@@ -660,7 +660,7 @@ const ASSET_META = {
 // PERSIST
 // ═══════════════════════════════════════
 function save(){
-  try{ localStorage.setItem('dash_v2', JSON.stringify({ usAssets, krAssets, stocks, FX, snapshots, budgetIncomeUSD, budgetIncomeKRW, budgetCats, debts, paychecks, spendingHistory, userCatMap })); }catch(e){}
+  try{ localStorage.setItem('dash_v2', JSON.stringify({ usAssets, krAssets, stocks, FX, snapshots, budgetIncomeUSD, budgetIncomeKRW, budgetCats, debts, paychecks, spendingHistory, userCatMap, liveQuotes })); }catch(e){}
 }
 function load(){
   try{
@@ -681,6 +681,7 @@ function load(){
       if(d.paychecks) paychecks = d.paychecks;
       if(d.spendingHistory) spendingHistory = d.spendingHistory;
       if(d.userCatMap) userCatMap = d.userCatMap;
+      if(d.liveQuotes) liveQuotes = d.liveQuotes;
     }
   }catch(e){}
 }
@@ -778,6 +779,7 @@ function setStatus(s){
   if(s==='loading') el.innerHTML='<div class="sdot"></div><span>조회 중...</span>';
   else if(s==='live'){ el.className='hdr-status status-live'; el.innerHTML='<div class="sdot"></div><span>실시간 · '+new Date().toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'})+'</span>'; }
   else if(s==='error'){ el.className='hdr-status status-err'; el.innerHTML='<div class="sdot"></div><span>오류</span>'; }
+  else if(s==='cached'){ el.className='hdr-status status-idle'; el.innerHTML='<div class="sdot"></div><span>캐시된 시세</span>'; }
   else{ el.className='hdr-status status-idle'; el.innerHTML='<div class="sdot"></div><span>시세 미조회</span>'; }
 }
 
@@ -2117,6 +2119,7 @@ if(dz){
 // INIT
 // ═══════════════════════════════════════
 load();
+if(Object.keys(liveQuotes).length) setStatus('cached');
 renderAll();
 </script>
 </body>
