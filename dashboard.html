@@ -204,6 +204,12 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
 .stock-hdr{display:grid;grid-template-columns:1.5fr .8fr .6fr .8fr .7fr 32px;gap:6px;padding:0 10px 6px;font-size:10px;color:var(--t3);}
 .del-btn{background:transparent;border:none;color:var(--t3);font-size:16px;cursor:pointer;padding:6px;border-radius:6px;}
 .del-btn:hover{color:var(--red);background:rgba(248,113,113,.1);}
+.cash-entry{display:grid;grid-template-columns:1fr 1fr 32px;gap:6px;align-items:end;background:var(--card2);border-radius:10px;padding:10px;margin-bottom:6px;}
+.cash-entry .field{margin-bottom:0;}
+.bank-detail{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.bank-detail:last-child{border-bottom:none;}
+.bank-name{color:var(--t2);min-width:80px;}
+.bank-val{font-weight:500;flex:1;text-align:right;}
 .add-row{display:flex;align-items:center;gap:6px;width:100%;background:transparent;border:1px dashed var(--border2);border-radius:8px;padding:10px;color:var(--t2);font-size:12px;font-family:var(--font);cursor:pointer;}
 .add-row:hover{background:var(--card2);}
 .modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;}
@@ -311,6 +317,7 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
       <div class="card">
         <div class="card-title"><span>🇺🇸 미국 자산 유형별</span></div>
         <div id="us-asset-rows"></div>
+        <div id="us-bank-detail"></div>
       </div>
       <div class="card">
         <div class="card-title"><span>미국 자산 배분</span></div>
@@ -341,6 +348,7 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
       <div class="card">
         <div class="card-title"><span>🇰🇷 한국 자산 유형별</span></div>
         <div id="kr-asset-rows"></div>
+        <div id="kr-bank-detail"></div>
       </div>
       <div class="card">
         <div class="card-title"><span>한국 자산 배분</span></div>
@@ -476,16 +484,20 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
     <div class="modal-sub">주식 티커는 Yahoo Finance 기준 (예: AAPL, 005930.KS)</div>
 
     <div class="form-section">🇺🇸 미국 자산 (USD)</div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:8px;">💵 현금/예금 (은행별)</div>
+    <div id="f-us-cash-fields"></div>
+    <button class="add-row" onclick="addCashField('us')" style="margin-bottom:12px;">+ 은행 추가</button>
     <div class="form-grid">
-      <div class="field"><label>현금/예금 ($)</label><input type="number" id="f-us-cash" min="0"/></div>
       <div class="field"><label>부동산 ($)</label><input type="number" id="f-us-realty" min="0"/></div>
       <div class="field"><label>암호화폐 ($)</label><input type="number" id="f-us-crypto" min="0"/></div>
       <div class="field"><label>401k/IRA ($)</label><input type="number" id="f-us-retire" min="0"/></div>
     </div>
 
     <div class="form-section">🇰🇷 한국 자산 (만원)</div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:8px;">💵 현금/예적금 (은행별)</div>
+    <div id="f-kr-cash-fields"></div>
+    <button class="add-row" onclick="addCashField('kr')" style="margin-bottom:12px;">+ 은행 추가</button>
     <div class="form-grid">
-      <div class="field"><label>현금/예적금 (만원)</label><input type="number" id="f-kr-cash" min="0"/></div>
       <div class="field"><label>부동산 (만원)</label><input type="number" id="f-kr-realty" min="0"/></div>
       <div class="field"><label>암호화폐 (만원)</label><input type="number" id="f-kr-crypto" min="0"/></div>
       <div class="field"><label>연금/퇴직금 (만원)</label><input type="number" id="f-kr-retire" min="0"/></div>
@@ -514,8 +526,8 @@ let FX = 1370;
 let liveQuotes = {};
 let currentTab = 'all';
 
-let usAssets = { cash:0, realty:0, crypto:0, retire:0 }; // USD
-let krAssets = { cash:0, realty:0, crypto:0, retire:0 }; // 만원
+let usAssets = { cash:[], realty:0, crypto:0, retire:0 }; // USD, cash = [{name,value}]
+let krAssets = { cash:[], realty:0, crypto:0, retire:0 }; // 만원, cash = [{name,value}]
 
 let stocks = [];
 let snapshots = [];
@@ -534,6 +546,9 @@ let budgetCats = [
   {name:'기타',icon:'📦',color:'#8b90a5',budget:0,currency:'USD'},
 ];
 let parsedTxns = []; // parsed CSV transactions
+
+// cash 합계 헬퍼
+function cashSum(arr){ return Array.isArray(arr) ? arr.reduce((s,a)=>s+(a.value||0),0) : (arr||0); }
 
 const CATS = ['국내주식','미국주식','ETF','채권','원자재','암호화폐','기타'];
 const ASSET_META = {
@@ -556,6 +571,9 @@ function load(){
     if(d){
       if(d.usAssets) Object.assign(usAssets, d.usAssets);
       if(d.krAssets) Object.assign(krAssets, d.krAssets);
+      // Migrate old number cash to array format
+      if(typeof usAssets.cash === 'number') usAssets.cash = usAssets.cash ? [{name:'기타', value:usAssets.cash}] : [];
+      if(typeof krAssets.cash === 'number') krAssets.cash = krAssets.cash ? [{name:'기타', value:krAssets.cash}] : [];
       if(d.stocks) stocks = d.stocks;
       if(d.FX) FX = d.FX;
       if(d.snapshots) snapshots = d.snapshots;
@@ -673,10 +691,10 @@ function stockChangePct(s){ const q=liveQuotes[s.ticker]; return q?.changePercen
 
 // US totals (USD)
 function usStockUSD(){ return stocks.filter(s=>s.currency==='USD').reduce((a,s)=>a+stockValUSD(s),0); }
-function usTotalUSD(){ return usAssets.cash + usAssets.realty + usAssets.crypto + usAssets.retire + usStockUSD(); }
+function usTotalUSD(){ return cashSum(usAssets.cash) + usAssets.realty + usAssets.crypto + usAssets.retire + usStockUSD(); }
 // KR totals (만원)
 function krStockMan(){ return stocks.filter(s=>s.currency==='KRW').reduce((a,s)=>a+curPrice(s)*s.qty/10000,0); }
-function krTotalMan(){ return krAssets.cash + krAssets.realty + krAssets.crypto + krAssets.retire + krStockMan(); }
+function krTotalMan(){ return cashSum(krAssets.cash) + krAssets.realty + krAssets.crypto + krAssets.retire + krStockMan(); }
 // Grand total (만원)
 function grandTotalMan(){ return usTotalUSD()*FX/10000 + krTotalMan(); }
 
@@ -723,13 +741,13 @@ function renderAllTab(){
 
   // Country cards
   document.getElementById('all-us-total').textContent = fmtUSD(usUSD);
-  document.getElementById('all-us-sub').textContent = `≈ ${fmtMan(usMan)}원 · 현금 ${fmtUSD(usAssets.cash)} · ${stocks.filter(s=>s.currency==='USD').length}종목`;
+  document.getElementById('all-us-sub').textContent = `≈ ${fmtMan(usMan)}원 · 현금 ${fmtUSD(cashSum(usAssets.cash))} · ${stocks.filter(s=>s.currency==='USD').length}종목`;
   document.getElementById('all-kr-total').textContent = fmtMan(krMan) + '원';
-  document.getElementById('all-kr-sub').textContent = `≈ ${fmtUSD(krMan*10000/FX)} · 현금 ${fmtMan(krAssets.cash)}원 · ${stocks.filter(s=>s.currency==='KRW').length}종목`;
+  document.getElementById('all-kr-sub').textContent = `≈ ${fmtUSD(krMan*10000/FX)} · 현금 ${fmtMan(cashSum(krAssets.cash))}원 · ${stocks.filter(s=>s.currency==='KRW').length}종목`;
 
   // Asset breakdown (통합, 만원 기준)
   const categories = [
-    { name:'현금/예금', icon:'💵', color:'#5b9cff', bg:'rgba(91,156,255,.12)', value: usAssets.cash*FX/10000 + krAssets.cash },
+    { name:'현금/예금', icon:'💵', color:'#5b9cff', bg:'rgba(91,156,255,.12)', value: cashSum(usAssets.cash)*FX/10000 + cashSum(krAssets.cash) },
     { name:'주식/ETF', icon:'📈', color:'#34d399', bg:'rgba(52,211,153,.12)', value: usStockUSD()*FX/10000 + krStockMan() },
     { name:'부동산', icon:'🏠', color:'#fbbf24', bg:'rgba(251,191,36,.12)', value: usAssets.realty*FX/10000 + krAssets.realty },
     { name:'암호화폐', icon:'🪙', color:'#fb923c', bg:'rgba(251,146,60,.12)', value: usAssets.crypto*FX/10000 + krAssets.crypto },
@@ -750,17 +768,18 @@ function renderUSTab(){
     <div class="stat"><div class="stat-label">🇺🇸 미국 총 자산</div><div class="stat-val">${fmtUSD(usUSD)}</div><div class="stat-sub neu">≈ ${fmtMan(usUSD*FX/10000)}원</div></div>
     <div class="stat"><div class="stat-label">📈 주식/ETF</div><div class="stat-val">${fmtUSD(usStk)}</div><div class="stat-sub neu">${stocks.filter(s=>s.currency==='USD').length}종목</div></div>
     <div class="stat"><div class="stat-label">💰 401k/IRA</div><div class="stat-val">${fmtUSD(usAssets.retire)}</div><div class="stat-sub neu">은퇴 계좌</div></div>
-    <div class="stat"><div class="stat-label">💵 현금/예금</div><div class="stat-val">${fmtUSD(usAssets.cash)}</div><div class="stat-sub neu">${usUSD?(usAssets.cash/usUSD*100).toFixed(0):0}%</div></div>
+    <div class="stat"><div class="stat-label">💵 현금/예금</div><div class="stat-val">${fmtUSD(cashSum(usAssets.cash))}</div><div class="stat-sub neu">${usUSD?(cashSum(usAssets.cash)/usUSD*100).toFixed(0):0}%</div></div>
   `;
 
   const categories = [
-    { name:'현금/예금', icon:'💵', color:'#5b9cff', bg:'rgba(91,156,255,.12)', value: usAssets.cash },
+    { name:'현금/예금', icon:'💵', color:'#5b9cff', bg:'rgba(91,156,255,.12)', value: cashSum(usAssets.cash) },
     { name:'주식/ETF', icon:'📈', color:'#34d399', bg:'rgba(52,211,153,.12)', value: usStk },
     { name:'부동산', icon:'🏠', color:'#fbbf24', bg:'rgba(251,191,36,.12)', value: usAssets.realty },
     { name:'암호화폐', icon:'🪙', color:'#fb923c', bg:'rgba(251,146,60,.12)', value: usAssets.crypto },
     { name:'401k/IRA', icon:'📋', color:'#a78bfa', bg:'rgba(167,139,250,.12)', value: usAssets.retire },
   ];
   renderAssetRows('us-asset-rows', categories, usUSD, v=>fmtUSD(v));
+  renderBankDetail('us-bank-detail', usAssets.cash, '$');
   renderDonut('us-donut','us-donut-total','us-donut-leg', categories, usUSD, fmtUSD(usUSD));
 
   const usStocks = [...stocks.filter(s=>s.currency==='USD')].sort((a,b)=>stockValUSD(b)-stockValUSD(a));
@@ -777,22 +796,50 @@ function renderKRTab(){
     <div class="stat"><div class="stat-label">🇰🇷 한국 총 자산</div><div class="stat-val">${fmtMan(krMan)}원</div><div class="stat-sub neu">≈ ${fmtUSD(krMan*10000/FX)}</div></div>
     <div class="stat"><div class="stat-label">📈 주식/ETF</div><div class="stat-val">${fmtMan(krStk)}원</div><div class="stat-sub neu">${stocks.filter(s=>s.currency==='KRW').length}종목</div></div>
     <div class="stat"><div class="stat-label">🏠 부동산</div><div class="stat-val">${fmtMan(krAssets.realty)}원</div><div class="stat-sub neu">≈ ${fmtUSD(krAssets.realty*10000/FX)}</div></div>
-    <div class="stat"><div class="stat-label">💵 현금/예적금</div><div class="stat-val">${fmtMan(krAssets.cash)}원</div><div class="stat-sub neu">${krMan?(krAssets.cash/krMan*100).toFixed(0):0}%</div></div>
+    <div class="stat"><div class="stat-label">💵 현금/예적금</div><div class="stat-val">${fmtMan(cashSum(krAssets.cash))}원</div><div class="stat-sub neu">${krMan?(cashSum(krAssets.cash)/krMan*100).toFixed(0):0}%</div></div>
   `;
 
   const categories = [
-    { name:'현금/예적금', icon:'💵', color:'#5b9cff', bg:'rgba(91,156,255,.12)', value: krAssets.cash },
+    { name:'현금/예적금', icon:'💵', color:'#5b9cff', bg:'rgba(91,156,255,.12)', value: cashSum(krAssets.cash) },
     { name:'주식/ETF', icon:'📈', color:'#34d399', bg:'rgba(52,211,153,.12)', value: krStk },
     { name:'부동산', icon:'🏠', color:'#fbbf24', bg:'rgba(251,191,36,.12)', value: krAssets.realty },
     { name:'암호화폐', icon:'🪙', color:'#fb923c', bg:'rgba(251,146,60,.12)', value: krAssets.crypto },
     { name:'연금/퇴직금', icon:'📋', color:'#a78bfa', bg:'rgba(167,139,250,.12)', value: krAssets.retire },
   ];
   renderAssetRows('kr-asset-rows', categories, krMan, v=>fmtMan(v)+'원');
+  renderBankDetail('kr-bank-detail', krAssets.cash, '₩', true);
   renderDonut('kr-donut','kr-donut-total','kr-donut-leg', categories, krMan, fmtMan(krMan)+'원');
 
   const krStocks = [...stocks.filter(s=>s.currency==='KRW')].sort((a,b)=>curPrice(b)*b.qty-curPrice(a)*a.qty);
   document.getElementById('kr-stock-count').textContent = krStocks.length+'종목';
   renderStockTable('kr-stock-tbody', krStocks, 'KRW');
+}
+
+// ═══════════════════════════════════════
+// BANK DETAIL RENDERER
+// ═══════════════════════════════════════
+function renderBankDetail(elId, cashArr, sym, isMan){
+  const el = document.getElementById(elId);
+  if(!el) return;
+  const arr = Array.isArray(cashArr) ? cashArr : [];
+  if(!arr.length || arr.every(b=>!b.value)){ el.innerHTML=''; return; }
+  const fmtV = isMan ? v=>fmtMan(v)+'원' : v=>sym+Math.round(v).toLocaleString();
+  const total = arr.reduce((s,b)=>s+(b.value||0),0);
+  el.innerHTML = `
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);">
+      <div style="font-size:10px;color:var(--t3);letter-spacing:.04em;margin-bottom:8px;">🏦 은행별 현금/예금 내역</div>
+      ${arr.filter(b=>b.value).map(b=>{
+        const pct = total?(b.value/total*100).toFixed(0):0;
+        return `<div class="bank-detail">
+          <span class="bank-name">🏦 ${b.name}</span>
+          <div style="flex:1;height:3px;background:rgba(255,255,255,.05);border-radius:2px;margin:0 8px;overflow:hidden;">
+            <div style="height:100%;width:${pct}%;background:var(--blue);border-radius:2px;"></div>
+          </div>
+          <span class="bank-val">${fmtV(b.value)}</span>
+          <span style="font-size:10px;color:var(--t3);min-width:32px;text-align:right;">${pct}%</span>
+        </div>`;
+      }).join('')}
+    </div>`;
 }
 
 // ═══════════════════════════════════════
@@ -943,7 +990,7 @@ function renderRecs(){
   const usMan = usTotalUSD()*FX/10000;
   const krMan = krTotalMan();
   const usPct = usMan/tot*100, krPct = krMan/tot*100;
-  const cashMan = usAssets.cash*FX/10000 + krAssets.cash;
+  const cashMan = cashSum(usAssets.cash)*FX/10000 + cashSum(krAssets.cash);
   const cashPct = cashMan/tot*100;
   const stockMan = (usStockUSD()*FX/10000) + krStockMan();
   const stockPct = stockMan/tot*100;
@@ -991,12 +1038,36 @@ function renderRecs(){
 // ═══════════════════════════════════════
 // MODAL
 // ═══════════════════════════════════════
+function addCashField(region, data){
+  const container = document.getElementById(`f-${region}-cash-fields`);
+  const d = document.createElement('div');
+  d.className='cash-entry';
+  const unit = region==='us'?'$':'만원';
+  d.innerHTML=`
+    <div class="field"><label>은행명</label><input placeholder="예: Chase, 신한" value="${data?.name||''}"/></div>
+    <div class="field"><label>금액 (${unit})</label><input type="number" placeholder="0" value="${data?.value||''}"/></div>
+    <button class="del-btn" onclick="this.parentElement.remove()">✕</button>`;
+  container.appendChild(d);
+}
+
 function openModal(){
-  document.getElementById('f-us-cash').value = usAssets.cash||'';
+  // US cash banks
+  const usCashEl = document.getElementById('f-us-cash-fields');
+  usCashEl.innerHTML='';
+  const usCashArr = Array.isArray(usAssets.cash) ? usAssets.cash : [{name:'',value:usAssets.cash}];
+  usCashArr.forEach(b=>addCashField('us',b));
+  if(!usCashArr.length) addCashField('us');
+
+  // KR cash banks
+  const krCashEl = document.getElementById('f-kr-cash-fields');
+  krCashEl.innerHTML='';
+  const krCashArr = Array.isArray(krAssets.cash) ? krAssets.cash : [{name:'',value:krAssets.cash}];
+  krCashArr.forEach(b=>addCashField('kr',b));
+  if(!krCashArr.length) addCashField('kr');
+
   document.getElementById('f-us-realty').value = usAssets.realty||'';
   document.getElementById('f-us-crypto').value = usAssets.crypto||'';
   document.getElementById('f-us-retire').value = usAssets.retire||'';
-  document.getElementById('f-kr-cash').value = krAssets.cash||'';
   document.getElementById('f-kr-realty').value = krAssets.realty||'';
   document.getElementById('f-kr-crypto').value = krAssets.crypto||'';
   document.getElementById('f-kr-retire').value = krAssets.retire||'';
@@ -1024,11 +1095,22 @@ function addStockField(data){
 }
 
 function saveModal(){
-  usAssets.cash = +document.getElementById('f-us-cash').value||0;
+  // Parse cash bank entries
+  usAssets.cash = [];
+  document.getElementById('f-us-cash-fields').querySelectorAll('.cash-entry').forEach(row=>{
+    const inp = row.querySelectorAll('input');
+    const name = inp[0].value.trim(), value = +inp[1].value||0;
+    if(name || value) usAssets.cash.push({name: name||'기타', value});
+  });
+  krAssets.cash = [];
+  document.getElementById('f-kr-cash-fields').querySelectorAll('.cash-entry').forEach(row=>{
+    const inp = row.querySelectorAll('input');
+    const name = inp[0].value.trim(), value = +inp[1].value||0;
+    if(name || value) krAssets.cash.push({name: name||'기타', value});
+  });
   usAssets.realty = +document.getElementById('f-us-realty').value||0;
   usAssets.crypto = +document.getElementById('f-us-crypto').value||0;
   usAssets.retire = +document.getElementById('f-us-retire').value||0;
-  krAssets.cash = +document.getElementById('f-kr-cash').value||0;
   krAssets.realty = +document.getElementById('f-kr-realty').value||0;
   krAssets.crypto = +document.getElementById('f-kr-crypto').value||0;
   krAssets.retire = +document.getElementById('f-kr-retire').value||0;
