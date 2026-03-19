@@ -132,8 +132,6 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
 .debt-entry{display:grid;grid-template-columns:1.5fr 1fr 1fr .8fr .8fr 32px;gap:6px;align-items:end;background:var(--card2);border-radius:10px;padding:10px;margin-bottom:6px;}
 .debt-entry .field{margin-bottom:0;}
 .debt-hdr-grid{display:grid;grid-template-columns:1.5fr 1fr 1fr .8fr .8fr 32px;gap:6px;padding:0 10px 6px;font-size:10px;color:var(--t3);}
-.networth-highlight{background:linear-gradient(135deg,rgba(91,156,255,.08),rgba(167,139,250,.08));border:1px solid rgba(91,156,255,.2);}
-
 .up{color:var(--green);}.down{color:var(--red);}.neu{color:var(--t3);}
 
 /* BUDGET */
@@ -305,16 +303,9 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
         </div>
       </div>
     </div>
-    <!-- DEBT & NET WORTH -->
+    <!-- DEBT -->
     <div class="section" id="debt-section" style="display:none;">
       <div class="section-hdr"><div class="section-title">📋 부채 · 상환 관리</div></div>
-      <div class="stat networth-highlight" style="margin-bottom:12px;padding:18px;">
-        <div class="stat-label" style="font-size:12px;">🏦 순자산 (총 자산 - 부채 잔액)</div>
-        <div style="display:flex;align-items:baseline;gap:12px;margin-top:6px;">
-          <div class="stat-val" id="net-worth-val" style="font-size:26px;">—</div>
-          <div id="net-worth-sub" style="font-size:12px;color:var(--t2);"></div>
-        </div>
-      </div>
       <div id="debt-list"></div>
     </div>
 
@@ -781,18 +772,11 @@ function renderAllTab(){
   const stockTotalMan = usStockUSD()*FX/10000 + krStockMan();
   const stockPctAll = tot ? (stockTotalMan/tot*100) : 0;
 
-  const hasDebt = debts.length > 0;
-  const debtRemMan = totalDebtRemainingMan();
-  const nw = tot - debtRemMan;
-
   document.getElementById('all-strip').innerHTML = `
     <div class="stat"><div class="stat-label">💰 총 자산</div><div class="stat-val">${fmtMan(tot)}원</div><div class="stat-sub neu">≈ ${fmtUSD(tot*10000/FX)}</div></div>
     <div class="stat"><div class="stat-label">🇺🇸 미국</div><div class="stat-val">${fmtUSD(usUSD)}</div><div class="stat-sub neu">${tot?(usMan/tot*100).toFixed(0):0}%</div></div>
     <div class="stat"><div class="stat-label">🇰🇷 한국</div><div class="stat-val">${fmtMan(krMan)}원</div><div class="stat-sub neu">${tot?(krMan/tot*100).toFixed(0):0}%</div></div>
-    ${hasDebt ?
-      `<div class="stat networth-highlight"><div class="stat-label">🏦 순자산</div><div class="stat-val">${fmtMan(nw)}원</div><div class="stat-sub down">부채 잔액 -${fmtMan(debtRemMan)}원</div></div>` :
-      `<div class="stat"><div class="stat-label">📈 주식/ETF</div><div class="stat-val">${fmtMan(stockTotalMan)}원</div><div class="stat-sub neu">${stocks.length}종목 · ${stockPctAll.toFixed(0)}%</div></div>`
-    }
+    <div class="stat"><div class="stat-label">📈 주식/ETF</div><div class="stat-val">${fmtMan(stockTotalMan)}원</div><div class="stat-sub neu">${stocks.length}종목 · ${stockPctAll.toFixed(0)}%</div></div>
   `;
 
   // Country cards
@@ -980,12 +964,6 @@ function renderDebts(){
   if(!debts.length){ section.style.display='none'; return; }
   section.style.display='block';
 
-  const nw = netWorthMan();
-  const tot = grandTotalMan();
-  const debtRemaining = totalDebtRemainingMan();
-  document.getElementById('net-worth-val').textContent = fmtMan(nw)+'원';
-  document.getElementById('net-worth-sub').textContent = `총 자산 ${fmtMan(tot)}원 − 부채 잔액 ${fmtMan(debtRemaining)}원 ≈ ${fmtUSD(nw*10000/FX)}`;
-
   document.getElementById('debt-list').innerHTML = debts.map((d,i) => {
     const sym = d.currency==='USD'?'$':'₩';
     const total = d.totalAmount||0;
@@ -1136,21 +1114,16 @@ function renderRecs(){
 
   // 부채 관련 추천
   if(debts.length > 0){
-    const debtRem = totalDebtRemainingMan();
-    const nw = netWorthMan();
-    if(debtRem > 0){
-      const debtRatio = tot > 0 ? (debtRem/tot*100) : 0;
-      if(debtRatio > 30) recs.push({icon:'⚠️',bg:'rgba(248,113,113,.1)',title:`부채 비율 ${debtRatio.toFixed(0)}% — 적극 상환 권장`,desc:'총 자산 대비 부채가 높습니다. 투자보다 상환을 우선하고, 상환 전용 계좌를 분리 관리하세요.',tag:'risk',tagText:'부채 관리'});
-      debts.forEach(d => {
-        const saved = d.savedAmount||0, total = d.totalAmount||0;
-        const pct = total?(saved/total*100):0;
-        const remaining = total-saved;
-        const monthly = remaining / ((d.targetYears||5)*12);
-        const sym = d.currency==='USD'?'$':'₩';
-        if(pct < 30) recs.push({icon:'📋',bg:'rgba(251,191,36,.1)',title:`${d.name}: 아직 ${pct.toFixed(0)}% 모았어요`,desc:`목표 달성까지 매월 ${sym}${Math.round(monthly).toLocaleString()} 저축이 필요합니다. 자동이체를 설정해두면 잊지 않아요.`,tag:'warn',tagText:'상환 계획'});
-        else if(pct >= 70 && pct < 100) recs.push({icon:'💪',bg:'rgba(52,211,153,.1)',title:`${d.name}: ${pct.toFixed(0)}% 달성! 거의 다 왔어요`,desc:`남은 ${sym}${Math.round(remaining).toLocaleString()}만 더 모으면 됩니다. 조금만 더 파이팅!`,tag:'good',tagText:'거의 완료'});
-      });
-    }
+    debts.forEach(d => {
+      const saved = d.savedAmount||0, total = d.totalAmount||0;
+      const pct = total?(saved/total*100):0;
+      const remaining = total-saved;
+      const monthly = remaining > 0 ? remaining / ((d.targetYears||5)*12) : 0;
+      const sym = d.currency==='USD'?'$':'₩';
+      if(pct < 30 && remaining > 0) recs.push({icon:'📋',bg:'rgba(251,191,36,.1)',title:`${d.name}: ${pct.toFixed(0)}% 모았어요`,desc:`목표까지 매월 ${sym}${Math.round(monthly).toLocaleString()} 저축하면 ${d.targetYears||5}년 안에 완료! 자동이체 설정 추천.`,tag:'info',tagText:'상환 계획'});
+      else if(pct >= 30 && pct < 70) recs.push({icon:'👍',bg:'rgba(91,156,255,.1)',title:`${d.name}: ${pct.toFixed(0)}% 진행 중`,desc:`잘 모으고 있어요. 매월 ${sym}${Math.round(monthly).toLocaleString()}씩 유지하면 계획대로 완료됩니다.`,tag:'info',tagText:'순조로움'});
+      else if(pct >= 70 && pct < 100) recs.push({icon:'💪',bg:'rgba(52,211,153,.1)',title:`${d.name}: ${pct.toFixed(0)}% 달성! 거의 다 왔어요`,desc:`남은 ${sym}${Math.round(remaining).toLocaleString()}만 더! 조금만 더 파이팅!`,tag:'good',tagText:'거의 완료'});
+    });
   }
 
   if(grandTotalMan()===0) recs.push({icon:'📝',bg:'rgba(91,156,255,.1)',title:'자산 정보를 입력해주세요',desc:'"✏️ 자산 수정" 버튼을 눌러 정보를 입력하면 분석을 시작합니다.',tag:'info',tagText:'시작하기'});
