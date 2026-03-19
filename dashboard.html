@@ -199,9 +199,9 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
 .field label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;}
 .field input,.field select{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:8px;color:var(--t1);font-size:13px;font-family:var(--font);padding:8px 12px;outline:none;}
 .field input:focus,.field select:focus{border-color:var(--blue);}
-.stock-entry{display:grid;grid-template-columns:1.5fr .8fr .6fr .8fr .7fr .5fr 32px;gap:6px;align-items:end;background:var(--card2);border-radius:10px;padding:10px;margin-bottom:6px;}
+.stock-entry{display:grid;grid-template-columns:1.5fr .8fr .6fr .8fr .7fr 32px;gap:6px;align-items:end;background:var(--card2);border-radius:10px;padding:10px;margin-bottom:6px;}
 .stock-entry .field{margin-bottom:0;}
-.stock-hdr{display:grid;grid-template-columns:1.5fr .8fr .6fr .8fr .7fr .5fr 32px;gap:6px;padding:0 10px 6px;font-size:10px;color:var(--t3);}
+.stock-hdr{display:grid;grid-template-columns:1.5fr .8fr .6fr .8fr .7fr 32px;gap:6px;padding:0 10px 6px;font-size:10px;color:var(--t3);}
 .del-btn{background:transparent;border:none;color:var(--t3);font-size:16px;cursor:pointer;padding:6px;border-radius:6px;}
 .del-btn:hover{color:var(--red);background:rgba(248,113,113,.1);}
 .add-row{display:flex;align-items:center;gap:6px;width:100%;background:transparent;border:1px dashed var(--border2);border-radius:8px;padding:10px;color:var(--t2);font-size:12px;font-family:var(--font);cursor:pointer;}
@@ -213,7 +213,7 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
   .hdr{padding:12px 16px;}
   .top-strip{grid-template-columns:1fr 1fr;}
   .grid-2,.grid-2-1{grid-template-columns:1fr;}
-  .stock-entry{grid-template-columns:1fr 1fr;}
+  .stock-entry{grid-template-columns:1fr 1fr 1fr;}
   .stock-hdr{display:none;}
   .tabs{flex-wrap:wrap;}
 }
@@ -328,7 +328,7 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
         <button class="btn btn-ghost" onclick="fetchAllQuotes()" style="font-size:11px;padding:6px 12px;">🔄 시세 갱신</button>
       </div>
       <div class="card" style="overflow-x:auto;">
-        <table class="stk-tbl"><thead><tr><th>종목</th><th>매수가</th><th>현재가</th><th>수량</th><th>평가금액</th><th>평가손익</th><th>수익률</th></tr></thead>
+        <table class="stk-tbl"><thead><tr><th>종목</th><th>현재가</th><th>수량</th><th>평가금액</th><th>전일비</th></tr></thead>
         <tbody id="us-stock-tbody"></tbody></table>
       </div>
     </div>
@@ -358,7 +358,7 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
         <button class="btn btn-ghost" onclick="fetchAllQuotes()" style="font-size:11px;padding:6px 12px;">🔄 시세 갱신</button>
       </div>
       <div class="card" style="overflow-x:auto;">
-        <table class="stk-tbl"><thead><tr><th>종목</th><th>매수가</th><th>현재가</th><th>수량</th><th>평가금액</th><th>평가손익</th><th>수익률</th></tr></thead>
+        <table class="stk-tbl"><thead><tr><th>종목</th><th>현재가</th><th>수량</th><th>평가금액</th><th>전일비</th></tr></thead>
         <tbody id="kr-stock-tbody"></tbody></table>
       </div>
     </div>
@@ -492,7 +492,7 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
     </div>
 
     <div class="form-section">📈 주식 / ETF</div>
-    <div class="stock-hdr"><span>종목명</span><span>카테고리</span><span>통화</span><span>티커</span><span>매수가</span><span>수량</span><span></span></div>
+    <div class="stock-hdr"><span>종목명</span><span>카테고리</span><span>통화</span><span>티커</span><span>수량</span><span></span></div>
     <div id="stock-fields"></div>
     <button class="add-row" onclick="addStockField()">+ 종목 추가</button>
 
@@ -652,13 +652,11 @@ function setStatus(s){
 // ═══════════════════════════════════════
 // PRICE HELPERS
 // ═══════════════════════════════════════
-function curPrice(s){ const q=liveQuotes[s.ticker]; return q?.price!=null ? q.price : s.buyPrice; }
+function curPrice(s){ const q=liveQuotes[s.ticker]; return q?.price!=null ? q.price : 0; }
 function isLive(s){ return liveQuotes[s.ticker]?.price!=null; }
-function stockValUSD(s){ const v=curPrice(s)*s.qty; return s.currency==='USD'?v:v/FX*10000; }  // always in USD
-function stockValMan(s){ const v=curPrice(s)*s.qty; return s.currency==='KRW'?v/10000:v*FX/10000; } // always in 만원
-function stockCostUSD(s){ const v=s.buyPrice*s.qty; return s.currency==='USD'?v:v/FX*10000; }
-function stockGainUSD(s){ return stockValUSD(s)-stockCostUSD(s); }
-function stockGainPct(s){ const c=stockCostUSD(s); return c?(stockGainUSD(s)/c*100):0; }
+function stockValUSD(s){ const v=curPrice(s)*s.qty; return s.currency==='USD'?v:v/FX*10000; }
+function stockValMan(s){ const v=curPrice(s)*s.qty; return s.currency==='KRW'?v/10000:v*FX/10000; }
+function stockChangePct(s){ const q=liveQuotes[s.ticker]; return q?.changePercent ?? 0; }
 
 // US totals (USD)
 function usStockUSD(){ return stocks.filter(s=>s.currency==='USD').reduce((a,s)=>a+stockValUSD(s),0); }
@@ -669,9 +667,9 @@ function krTotalMan(){ return krAssets.cash + krAssets.realty + krAssets.crypto 
 // Grand total (만원)
 function grandTotalMan(){ return usTotalUSD()*FX/10000 + krTotalMan(); }
 
-// Stock gain by region
-function usStockGainUSD(){ return stocks.filter(s=>s.currency==='USD').reduce((a,s)=>a+stockGainUSD(s),0); }
-function krStockGainMan(){ return stocks.filter(s=>s.currency==='KRW').reduce((a,s)=>a+(curPrice(s)-s.buyPrice)*s.qty/10000,0); }
+// Stock count by region
+function usStockCount(){ return stocks.filter(s=>s.currency==='USD').length; }
+function krStockCount(){ return stocks.filter(s=>s.currency==='KRW').length; }
 
 // FORMAT
 const fmtMan = v => { v=Math.abs(v); if(v>=10000) return (v/10000).toFixed(1)+'억'; if(v>=1000) return (v/1000).toFixed(1)+'천만'; return Math.round(v).toLocaleString()+'만'; };
@@ -700,15 +698,14 @@ function renderAllTab(){
   const usUSD = usTotalUSD();
   const krMan = krTotalMan();
   const usMan = usUSD*FX/10000;
-  const allGainUSD = stocks.reduce((a,s)=>a+stockGainUSD(s),0);
-  const allCostUSD = stocks.reduce((a,s)=>a+stockCostUSD(s),0);
-  const allGainPct = allCostUSD ? (allGainUSD/allCostUSD*100) : 0;
+  const stockTotalMan = usStockUSD()*FX/10000 + krStockMan();
+  const stockPctAll = tot ? (stockTotalMan/tot*100) : 0;
 
   document.getElementById('all-strip').innerHTML = `
     <div class="stat"><div class="stat-label">💰 총 자산</div><div class="stat-val">${fmtMan(tot)}원</div><div class="stat-sub neu">≈ ${fmtUSD(tot*10000/FX)}</div></div>
     <div class="stat"><div class="stat-label">🇺🇸 미국</div><div class="stat-val">${fmtUSD(usUSD)}</div><div class="stat-sub neu">${tot?(usMan/tot*100).toFixed(0):0}%</div></div>
     <div class="stat"><div class="stat-label">🇰🇷 한국</div><div class="stat-val">${fmtMan(krMan)}원</div><div class="stat-sub neu">${tot?(krMan/tot*100).toFixed(0):0}%</div></div>
-    <div class="stat"><div class="stat-label">📊 주식 손익</div><div class="stat-val ${cls(allGainUSD)}">${fmtUSDSigned(allGainUSD)}</div><div class="stat-sub ${cls(allGainPct)}">${fmtPct(allGainPct)}</div></div>
+    <div class="stat"><div class="stat-label">📈 주식/ETF</div><div class="stat-val">${fmtMan(stockTotalMan)}원</div><div class="stat-sub neu">${stocks.length}종목 · ${stockPctAll.toFixed(0)}%</div></div>
   `;
 
   // Country cards
@@ -735,15 +732,12 @@ function renderAllTab(){
 function renderUSTab(){
   const usUSD = usTotalUSD();
   const usStk = usStockUSD();
-  const usGain = usStockGainUSD();
-  const usCost = stocks.filter(s=>s.currency==='USD').reduce((a,s)=>a+stockCostUSD(s),0);
-  const gainPct = usCost ? (usGain/usCost*100) : 0;
 
   document.getElementById('us-strip').innerHTML = `
     <div class="stat"><div class="stat-label">🇺🇸 미국 총 자산</div><div class="stat-val">${fmtUSD(usUSD)}</div><div class="stat-sub neu">≈ ${fmtMan(usUSD*FX/10000)}원</div></div>
     <div class="stat"><div class="stat-label">📈 주식/ETF</div><div class="stat-val">${fmtUSD(usStk)}</div><div class="stat-sub neu">${stocks.filter(s=>s.currency==='USD').length}종목</div></div>
     <div class="stat"><div class="stat-label">💰 401k/IRA</div><div class="stat-val">${fmtUSD(usAssets.retire)}</div><div class="stat-sub neu">은퇴 계좌</div></div>
-    <div class="stat"><div class="stat-label">📊 주식 손익</div><div class="stat-val ${cls(usGain)}">${fmtUSDSigned(usGain)}</div><div class="stat-sub ${cls(gainPct)}">${fmtPct(gainPct)}</div></div>
+    <div class="stat"><div class="stat-label">💵 현금/예금</div><div class="stat-val">${fmtUSD(usAssets.cash)}</div><div class="stat-sub neu">${usUSD?(usAssets.cash/usUSD*100).toFixed(0):0}%</div></div>
   `;
 
   const categories = [
@@ -765,15 +759,12 @@ function renderUSTab(){
 function renderKRTab(){
   const krMan = krTotalMan();
   const krStk = krStockMan();
-  const krGain = krStockGainMan();
-  const krCost = stocks.filter(s=>s.currency==='KRW').reduce((a,s)=>a+s.buyPrice*s.qty/10000,0);
-  const gainPct = krCost ? (krGain/krCost*100) : 0;
 
   document.getElementById('kr-strip').innerHTML = `
     <div class="stat"><div class="stat-label">🇰🇷 한국 총 자산</div><div class="stat-val">${fmtMan(krMan)}원</div><div class="stat-sub neu">≈ ${fmtUSD(krMan*10000/FX)}</div></div>
     <div class="stat"><div class="stat-label">📈 주식/ETF</div><div class="stat-val">${fmtMan(krStk)}원</div><div class="stat-sub neu">${stocks.filter(s=>s.currency==='KRW').length}종목</div></div>
     <div class="stat"><div class="stat-label">🏠 부동산</div><div class="stat-val">${fmtMan(krAssets.realty)}원</div><div class="stat-sub neu">≈ ${fmtUSD(krAssets.realty*10000/FX)}</div></div>
-    <div class="stat"><div class="stat-label">📊 주식 손익</div><div class="stat-val ${cls(krGain)}">${fmtManSigned(krGain)}원</div><div class="stat-sub ${cls(gainPct)}">${fmtPct(gainPct)}</div></div>
+    <div class="stat"><div class="stat-label">💵 현금/예적금</div><div class="stat-val">${fmtMan(krAssets.cash)}원</div><div class="stat-sub neu">${krMan?(krAssets.cash/krMan*100).toFixed(0):0}%</div></div>
   `;
 
   const categories = [
@@ -826,25 +817,20 @@ function renderDonut(canvasId, totalId, legId, categories, total, totalText){
 
 function renderStockTable(tbodyId, list, cur){
   const tbody = document.getElementById(tbodyId);
-  if(!list.length){ tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:32px 0;">종목이 없습니다</td></tr>'; return; }
+  if(!list.length){ tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:32px 0;">종목이 없습니다. "✏️ 자산 수정"에서 추가하세요.</td></tr>'; return; }
   tbody.innerHTML = list.map(s => {
-    const cp = curPrice(s), val = cp*s.qty, cost = s.buyPrice*s.qty;
-    const gain = val-cost, pct = cost?(gain/cost*100):0;
-    const live = isLive(s), q = liveQuotes[s.ticker], chg = q?.changePercent;
+    const cp = curPrice(s), val = cp*s.qty;
+    const live = isLive(s), q = liveQuotes[s.ticker], chg = q?.changePercent ?? 0;
     const sym = cur==='USD'?'$':'₩';
-    const buyF = sym+s.buyPrice.toLocaleString();
-    const curF = sym+cp.toLocaleString(undefined,{maximumFractionDigits:2});
-    const valF = cur==='USD'?fmtUSD(val):fmtMan(val/10000)+'원';
-    const gainF = cur==='USD'?fmtUSDSigned(gain):fmtManSigned(gain/10000)+'원';
-    const chgH = live&&chg!=null?` <span class="${cls(chg)}" style="font-size:10px">${fmtPct(chg)}</span>`:'';
+    const curF = live ? sym+cp.toLocaleString(undefined,{maximumFractionDigits:2}) : '시세 조회 필요';
+    const valF = live ? (cur==='USD'?fmtUSD(val):fmtMan(val/10000)+'원') : '—';
+    const chgH = live&&q?.changePercent!=null ? `<span class="${cls(chg)}">${fmtPct(chg)}</span>` : '<span class="neu">—</span>';
     return `<tr>
       <td><div class="stk-name">${s.name}</div><div class="stk-ticker">${s.ticker} · ${s.cat}</div></td>
-      <td class="stk-live">${buyF}</td>
-      <td class="stk-live">${live?`<span class="${cls(chg||0)}">${curF}</span>${chgH}`:`<span class="stk-loading">${curF}</span>`}</td>
+      <td class="stk-live">${live?`<span class="${cls(chg)}">${curF}</span>`:`<span class="stk-loading">${curF}</span>`}</td>
       <td>${s.qty.toLocaleString()}</td>
       <td style="font-weight:500;">${valF}</td>
-      <td class="${cls(gain)}">${gainF}</td>
-      <td class="${cls(pct)}" style="font-weight:600;">${fmtPct(pct)}</td>
+      <td>${chgH}</td>
     </tr>`;
   }).join('');
 }
@@ -968,15 +954,12 @@ function renderRecs(){
   if(stocks.length > 0){
     const vals = stocks.map(s=>stockValUSD(s));
     const stot = vals.reduce((a,b)=>a+b,0);
-    const maxI = vals.indexOf(Math.max(...vals));
-    const maxPct = Math.max(...vals)/stot*100;
-    if(maxPct > 40) recs.push({icon:'⚠️',bg:'rgba(251,191,36,.1)',title:`종목 집중: ${stocks[maxI].name} (${maxPct.toFixed(0)}%)`,desc:'단일 종목 비중 40% 초과. ETF로 리밸런싱을 고려하세요.',tag:'warn',tagText:'주의'});
-
-    const best = [...stocks].sort((a,b)=>stockGainPct(b)-stockGainPct(a))[0];
-    if(stockGainPct(best)>30) recs.push({icon:'🎯',bg:'rgba(91,156,255,.1)',title:`${best.name} 수익률 ${fmtPct(stockGainPct(best))}`,desc:'일부 차익 실현 후 분산 투자도 전략입니다.',tag:'info',tagText:'참고'});
-
-    const worst = [...stocks].sort((a,b)=>stockGainPct(a)-stockGainPct(b))[0];
-    if(stockGainPct(worst)<-15) recs.push({icon:'📉',bg:'rgba(248,113,113,.1)',title:`${worst.name} 손실 ${fmtPct(stockGainPct(worst))}`,desc:'손절 기준을 정하고 관리하세요.',tag:'risk',tagText:'손실 관리'});
+    if(stot > 0){
+      const maxI = vals.indexOf(Math.max(...vals));
+      const maxPct = Math.max(...vals)/stot*100;
+      if(maxPct > 40) recs.push({icon:'⚠️',bg:'rgba(251,191,36,.1)',title:`종목 집중: ${stocks[maxI].name} (${maxPct.toFixed(0)}%)`,desc:'단일 종목 비중 40% 초과. ETF로 리밸런싱을 고려하세요.',tag:'warn',tagText:'주의'});
+    }
+    if(!stocks.some(s=>isLive(s))) recs.push({icon:'🔄',bg:'rgba(91,156,255,.1)',title:'시세 업데이트를 눌러주세요',desc:'실시간 시세를 조회해야 주식 평가금액이 정확히 표시됩니다.',tag:'info',tagText:'시세 조회'});
   }
 
   if(cryptoPct>20) recs.push({icon:'🪙',bg:'rgba(251,146,60,.1)',title:`암호화폐 과다 (${cryptoPct.toFixed(1)}%)`,desc:'5~10% 이내가 일반적 권장. 일부를 안정 자산으로 전환 고려.',tag:'warn',tagText:'주의'});
@@ -1022,7 +1005,6 @@ function addStockField(data){
     <div class="field"><select>${CATS.map(c=>`<option ${data?.cat===c?'selected':''}>${c}</option>`).join('')}</select></div>
     <div class="field"><select><option ${data?.currency==='KRW'?'selected':''}>KRW</option><option ${data?.currency==='USD'?'selected':''}>USD</option></select></div>
     <div class="field"><input placeholder="VOO" value="${data?.ticker||''}"/></div>
-    <div class="field"><input type="number" placeholder="매수가" value="${data?.buyPrice||''}"/></div>
     <div class="field"><input type="number" placeholder="수량" value="${data?.qty||''}"/></div>
     <button class="del-btn" onclick="this.parentElement.remove()">✕</button>`;
   c.appendChild(d);
@@ -1041,8 +1023,8 @@ function saveModal(){
   stocks=[];
   document.querySelectorAll('.stock-entry').forEach(row=>{
     const inp=row.querySelectorAll('input'), sel=row.querySelectorAll('select');
-    const name=inp[0].value.trim(), ticker=inp[1].value.trim(), buyPrice=+inp[2].value, qty=+inp[3].value;
-    if(name&&ticker&&buyPrice&&qty) stocks.push({name,cat:sel[0].value,currency:sel[1].value,ticker,buyPrice,qty});
+    const name=inp[0].value.trim(), ticker=inp[1].value.trim(), qty=+inp[2].value;
+    if(name&&ticker&&qty) stocks.push({name,cat:sel[0].value,currency:sel[1].value,ticker,qty});
   });
   save(); closeModal(); renderAll();
   if(stocks.length) fetchAllQuotes();
