@@ -1744,7 +1744,9 @@ function categorize(desc){
 }
 
 function getCatOptions(selected){
-  const allCats = [...new Set([...budgetCats.map(c=>c.name), ...Object.keys(BUDGET_ICONS)])];
+  const allCats = budgetCats.map(c=>c.name);
+  // If current selection isn't in budget cats, add it so it still shows
+  if(selected && !allCats.includes(selected)) allCats.push(selected);
   return allCats.map(c => `<option value="${c}" ${c===selected?'selected':''}>${BUDGET_ICONS[c]||'📦'} ${c}</option>`).join('');
 }
 
