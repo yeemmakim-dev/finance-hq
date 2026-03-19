@@ -255,7 +255,8 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
   .debt-stats{grid-template-columns:1fr 1fr;}
   .stock-hdr{display:none;}
   .tabs{flex-wrap:wrap;}
-  #page-budget > .budget-strip + div{display:flex !important;flex-direction:column-reverse !important;}
+  #page-budget > .budget-strip + div{display:flex !important;flex-direction:column !important;}
+  #page-budget > .budget-strip + div > *{order:unset !important;}
 }
 </style>
 </head>
@@ -440,11 +441,11 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
 
     <div class="budget-strip" id="bud-strip"></div>
 
-    <!-- MAIN LAYOUT: sidebar budget + main spending -->
-    <div style="display:grid;grid-template-columns:240px 1fr;gap:12px;align-items:start;">
+    <!-- MAIN LAYOUT: spending (left) + sidebar budget (right) -->
+    <div style="display:grid;grid-template-columns:1fr 240px;gap:12px;align-items:start;">
 
-      <!-- LEFT: 예산 설정 (compact) -->
-      <div style="position:sticky;top:12px;font-size:11px;">
+      <!-- RIGHT: 예산 설정 (compact, order:2 pushes to right) -->
+      <div style="position:sticky;top:12px;font-size:11px;order:2;">
         <div class="card" style="padding:12px;">
           <div class="card-title" style="margin-bottom:6px;">
             <span style="font-size:10px;">🎯 월 예산</span>
@@ -466,8 +467,8 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
         </div>
       </div>
 
-      <!-- RIGHT: 달별 지출 분석 (main) -->
-      <div>
+      <!-- LEFT: 달별 지출 분석 (main, order:1) -->
+      <div style="order:1;">
         <!-- 월별 탭 -->
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
           <div id="month-tab-list" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;"></div>
@@ -1790,7 +1791,6 @@ function _lightUpdate(){
     <div class="stat"><div class="stat-label">💰 실지출</div><div class="stat-val" style="color:var(--accent)">$${Math.round(cardSpent).toLocaleString()}</div><div class="stat-sub neu">고정비 제외</div></div>
     <div class="stat"><div class="stat-label">🏠 고정지출</div><div class="stat-val" style="color:var(--t2)">$${Math.round(fixedTotal).toLocaleString()}</div><div class="stat-sub neu">주거비 등</div></div>
     <div class="stat"><div class="stat-label">🎯 예산 대비</div><div class="stat-val ${totalSpent>totalBudget?'down':'up'}">${totalBudget?(totalSpent/totalBudget*100).toFixed(0)+'%':'—'}</div><div class="stat-sub ${totalSpent<=totalBudget?'up':'down'}">${totalBudget?'$'+Math.round(Math.abs(totalBudget-totalSpent)).toLocaleString()+(totalSpent<=totalBudget?' 남음':' 초과'):''}</div></div>
-    <div class="stat"><div class="stat-label">🏆 최대 지출</div><div class="stat-val">${Object.keys(catSpent).length?Object.entries(catSpent).sort((a,b)=>b[1]-a[1])[0][0]:'—'}</div><div class="stat-sub neu">${Object.keys(catSpent).length?'$'+Math.round(Object.entries(catSpent).sort((a,b)=>b[1]-a[1])[0][1]).toLocaleString():''}</div></div>
   `;
   renderTxnList();
   renderBudgetTab();
@@ -1989,7 +1989,6 @@ function renderSpendingAnalysis(catSpent){
     <div class="stat"><div class="stat-label">💰 실지출</div><div class="stat-val" style="color:var(--accent)">$${Math.round(cardSpent).toLocaleString()}</div><div class="stat-sub neu">고정비 제외</div></div>
     <div class="stat"><div class="stat-label">🏠 고정지출</div><div class="stat-val" style="color:var(--t2)">$${Math.round(fixedTotal).toLocaleString()}</div><div class="stat-sub neu">주거비 등</div></div>
     <div class="stat"><div class="stat-label">🎯 예산 대비</div><div class="stat-val ${totalSpent>totalBudget?'down':'up'}">${totalBudget?(totalSpent/totalBudget*100).toFixed(0)+'%':'—'}</div><div class="stat-sub ${totalSpent<=totalBudget?'up':'down'}">${totalBudget?'$'+Math.round(Math.abs(totalBudget-totalSpent)).toLocaleString()+(totalSpent<=totalBudget?' 남음':' 초과'):''}</div></div>
-    <div class="stat"><div class="stat-label">🏆 최대 지출</div><div class="stat-val">${Object.keys(catSpent).length?Object.entries(catSpent).sort((a,b)=>b[1]-a[1])[0][0]:'—'}</div><div class="stat-sub neu">${Object.keys(catSpent).length?'$'+Math.round(Object.entries(catSpent).sort((a,b)=>b[1]-a[1])[0][1]).toLocaleString():''}</div></div>
   `;
 
   // Compare rows (budget vs spent) — click to filter txn list below
