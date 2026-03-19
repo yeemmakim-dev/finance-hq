@@ -1746,62 +1746,72 @@ function getCatOptions(selected){
   return allCats.map(c => `<option value="${c}" ${c===selected?'selected':''}>${BUDGET_ICONS[c]||'📦'} ${c}</option>`).join('');
 }
 
+// Recalc spending data without full re-render
+function _recalcSpending(){
+  if(!selectedMonth || !spendingHistory[selectedMonth]) return;
+  const data = spendingHistory[selectedMonth];
+  data.catSpent = {};
+  data.txns.forEach(tx => {
+    const amtUSD = tx.currency==='KRW' ? tx.amount/FX*10000 : tx.amount;
+    data.catSpent[tx.category] = (data.catSpent[tx.category]||0) + amtUSD;
+  });
+  data.totalSpent = Object.values(data.catSpent).reduce((a,b)=>a+b,0);
+  save();
+  applySpendingToBudget(selectedMonth);
+}
+
+// Light update: only refresh the strip numbers + donut + budget, NOT the category rows
+function _lightUpdate(){
+  _recalcSpending();
+  const data = spendingHistory[selectedMonth];
+  if(!data) return;
+  const catSpent = data.catSpent;
+  const totalSpent = Object.values(catSpent).reduce((a,b)=>a+b,0);
+  const totalBudget = budgetCats.reduce((a,c)=>a+c.budget,0);
+  const txnCount = parsedTxns.length;
+  const avgPerTxn = txnCount ? totalSpent/txnCount : 0;
+
+  // Update strip only
+  const strip = document.getElementById('sp-strip');
+  if(strip) strip.innerHTML = `
+    <div class="stat"><div class="stat-label">💳 총 지출</div><div class="stat-val">$${Math.round(totalSpent).toLocaleString()}</div><div class="stat-sub neu">${txnCount}건</div></div>
+    <div class="stat"><div class="stat-label">📊 건당 평균</div><div class="stat-val">$${Math.round(avgPerTxn).toLocaleString()}</div><div class="stat-sub neu">—</div></div>
+    <div class="stat"><div class="stat-label">🎯 예산 대비</div><div class="stat-val ${totalSpent>totalBudget?'down':'up'}">${totalBudget?(totalSpent/totalBudget*100).toFixed(0)+'%':'—'}</div><div class="stat-sub ${totalSpent<=totalBudget?'up':'down'}">${totalBudget?'$'+Math.round(Math.abs(totalBudget-totalSpent)).toLocaleString()+(totalSpent<=totalBudget?' 남음':' 초과'):''}</div></div>
+    <div class="stat"><div class="stat-label">🏆 최대 지출</div><div class="stat-val">${Object.keys(catSpent).length?Object.entries(catSpent).sort((a,b)=>b[1]-a[1])[0][0]:'—'}</div><div class="stat-sub neu">${Object.keys(catSpent).length?'$'+Math.round(Object.entries(catSpent).sort((a,b)=>b[1]-a[1])[0][1]).toLocaleString():''}</div></div>
+  `;
+  renderBudgetTab();
+}
+
 function changeTxnCategory(txnIdx, newCat){
   const t = parsedTxns[txnIdx];
   if(!t) return;
-  const oldCat = t.category;
   t.category = newCat;
-
-  // Save user override so same merchant auto-categorizes next time
   userCatMap[t.desc.toLowerCase()] = newCat;
 
-  // Update spending history for current month
   if(selectedMonth && spendingHistory[selectedMonth]){
-    const data = spendingHistory[selectedMonth];
-    // Find and update the transaction in history
-    const histTxn = data.txns.find(h => h.desc===t.desc && h.date===t.date && h.amount===t.amount);
+    const histTxn = spendingHistory[selectedMonth].txns.find(h => h.desc===t.desc && h.date===t.date && h.amount===t.amount);
     if(histTxn) histTxn.category = newCat;
-    // Recalculate catSpent
-    data.catSpent = {};
-    data.txns.forEach(tx => {
-      const amtUSD = tx.currency==='KRW' ? tx.amount/FX*10000 : tx.amount;
-      data.catSpent[tx.category] = (data.catSpent[tx.category]||0) + amtUSD;
-    });
-    data.totalSpent = Object.values(data.catSpent).reduce((a,b)=>a+b,0);
   }
 
-  save();
-  applySpendingToBudget(selectedMonth);
-
-  // Re-render but preserve open sub-rows
-  const data = spendingHistory[selectedMonth];
-  if(data) renderSpendingAnalysis(data.catSpent, true);
-  renderBudgetTab();
+  // Only update numbers, don't re-render category rows
+  _lightUpdate();
 }
 
 function deleteTxn(txnIdx){
   const t = parsedTxns[txnIdx];
   if(!t) return;
 
-  // Remove from parsedTxns
+  // Remove the DOM row immediately (no re-render)
   parsedTxns.splice(txnIdx, 1);
 
-  // Remove from spending history
   if(selectedMonth && spendingHistory[selectedMonth]){
     const data = spendingHistory[selectedMonth];
     const hi = data.txns.findIndex(h => h.desc===t.desc && h.date===t.date && h.amount===t.amount);
     if(hi>=0) data.txns.splice(hi, 1);
-    // Recalculate
-    data.catSpent = {};
-    data.txns.forEach(tx => {
-      const amtUSD = tx.currency==='KRW' ? tx.amount/FX*10000 : tx.amount;
-      data.catSpent[tx.category] = (data.catSpent[tx.category]||0) + amtUSD;
-    });
-    data.totalSpent = Object.values(data.catSpent).reduce((a,b)=>a+b,0);
   }
 
-  save();
-  applySpendingToBudget(selectedMonth);
+  // Full re-render needed for delete (row removed), but preserve open
+  _recalcSpending();
   const data = spendingHistory[selectedMonth];
   if(data) renderSpendingAnalysis(data.catSpent, true);
   renderBudgetTab();
