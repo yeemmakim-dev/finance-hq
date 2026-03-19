@@ -1396,7 +1396,7 @@ function renderBudgetTab(){
     return `<div class="bud-row" style="padding:8px 0;gap:8px;">
       <div class="bud-icon" style="background:${c.color}22;width:24px;height:24px;font-size:11px;border-radius:6px;">${c.icon}</div>
       <div class="bud-info">
-        <div class="bud-name" style="font-size:11px;">${c.name}</div>
+        <div class="bud-name" style="font-size:11px;">${c.name}${c.fixed?'<span style="font-size:9px;color:var(--t3);margin-left:4px;background:rgba(255,255,255,.06);padding:1px 4px;border-radius:3px;">고정</span>':''}</div>
         <div class="bud-meter">
           <div class="bud-bar-bg"><div class="bud-bar-fill" style="width:${Math.min(pct,100)}%;background:${color}"></div></div>
           <div class="bud-pct-num" style="color:${color};font-size:10px;">${pct.toFixed(0)}%</div>
@@ -1542,6 +1542,9 @@ function addBudgetEditRow(data){
     <input placeholder="카테고리명" value="${data?.name||''}"/>
     <input type="number" placeholder="예산 ($)" value="${data?.budget||''}"/>
     <select><option ${data?.currency==='USD'?'selected':''}>USD</option><option ${data?.currency==='KRW'?'selected':''}>KRW</option></select>
+    <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--t2);cursor:pointer;white-space:nowrap;" title="렌트 등 카드에 안 잡히는 고정지출은 매달 자동으로 예산만큼 지출에 추가됩니다">
+      <input type="checkbox" class="fixed-chk" ${data?.fixed?'checked':''} style="margin:0;"/>고정
+    </label>
     <button class="del-btn" onclick="this.parentElement.remove()">✕</button>`;
   c.appendChild(d);
 }
@@ -1559,7 +1562,8 @@ function saveBudgetModal(){
     const name = inp[0].value.trim();
     const budget = +inp[1].value||0;
     const currency = sel[1].value;
-    if(name) budgetCats.push({name,icon,budget,currency,color:BUDGET_COLORS[i%BUDGET_COLORS.length],spent:oldSpent[name]||0});
+    const fixed = row.querySelector('.fixed-chk')?.checked || false;
+    if(name) budgetCats.push({name,icon,budget,currency,fixed,color:BUDGET_COLORS[i%BUDGET_COLORS.length],spent:oldSpent[name]||0});
   });
   save(); closeBudgetModal(); renderBudgetTab();
 }
@@ -1862,6 +1866,10 @@ function applySpendingToBudget(month){
       const etc = budgetCats.find(c=>c.name==='기타');
       if(etc) etc.spent = (etc.spent||0) + amtUSD;
     }
+  });
+  // Auto-add fixed expenses (rent etc.) — budget amount counts as spent
+  budgetCats.forEach(c => {
+    if(c.fixed && c.budget > 0) c.spent = (c.spent||0) + c.budget;
   });
 }
 
