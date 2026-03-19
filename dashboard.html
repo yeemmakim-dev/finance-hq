@@ -1973,7 +1973,7 @@ function renderSpendingAnalysis(catSpent, preserveOpen){
     const over = budget>0 && spent>budget;
     const icon = BUDGET_ICONS[cat]||'📦';
     const color = budCat?.color || '#8b90a5';
-    const subId = 'sp-cat-txns-'+idx;
+    const subId = 'sp-cat-'+cat.replace(/[^a-zA-Z0-9가-힣]/g,'_');
 
     // Get transactions for this category
     const catTxns = parsedTxns.filter(t=>t.category===cat).sort((a,b)=>b.amount-a.amount);
@@ -2005,13 +2005,16 @@ function renderSpendingAnalysis(catSpent, preserveOpen){
   }).join('');
 
   // Restore open sub-rows
-  if(preserveOpen && openSubs.size){
+  if(preserveOpen){
     openSubs.forEach(id => {
       const el = document.getElementById(id);
       if(el){
         el.style.display = 'block';
         const row = el.previousElementSibling;
-        if(row){ const arrow = row.querySelector('.bud-name span'); if(arrow) arrow.textContent = arrow.textContent.replace('▶','▼'); }
+        if(row){
+          const arrow = row.querySelector('.bud-name span');
+          if(arrow) arrow.textContent = arrow.textContent.replace('▶','▼');
+        }
       }
     });
   }
