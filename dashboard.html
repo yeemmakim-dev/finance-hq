@@ -1365,6 +1365,14 @@ function renderBudgetTab(){
     const data = spendingHistory[selectedMonth];
     if(data && data.txns){
       parsedTxns = data.txns;
+      // Recalculate catSpent to include fixed expenses
+      data.catSpent = {};
+      data.txns.forEach(tx => {
+        const amtUSD = tx.currency==='KRW' ? tx.amount/FX*10000 : tx.amount;
+        data.catSpent[tx.category] = (data.catSpent[tx.category]||0) + amtUSD;
+      });
+      addFixedToCatSpent(data.catSpent);
+      data.totalSpent = Object.values(data.catSpent).reduce((a,b)=>a+b,0);
       applySpendingToBudget(selectedMonth);
       document.getElementById('csv-upload-area').style.display='none';
       document.getElementById('csv-result').style.display='block';
@@ -1887,6 +1895,14 @@ function switchMonth(month){
   const data = spendingHistory[month];
   if(!data) return;
   parsedTxns = data.txns;
+  // Recalculate catSpent with fixed expenses
+  data.catSpent = {};
+  data.txns.forEach(tx => {
+    const amtUSD = tx.currency==='KRW' ? tx.amount/FX*10000 : tx.amount;
+    data.catSpent[tx.category] = (data.catSpent[tx.category]||0) + amtUSD;
+  });
+  addFixedToCatSpent(data.catSpent);
+  data.totalSpent = Object.values(data.catSpent).reduce((a,b)=>a+b,0);
   applySpendingToBudget(month);
 
   document.getElementById('csv-upload-area').style.display='none';
