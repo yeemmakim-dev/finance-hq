@@ -1882,7 +1882,7 @@ function deleteTxn(txnIdx){
   renderMonthTabs();
 }
 
-function txnKey(t){ return `${t.date}|${t.desc}|${t.amount}`; }
+function txnKey(t){ return `${t.date}|${t.desc}|${Math.round(t.amount*100)}`; }
 
 function analyzeSpending(){
   // Group new txns by month
