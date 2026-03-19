@@ -581,58 +581,71 @@ function switchTab(id, el){
 // ═══════════════════════════════════════
 // QUOTES (서버 없이 브라우저에서 직접 호출)
 // ═══════════════════════════════════════
-const PROXIES = [
-  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-];
+// 개별 종목 조회 (Yahoo Finance v8 chart API - 가장 안정적)
+async function fetchSingleQuote(ticker){
+  const urls = [
+    `https://corsproxy.io/?${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=2d&interval=1d`)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=2d&interval=1d`)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=2d&interval=1d`)}`,
+  ];
+  for(const url of urls){
+    try{
+      const res = await fetch(url);
+      if(!res.ok) continue;
+      const data = await res.json();
+      const result = data?.chart?.result?.[0];
+      if(!result) continue;
+      const meta = result.meta;
+      const price = meta.regularMarketPrice;
+      const prevClose = meta.chartPreviousClose || meta.previousClose;
+      if(price==null) continue;
+      const change = prevClose ? price - prevClose : 0;
+      const changePct = prevClose ? (change/prevClose*100) : 0;
+      return {
+        symbol: ticker,
+        price: price,
+        change: change,
+        changePercent: changePct,
+        currency: meta.currency || 'USD',
+        shortName: meta.shortName || ticker,
+      };
+    }catch(e){ continue; }
+  }
+  return null;
+}
 
 async function fetchAllQuotes(){
   const tickers = stocks.map(s=>s.ticker).filter(Boolean);
-  if(!tickers.length) return;
+  if(!tickers.length){ alert('종목을 먼저 추가해주세요.'); return; }
   setStatus('loading');
   const btn = document.getElementById('refresh-btn');
   btn.disabled = true; btn.textContent = '⏳ 조회 중...';
 
   try{
-    const yahooUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(tickers.join(','))}`;
-    let data = null;
+    // 환율도 함께 조회
+    const allTickers = [...tickers];
+    if(!allTickers.includes('KRW=X')) allTickers.push('KRW=X');
 
-    // 1) Netlify 함수가 있으면 먼저 시도 (로컬/Netlify 배포)
-    try{
-      const res = await fetch(`/api/quote?symbols=${tickers.join(',')}`);
-      if(res.ok){ const d = await res.json(); if(!d.error){ liveQuotes = d; setStatus('live'); renderAll(); return; } }
-    }catch(e){}
+    // 개별 종목을 병렬로 조회 (v8 chart API 사용)
+    const results = await Promise.allSettled(allTickers.map(t => fetchSingleQuote(t)));
 
-    // 2) CORS 프록시로 Yahoo Finance 직접 호출
-    for(const proxy of PROXIES){
-      try{
-        const res = await fetch(proxy(yahooUrl), { headers:{'Accept':'application/json'} });
-        if(!res.ok) continue;
-        const text = await res.text();
-        data = JSON.parse(text);
-        break;
-      }catch(e){ continue; }
-    }
+    let successCount = 0;
+    results.forEach((r, i) => {
+      if(r.status === 'fulfilled' && r.value){
+        const q = r.value;
+        if(q.symbol === 'KRW=X'){
+          FX = Math.round(q.price);
+        } else {
+          liveQuotes[allTickers[i]] = q;
+          successCount++;
+        }
+      }
+    });
 
-    if(!data) throw new Error('모든 시세 소스 실패');
-
-    const quotes = data?.quoteResponse?.result || [];
-    for(const q of quotes){
-      liveQuotes[q.symbol] = {
-        symbol: q.symbol,
-        price: q.regularMarketPrice ?? null,
-        change: q.regularMarketChange ?? null,
-        changePercent: q.regularMarketChangePercent ?? null,
-        currency: q.currency ?? 'USD',
-        shortName: q.shortName ?? q.symbol,
-      };
-    }
-
-    // 환율 자동 업데이트 (USDKRW=X가 응답에 있으면)
-    const fxQ = quotes.find(q => q.symbol === 'KRW=X' || q.symbol === 'USDKRW=X');
-    if(fxQ?.regularMarketPrice) FX = Math.round(fxQ.regularMarketPrice);
+    if(successCount === 0) throw new Error('시세 조회 실패 - 잠시 후 다시 시도하세요');
 
     setStatus('live');
+    save();
     renderAll();
   }catch(e){
     console.error('Quote error:', e);
