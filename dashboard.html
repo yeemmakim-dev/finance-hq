@@ -1779,13 +1779,17 @@ function _lightUpdate(){
   const totalSpent = Object.values(catSpent).reduce((a,b)=>a+b,0);
   const totalBudget = budgetCats.reduce((a,c)=>a+c.budget,0);
   const txnCount = parsedTxns.length;
-  const avgPerTxn = txnCount ? totalSpent/txnCount : 0;
+  const fixedTotal = budgetCats.filter(c=>c.fixed&&c.budget>0).reduce((a,c)=>a+c.budget,0);
+  const cardSpent = totalSpent - fixedTotal;
+  const avgPerTxn = txnCount ? cardSpent/txnCount : 0;
 
   // Update strip only
   const strip = document.getElementById('sp-strip');
   if(strip) strip.innerHTML = `
     <div class="stat"><div class="stat-label">💳 총 지출</div><div class="stat-val">$${Math.round(totalSpent).toLocaleString()}</div><div class="stat-sub neu">${txnCount}건</div></div>
-    <div class="stat"><div class="stat-label">📊 건당 평균</div><div class="stat-val">$${Math.round(avgPerTxn).toLocaleString()}</div><div class="stat-sub neu">—</div></div>
+    <div class="stat"><div class="stat-label">💰 실지출</div><div class="stat-val" style="color:var(--accent)">$${Math.round(cardSpent).toLocaleString()}</div><div class="stat-sub neu">고정비 제외</div></div>
+    <div class="stat"><div class="stat-label">🏠 고정지출</div><div class="stat-val" style="color:var(--t2)">$${Math.round(fixedTotal).toLocaleString()}</div><div class="stat-sub neu">주거비 등</div></div>
+    <div class="stat"><div class="stat-label">📊 건당 평균</div><div class="stat-val">$${Math.round(avgPerTxn).toLocaleString()}</div><div class="stat-sub neu">실지출 기준</div></div>
     <div class="stat"><div class="stat-label">🎯 예산 대비</div><div class="stat-val ${totalSpent>totalBudget?'down':'up'}">${totalBudget?(totalSpent/totalBudget*100).toFixed(0)+'%':'—'}</div><div class="stat-sub ${totalSpent<=totalBudget?'up':'down'}">${totalBudget?'$'+Math.round(Math.abs(totalBudget-totalSpent)).toLocaleString()+(totalSpent<=totalBudget?' 남음':' 초과'):''}</div></div>
     <div class="stat"><div class="stat-label">🏆 최대 지출</div><div class="stat-val">${Object.keys(catSpent).length?Object.entries(catSpent).sort((a,b)=>b[1]-a[1])[0][0]:'—'}</div><div class="stat-sub neu">${Object.keys(catSpent).length?'$'+Math.round(Object.entries(catSpent).sort((a,b)=>b[1]-a[1])[0][1]).toLocaleString():''}</div></div>
   `;
@@ -1977,12 +1981,16 @@ function renderSpendingAnalysis(catSpent){
   const totalSpent = Object.values(catSpent).reduce((a,b)=>a+b,0);
   const totalBudget = budgetCats.reduce((a,c)=>a+c.budget,0);
   const txnCount = parsedTxns.length;
-  const avgPerTxn = txnCount ? totalSpent/txnCount : 0;
+  const fixedTotal = budgetCats.filter(c=>c.fixed&&c.budget>0).reduce((a,c)=>a+c.budget,0);
+  const cardSpent = totalSpent - fixedTotal;
+  const avgPerTxn = txnCount ? cardSpent/txnCount : 0;
 
   // Top strip
   document.getElementById('sp-strip').innerHTML = `
     <div class="stat"><div class="stat-label">💳 총 지출</div><div class="stat-val">$${Math.round(totalSpent).toLocaleString()}</div><div class="stat-sub neu">${txnCount}건</div></div>
-    <div class="stat"><div class="stat-label">📊 건당 평균</div><div class="stat-val">$${Math.round(avgPerTxn).toLocaleString()}</div><div class="stat-sub neu">—</div></div>
+    <div class="stat"><div class="stat-label">💰 실지출</div><div class="stat-val" style="color:var(--accent)">$${Math.round(cardSpent).toLocaleString()}</div><div class="stat-sub neu">고정비 제외</div></div>
+    <div class="stat"><div class="stat-label">🏠 고정지출</div><div class="stat-val" style="color:var(--t2)">$${Math.round(fixedTotal).toLocaleString()}</div><div class="stat-sub neu">주거비 등</div></div>
+    <div class="stat"><div class="stat-label">📊 건당 평균</div><div class="stat-val">$${Math.round(avgPerTxn).toLocaleString()}</div><div class="stat-sub neu">실지출 기준</div></div>
     <div class="stat"><div class="stat-label">🎯 예산 대비</div><div class="stat-val ${totalSpent>totalBudget?'down':'up'}">${totalBudget?(totalSpent/totalBudget*100).toFixed(0)+'%':'—'}</div><div class="stat-sub ${totalSpent<=totalBudget?'up':'down'}">${totalBudget?'$'+Math.round(Math.abs(totalBudget-totalSpent)).toLocaleString()+(totalSpent<=totalBudget?' 남음':' 초과'):''}</div></div>
     <div class="stat"><div class="stat-label">🏆 최대 지출</div><div class="stat-val">${Object.keys(catSpent).length?Object.entries(catSpent).sort((a,b)=>b[1]-a[1])[0][0]:'—'}</div><div class="stat-sub neu">${Object.keys(catSpent).length?'$'+Math.round(Object.entries(catSpent).sort((a,b)=>b[1]-a[1])[0][1]).toLocaleString():''}</div></div>
   `;
