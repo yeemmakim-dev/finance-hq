@@ -1872,34 +1872,58 @@ function deleteTxn(txnIdx){
   renderMonthTabs();
 }
 
+function txnKey(t){ return `${t.date}|${t.desc}|${t.amount}`; }
+
 function analyzeSpending(){
-  // Detect month from transactions
-  let month = '';
-  if(parsedTxns.length){
-    // Use the most common month in the data
-    const monthCounts = {};
-    parsedTxns.forEach(t => {
-      const m = t.date ? t.date.slice(0,7) : '';
-      if(m) monthCounts[m] = (monthCounts[m]||0) + 1;
-    });
-    month = Object.entries(monthCounts).sort((a,b)=>b[1]-a[1])[0]?.[0] || new Date().toISOString().slice(0,7);
-  } else {
-    month = new Date().toISOString().slice(0,7);
-  }
-
-  // Aggregate by category
-  const catSpent = {};
+  // Group new txns by month
+  const byMonth = {};
   parsedTxns.forEach(t => {
-    const amtUSD = t.currency==='KRW' ? t.amount/FX*10000 : t.amount;
-    catSpent[t.category] = (catSpent[t.category]||0) + amtUSD;
+    const m = t.date ? t.date.slice(0,7) : new Date().toISOString().slice(0,7);
+    if(!byMonth[m]) byMonth[m] = [];
+    byMonth[m].push(t);
   });
-  addFixedToCatSpent(catSpent);
-  const totalSpent = Object.values(catSpent).reduce((a,b)=>a+b,0);
 
-  // Save to monthly history
-  spendingHistory[month] = { txns: parsedTxns, catSpent, totalSpent };
-  selectedMonth = month;
+  // Merge into each month (avoid duplicates)
+  const months = Object.keys(byMonth);
+  months.forEach(month => {
+    const newTxns = byMonth[month];
+    const existing = spendingHistory[month]?.txns || [];
+    const existingKeys = new Set(existing.map(txnKey));
+    const merged = [...existing];
+    let added = 0;
+    newTxns.forEach(t => {
+      if(!existingKeys.has(txnKey(t))){
+        merged.push(t);
+        existingKeys.add(txnKey(t));
+        added++;
+      }
+    });
+
+    // Recalculate catSpent
+    const catSpent = {};
+    merged.forEach(t => {
+      const amtUSD = t.currency==='KRW' ? t.amount/FX*10000 : t.amount;
+      catSpent[t.category] = (catSpent[t.category]||0) + amtUSD;
+    });
+    addFixedToCatSpent(catSpent);
+    const totalSpent = Object.values(catSpent).reduce((a,b)=>a+b,0);
+
+    spendingHistory[month] = { txns: merged, catSpent, totalSpent };
+  });
+
+  // Select the month with most new txns
+  const primaryMonth = Object.entries(byMonth).sort((a,b)=>b[1].length-a[1].length)[0]?.[0] || new Date().toISOString().slice(0,7);
+  selectedMonth = primaryMonth;
+  parsedTxns = spendingHistory[primaryMonth].txns;
   save();
+
+  if(months.length > 1){
+    const summary = months.map(m => {
+      const [y,mo] = m.split('-');
+      return `${parseInt(mo)}월 ${byMonth[m].length}건`;
+    }).join(', ');
+    setTimeout(()=>alert(`📋 ${months.length}개월로 분류되어 병합되었습니다:\n${summary}`), 100);
+  }
 
   // Apply to budget
   applySpendingToBudget(month);
