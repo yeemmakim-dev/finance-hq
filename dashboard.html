@@ -1414,20 +1414,6 @@ function renderBudgetTab(){
     </div>`;
   }).join('') : '<div style="text-align:center;color:var(--t3);padding:16px;font-size:11px;">예산을 설정해주세요 → ✏️</div>';
 
-  // Donut
-  if(rows.length && rows.some(c=>(c.spent||0)>0)){
-    const data = rows.map(c=>c.spent||0);
-    const colors = rows.map(c=>c.color);
-    dc('bud-donut');
-    const ctx = document.getElementById('bud-donut');
-    charts['bud-donut'] = new Chart(ctx,{type:'doughnut',data:{datasets:[{data,backgroundColor:colors,borderWidth:0,hoverOffset:5}]},options:{responsive:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{enabled:false}}}});
-    document.getElementById('bud-donut-total').textContent = '$'+Math.round(totalSpent).toLocaleString();
-    document.getElementById('bud-donut-leg').innerHTML = rows.filter(c=>(c.spent||0)>0).map(c=>`<div class="leg-item"><div class="leg-dot" style="background:${c.color}"></div><span class="leg-name">${c.name}</span><span class="leg-val">$${Math.round(c.spent||0).toLocaleString()}</span></div>`).join('');
-  } else {
-    dc('bud-donut');
-    document.getElementById('bud-donut-total').textContent = '—';
-    document.getElementById('bud-donut-leg').innerHTML = '<div style="color:var(--t3);font-size:12px;">명세서를 업로드하면 지출 분포가 표시됩니다</div>';
-  }
 }
 
 // ═══════════════════════════════════════
