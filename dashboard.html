@@ -1604,12 +1604,15 @@ function parseCSV(text){
   // Detect column indices
   let dateCol=-1, descCol=-1, amtCol=-1, debitCol=-1, creditCol=-1;
 
+  let typeCol=-1, catCol=-1;
   headers.forEach((h,i)=>{
     if(dateCol<0 && /date|날짜|거래일|이용일|일시|transaction date|posting date/.test(h)) dateCol=i;
     if(descCol<0 && /desc|description|memo|메모|내용|이용처|가맹점|적요|상세/.test(h)) descCol=i;
     if(amtCol<0 && /^amount$|금액|이용금액|거래금액|결제금액/.test(h)) amtCol=i;
     if(debitCol<0 && /debit|출금|지출/.test(h)) debitCol=i;
     if(creditCol<0 && /credit|입금|수입/.test(h)) creditCol=i;
+    if(typeCol<0 && /^type$/.test(h)) typeCol=i;
+    if(catCol<0 && /^category$|카테고리|분류/.test(h)) catCol=i;
   });
 
   // Fallback: guess by position
@@ -1648,13 +1651,39 @@ function parseCSV(text){
     // Only keep spending (negative amounts = money out)
     // For debit/credit columns: debit is already positive spending
     if(debitCol>=0){
-      // debit column: positive = spending, skip if came from credit column (negative)
       if(amt<=0) continue; // credit/refund, skip
     } else {
-      // single amount column: negative = spending, positive = refund/payment received
       if(amt>0) continue; // income/refund, skip
       amt = -amt; // flip to positive for display
     }
+
+    // Skip non-purchase transaction types (e.g. Chase "Type" column)
+    if(typeCol>=0){
+      const type = (cols[typeCol]||'').replace(/"/g,'').trim().toLowerCase();
+      if(['payment','return','adjustment','fee'].includes(type)) continue;
+    }
+
+    // Filter out non-spending transactions (payments, transfers, fees, etc.)
+    const lowerDesc = desc.toLowerCase();
+    const excludePatterns = [
+      // Card payments / bill pay
+      'payment thank', 'automatic payment', 'autopay', 'online payment',
+      'bill payment', 'payment received', 'payment to chase', 'payment - thank',
+      'mobile payment', 'epayment', 'web payment',
+      // Transfers
+      'transfer to', 'transfer from', 'online transfer', 'wire transfer',
+      'ach transfer', 'zelle', 'venmo', 'cashapp', 'cash app',
+      'direct dep', 'direct deposit', 'payroll',
+      // Banking
+      'overdraft', 'nsf fee', 'annual fee', 'interest charge', 'finance charge',
+      'late fee', 'monthly fee', 'service fee', 'atm fee', 'foreign transaction fee',
+      'balance transfer', 'cash advance', 'credit adjustment', 'dispute',
+      'provisional credit', 'reversal',
+      // Korean banking
+      '이체', '입금', '급여', '월급', '상환', '대출', '이자', '수수료',
+      '카드대금', '자동이체', '적금', '예금',
+    ];
+    if(excludePatterns.some(p => lowerDesc.includes(p))) continue;
 
     const cat = categorize(desc);
     const date = parseDate(dateStr);
