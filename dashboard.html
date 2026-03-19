@@ -1613,8 +1613,16 @@ function parseCSV(text){
     const rawAmt = (cols[amtCol]||cols[debitCol]||'').replace(/"/g,'');
     const isKRW = Math.abs(amt)>500 && !rawAmt.includes('$'); // heuristic
 
-    // Make spending positive
-    if(amt<0) amt = -amt; // Some banks use negative for spending
+    // Only keep spending (negative amounts = money out)
+    // For debit/credit columns: debit is already positive spending
+    if(debitCol>=0){
+      // debit column: positive = spending, skip if came from credit column (negative)
+      if(amt<=0) continue; // credit/refund, skip
+    } else {
+      // single amount column: negative = spending, positive = refund/payment received
+      if(amt>0) continue; // income/refund, skip
+      amt = -amt; // flip to positive for display
+    }
 
     const cat = categorize(desc);
     const date = parseDate(dateStr);
