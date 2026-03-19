@@ -116,6 +116,24 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
 .tag-info{background:rgba(91,156,255,.1);color:var(--blue);}
 .tag-risk{background:rgba(248,113,113,.1);color:var(--red);}
 
+/* DEBT */
+.debt-card{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:10px;}
+.debt-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.debt-name{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;}
+.debt-badge{font-size:10px;padding:3px 8px;border-radius:4px;font-weight:500;}
+.debt-progress{margin-bottom:10px;}
+.debt-bar-bg{height:10px;background:rgba(255,255,255,.06);border-radius:5px;overflow:hidden;}
+.debt-bar-fill{height:100%;border-radius:5px;transition:width .5s;background:linear-gradient(90deg,var(--red),var(--amber));}
+.debt-bar-fill.complete{background:linear-gradient(90deg,var(--green),var(--teal));}
+.debt-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.debt-stat{text-align:center;}
+.debt-stat-label{font-size:10px;color:var(--t3);margin-bottom:3px;}
+.debt-stat-val{font-size:14px;font-weight:600;}
+.debt-entry{display:grid;grid-template-columns:1.5fr 1fr 1fr .8fr .8fr 32px;gap:6px;align-items:end;background:var(--card2);border-radius:10px;padding:10px;margin-bottom:6px;}
+.debt-entry .field{margin-bottom:0;}
+.debt-hdr-grid{display:grid;grid-template-columns:1.5fr 1fr 1fr .8fr .8fr 32px;gap:6px;padding:0 10px 6px;font-size:10px;color:var(--t3);}
+.networth-highlight{background:linear-gradient(135deg,rgba(91,156,255,.08),rgba(167,139,250,.08));border:1px solid rgba(91,156,255,.2);}
+
 .up{color:var(--green);}.down{color:var(--red);}.neu{color:var(--t3);}
 
 /* BUDGET */
@@ -220,6 +238,9 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
   .top-strip{grid-template-columns:1fr 1fr;}
   .grid-2,.grid-2-1{grid-template-columns:1fr;}
   .stock-entry{grid-template-columns:1fr 1fr 1fr;}
+  .debt-entry{grid-template-columns:1fr 1fr;}
+  .debt-hdr-grid{display:none;}
+  .debt-stats{grid-template-columns:1fr 1fr;}
   .stock-hdr{display:none;}
   .tabs{flex-wrap:wrap;}
 }
@@ -284,6 +305,19 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
         </div>
       </div>
     </div>
+    <!-- DEBT & NET WORTH -->
+    <div class="section" id="debt-section" style="display:none;">
+      <div class="section-hdr"><div class="section-title">📋 부채 · 상환 관리</div></div>
+      <div class="stat networth-highlight" style="margin-bottom:12px;padding:18px;">
+        <div class="stat-label" style="font-size:12px;">🏦 순자산 (총 자산 - 부채 잔액)</div>
+        <div style="display:flex;align-items:baseline;gap:12px;margin-top:6px;">
+          <div class="stat-val" id="net-worth-val" style="font-size:26px;">—</div>
+          <div id="net-worth-sub" style="font-size:12px;color:var(--t2);"></div>
+        </div>
+      </div>
+      <div id="debt-list"></div>
+    </div>
+
     <!-- HISTORY -->
     <div class="section">
       <div class="section-hdr">
@@ -508,6 +542,11 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
     <div id="stock-fields"></div>
     <button class="add-row" onclick="addStockField()">+ 종목 추가</button>
 
+    <div class="form-section">📋 부채 / 상환 계획</div>
+    <div class="debt-hdr-grid"><span>대상/설명</span><span>총 금액</span><span>모은 금액</span><span>통화</span><span>목표(년)</span><span></span></div>
+    <div id="debt-fields"></div>
+    <button class="add-row" onclick="addDebtField()">+ 부채 추가</button>
+
     <div class="form-section">⚙️ 환율</div>
     <div class="field"><label>USD/KRW 환율</label><input type="number" id="f-fx" min="1000" max="2000"/></div>
 
@@ -531,6 +570,8 @@ let krAssets = { cash:[], realty:0, crypto:0, retire:0 }; // 만원, cash = [{na
 
 let stocks = [];
 let snapshots = [];
+// Debts: [{name, totalAmount, savedAmount, currency, targetYears, note}]
+let debts = [];
 
 // Budget state
 let budgetIncomeUSD = 0;
@@ -563,7 +604,7 @@ const ASSET_META = {
 // PERSIST
 // ═══════════════════════════════════════
 function save(){
-  try{ localStorage.setItem('dash_v2', JSON.stringify({ usAssets, krAssets, stocks, FX, snapshots, budgetIncomeUSD, budgetIncomeKRW, budgetCats })); }catch(e){}
+  try{ localStorage.setItem('dash_v2', JSON.stringify({ usAssets, krAssets, stocks, FX, snapshots, budgetIncomeUSD, budgetIncomeKRW, budgetCats, debts })); }catch(e){}
 }
 function load(){
   try{
@@ -580,6 +621,7 @@ function load(){
       if(d.budgetIncomeUSD!=null) budgetIncomeUSD = d.budgetIncomeUSD;
       if(d.budgetIncomeKRW!=null) budgetIncomeKRW = d.budgetIncomeKRW;
       if(d.budgetCats) budgetCats = d.budgetCats;
+      if(d.debts) debts = d.debts;
     }
   }catch(e){}
 }
@@ -702,6 +744,13 @@ function grandTotalMan(){ return usTotalUSD()*FX/10000 + krTotalMan(); }
 function usStockCount(){ return stocks.filter(s=>s.currency==='USD').length; }
 function krStockCount(){ return stocks.filter(s=>s.currency==='KRW').length; }
 
+// Debt totals (만원 기준)
+function totalDebtMan(){ return debts.reduce((s,d)=>{ const amt=d.totalAmount||0; return s+(d.currency==='USD'?amt*FX/10000:amt/10000); },0); }
+function totalDebtSavedMan(){ return debts.reduce((s,d)=>{ const amt=d.savedAmount||0; return s+(d.currency==='USD'?amt*FX/10000:amt/10000); },0); }
+function totalDebtRemainingMan(){ return totalDebtMan()-totalDebtSavedMan(); }
+// Net worth = total assets - total debt remaining
+function netWorthMan(){ return grandTotalMan() - totalDebtRemainingMan(); }
+
 // FORMAT
 const fmtMan = v => { v=Math.abs(v); if(v>=10000) return (v/10000).toFixed(1)+'억'; if(v>=1000) return (v/1000).toFixed(1)+'천만'; return Math.round(v).toLocaleString()+'만'; };
 const fmtManSigned = v => (v>=0?'+':'-') + fmtMan(v);
@@ -732,11 +781,18 @@ function renderAllTab(){
   const stockTotalMan = usStockUSD()*FX/10000 + krStockMan();
   const stockPctAll = tot ? (stockTotalMan/tot*100) : 0;
 
+  const hasDebt = debts.length > 0;
+  const debtRemMan = totalDebtRemainingMan();
+  const nw = tot - debtRemMan;
+
   document.getElementById('all-strip').innerHTML = `
     <div class="stat"><div class="stat-label">💰 총 자산</div><div class="stat-val">${fmtMan(tot)}원</div><div class="stat-sub neu">≈ ${fmtUSD(tot*10000/FX)}</div></div>
     <div class="stat"><div class="stat-label">🇺🇸 미국</div><div class="stat-val">${fmtUSD(usUSD)}</div><div class="stat-sub neu">${tot?(usMan/tot*100).toFixed(0):0}%</div></div>
     <div class="stat"><div class="stat-label">🇰🇷 한국</div><div class="stat-val">${fmtMan(krMan)}원</div><div class="stat-sub neu">${tot?(krMan/tot*100).toFixed(0):0}%</div></div>
-    <div class="stat"><div class="stat-label">📈 주식/ETF</div><div class="stat-val">${fmtMan(stockTotalMan)}원</div><div class="stat-sub neu">${stocks.length}종목 · ${stockPctAll.toFixed(0)}%</div></div>
+    ${hasDebt ?
+      `<div class="stat networth-highlight"><div class="stat-label">🏦 순자산</div><div class="stat-val">${fmtMan(nw)}원</div><div class="stat-sub down">부채 잔액 -${fmtMan(debtRemMan)}원</div></div>` :
+      `<div class="stat"><div class="stat-label">📈 주식/ETF</div><div class="stat-val">${fmtMan(stockTotalMan)}원</div><div class="stat-sub neu">${stocks.length}종목 · ${stockPctAll.toFixed(0)}%</div></div>`
+    }
   `;
 
   // Country cards
@@ -755,6 +811,7 @@ function renderAllTab(){
   ];
   renderAssetRows('all-asset-rows', categories, tot);
   renderDonut('all-donut', 'all-donut-total', 'all-donut-leg', categories, tot, fmtMan(tot)+'원');
+  renderDebts();
   renderHistory();
   renderRecs();
 }
@@ -915,6 +972,58 @@ function takeSnapshot(){
 function deleteSnapshot(idx){ snapshots.splice(idx,1); save(); renderHistory(); }
 function clearSnapshots(){ if(!confirm('모든 기록을 삭제할까요?')) return; snapshots=[]; save(); renderHistory(); }
 
+// ═══════════════════════════════════════
+// DEBT RENDERING
+// ═══════════════════════════════════════
+function renderDebts(){
+  const section = document.getElementById('debt-section');
+  if(!debts.length){ section.style.display='none'; return; }
+  section.style.display='block';
+
+  const nw = netWorthMan();
+  const tot = grandTotalMan();
+  const debtRemaining = totalDebtRemainingMan();
+  document.getElementById('net-worth-val').textContent = fmtMan(nw)+'원';
+  document.getElementById('net-worth-sub').textContent = `총 자산 ${fmtMan(tot)}원 − 부채 잔액 ${fmtMan(debtRemaining)}원 ≈ ${fmtUSD(nw*10000/FX)}`;
+
+  document.getElementById('debt-list').innerHTML = debts.map((d,i) => {
+    const sym = d.currency==='USD'?'$':'₩';
+    const total = d.totalAmount||0;
+    const saved = d.savedAmount||0;
+    const remaining = total - saved;
+    const pct = total ? (saved/total*100) : 0;
+    const complete = pct >= 100;
+
+    // Monthly payment calc
+    const monthsLeft = (d.targetYears||5)*12;
+    const monthlyNeeded = remaining > 0 ? remaining / monthsLeft : 0;
+
+    const fmtA = v => d.currency==='USD' ? '$'+Math.round(v).toLocaleString() : '₩'+Math.round(v).toLocaleString();
+
+    return `<div class="debt-card">
+      <div class="debt-hdr">
+        <div class="debt-name">📋 ${d.name}</div>
+        <div class="debt-badge" style="background:${complete?'rgba(52,211,153,.12);color:var(--green)':'rgba(248,113,113,.12);color:var(--red)'}">
+          ${complete?'✅ 완납':'잔액 '+fmtA(remaining)}
+        </div>
+      </div>
+      <div class="debt-progress">
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;">
+          <span style="color:var(--t2)">상환 진행률</span>
+          <span style="font-weight:600;color:${complete?'var(--green)':'var(--amber)'}">${pct.toFixed(1)}%</span>
+        </div>
+        <div class="debt-bar-bg"><div class="debt-bar-fill ${complete?'complete':''}" style="width:${Math.min(pct,100)}%"></div></div>
+      </div>
+      <div class="debt-stats">
+        <div class="debt-stat"><div class="debt-stat-label">총 금액</div><div class="debt-stat-val">${fmtA(total)}</div></div>
+        <div class="debt-stat"><div class="debt-stat-label">모은 금액</div><div class="debt-stat-val up">${fmtA(saved)}</div></div>
+        <div class="debt-stat"><div class="debt-stat-label">남은 금액</div><div class="debt-stat-val ${remaining>0?'down':''}">${fmtA(remaining)}</div></div>
+        <div class="debt-stat"><div class="debt-stat-label">월 필요액 (${d.targetYears||5}년)</div><div class="debt-stat-val">${fmtA(Math.round(monthlyNeeded))}/월</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function renderHistory(){
   const tot = grandTotalMan();
   document.getElementById('hist-val').textContent = fmtMan(tot)+'원';
@@ -1025,6 +1134,25 @@ function renderRecs(){
   if(cryptoPct>20) recs.push({icon:'🪙',bg:'rgba(251,146,60,.1)',title:`암호화폐 과다 (${cryptoPct.toFixed(1)}%)`,desc:'5~10% 이내가 일반적 권장. 일부를 안정 자산으로 전환 고려.',tag:'warn',tagText:'주의'});
   if(realtyPct>70) recs.push({icon:'🏠',bg:'rgba(251,191,36,.1)',title:`부동산 편중 (${realtyPct.toFixed(1)}%)`,desc:'유동성이 낮아 긴급 시 불리합니다. 금융 자산 비중을 늘리세요.',tag:'warn',tagText:'유동성 주의'});
 
+  // 부채 관련 추천
+  if(debts.length > 0){
+    const debtRem = totalDebtRemainingMan();
+    const nw = netWorthMan();
+    if(debtRem > 0){
+      const debtRatio = tot > 0 ? (debtRem/tot*100) : 0;
+      if(debtRatio > 30) recs.push({icon:'⚠️',bg:'rgba(248,113,113,.1)',title:`부채 비율 ${debtRatio.toFixed(0)}% — 적극 상환 권장`,desc:'총 자산 대비 부채가 높습니다. 투자보다 상환을 우선하고, 상환 전용 계좌를 분리 관리하세요.',tag:'risk',tagText:'부채 관리'});
+      debts.forEach(d => {
+        const saved = d.savedAmount||0, total = d.totalAmount||0;
+        const pct = total?(saved/total*100):0;
+        const remaining = total-saved;
+        const monthly = remaining / ((d.targetYears||5)*12);
+        const sym = d.currency==='USD'?'$':'₩';
+        if(pct < 30) recs.push({icon:'📋',bg:'rgba(251,191,36,.1)',title:`${d.name}: 아직 ${pct.toFixed(0)}% 모았어요`,desc:`목표 달성까지 매월 ${sym}${Math.round(monthly).toLocaleString()} 저축이 필요합니다. 자동이체를 설정해두면 잊지 않아요.`,tag:'warn',tagText:'상환 계획'});
+        else if(pct >= 70 && pct < 100) recs.push({icon:'💪',bg:'rgba(52,211,153,.1)',title:`${d.name}: ${pct.toFixed(0)}% 달성! 거의 다 왔어요`,desc:`남은 ${sym}${Math.round(remaining).toLocaleString()}만 더 모으면 됩니다. 조금만 더 파이팅!`,tag:'good',tagText:'거의 완료'});
+      });
+    }
+  }
+
   if(grandTotalMan()===0) recs.push({icon:'📝',bg:'rgba(91,156,255,.1)',title:'자산 정보를 입력해주세요',desc:'"✏️ 자산 수정" 버튼을 눌러 정보를 입력하면 분석을 시작합니다.',tag:'info',tagText:'시작하기'});
   if(grandTotalMan()>0 && recs.length<3) recs.push({icon:'📊',bg:'rgba(167,139,250,.1)',title:'정기 리밸런싱 추천',desc:'3~6개월마다 자산 배분 비율을 점검하고 리밸런싱하세요.',tag:'info',tagText:'팁'});
 
@@ -1076,6 +1204,12 @@ function openModal(){
   c.innerHTML='';
   stocks.forEach(s=>addStockField(s));
   if(!stocks.length) addStockField();
+
+  // Debt fields
+  const dc = document.getElementById('debt-fields');
+  dc.innerHTML='';
+  debts.forEach(d=>addDebtField(d));
+
   document.getElementById('modal-overlay').classList.add('open');
 }
 function closeModal(){ document.getElementById('modal-overlay').classList.remove('open'); }
@@ -1090,6 +1224,20 @@ function addStockField(data){
     <div class="field"><select><option ${data?.currency==='KRW'?'selected':''}>KRW</option><option ${data?.currency==='USD'?'selected':''}>USD</option></select></div>
     <div class="field"><input placeholder="VOO" value="${data?.ticker||''}"/></div>
     <div class="field"><input type="number" placeholder="수량" value="${data?.qty||''}"/></div>
+    <button class="del-btn" onclick="this.parentElement.remove()">✕</button>`;
+  c.appendChild(d);
+}
+
+function addDebtField(data){
+  const c = document.getElementById('debt-fields');
+  const d = document.createElement('div');
+  d.className='debt-entry';
+  d.innerHTML=`
+    <div class="field"><label>대상</label><input placeholder="예: 엄마 빌린돈" value="${data?.name||''}"/></div>
+    <div class="field"><label>총 금액</label><input type="number" placeholder="100000" value="${data?.totalAmount||''}"/></div>
+    <div class="field"><label>모은 금액</label><input type="number" placeholder="20000" value="${data?.savedAmount||''}"/></div>
+    <div class="field"><label>통화</label><select><option ${data?.currency==='USD'?'selected':''}>USD</option><option ${data?.currency==='KRW'?'selected':''}>KRW</option></select></div>
+    <div class="field"><label>목표(년)</label><input type="number" placeholder="5" value="${data?.targetYears||''}"/></div>
     <button class="del-btn" onclick="this.parentElement.remove()">✕</button>`;
   c.appendChild(d);
 }
@@ -1120,6 +1268,12 @@ function saveModal(){
     const inp=row.querySelectorAll('input'), sel=row.querySelectorAll('select');
     const name=inp[0].value.trim(), ticker=inp[1].value.trim(), qty=+inp[2].value;
     if(name&&ticker&&qty) stocks.push({name,cat:sel[0].value,currency:sel[1].value,ticker,qty});
+  });
+  debts=[];
+  document.querySelectorAll('.debt-entry').forEach(row=>{
+    const inp=row.querySelectorAll('input'), sel=row.querySelectorAll('select');
+    const name=inp[0].value.trim(), totalAmount=+inp[1].value||0, savedAmount=+inp[2].value||0, targetYears=+inp[3].value||5;
+    if(name&&totalAmount) debts.push({name,totalAmount,savedAmount,currency:sel[0].value,targetYears});
   });
   save(); closeModal(); renderAll();
   if(stocks.length) fetchAllQuotes();
