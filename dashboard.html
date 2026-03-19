@@ -146,6 +146,15 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
 .bud-bar-fill{height:100%;border-radius:3px;transition:width .4s;}
 .bud-pct-num{font-size:11px;min-width:40px;text-align:right;font-weight:500;}
 .bud-right{text-align:right;flex-shrink:0;min-width:100px;}
+.pc-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.pc-row:last-child{border-bottom:none;}
+.pc-date{font-size:12px;color:var(--t2);min-width:80px;}
+.pc-amounts{flex:1;display:flex;gap:16px;}
+.pc-amt{font-size:13px;font-weight:500;}
+.pc-label{font-size:10px;color:var(--t2);}
+.pc-note{font-size:11px;color:var(--t2);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pc-del{background:none;border:none;color:var(--t2);cursor:pointer;font-size:14px;padding:4px;transition:color .15s;}
+.pc-del:hover{color:var(--red);}
 .bud-val{font-size:13px;font-weight:600;}
 .bud-sub{font-size:11px;color:var(--t3);margin-top:2px;}
 .bud-edit-row{display:grid;grid-template-columns:40px 1.2fr 1fr 1fr 40px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);}
@@ -399,7 +408,43 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
 
   <!-- ====== BUDGET (예산/지출) ====== -->
   <div class="tab-page" id="page-budget">
+
+    <!-- PAYDAY BANNER -->
+    <div id="payday-banner" style="display:none;background:linear-gradient(135deg,rgba(52,211,153,.1),rgba(91,156,255,.1));border:1px solid rgba(52,211,153,.25);border-radius:14px;padding:20px 24px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-size:16px;font-weight:600;">💰 오늘 급여일이에요!</div>
+          <div style="font-size:12px;color:var(--t2);margin-top:4px;">이번 급여를 기록해두세요</div>
+        </div>
+        <button class="btn btn-primary" onclick="openPaycheckInput()" style="padding:8px 20px;">✍️ 급여 입력</button>
+      </div>
+    </div>
+
+    <!-- PAYCHECK INPUT (hidden by default) -->
+    <div id="paycheck-input-area" style="display:none;" class="card section">
+      <div class="card-title"><span>✍️ 급여 입력</span><button class="btn btn-ghost" onclick="closePaycheckInput()" style="font-size:11px;">✕ 닫기</button></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:flex-end;">
+        <div class="field"><label>날짜</label><input type="date" id="pc-date"/></div>
+        <div class="field"><label>세전 (Gross) $</label><input type="number" id="pc-gross" min="0" placeholder="0"/></div>
+        <div class="field"><label>세후 (Net) $</label><input type="number" id="pc-net" min="0" placeholder="0"/></div>
+        <div class="field"><label>메모</label><input type="text" id="pc-note" placeholder="예: 보너스 포함"/></div>
+        <button class="btn btn-primary" onclick="savePaycheck()" style="padding:8px 16px;margin-bottom:1px;">저장</button>
+      </div>
+    </div>
+
     <div class="budget-strip" id="bud-strip"></div>
+
+    <!-- PAYCHECK HISTORY -->
+    <div class="section" id="paycheck-section" style="display:none;">
+      <div class="card">
+        <div class="card-title">
+          <span>💵 급여 기록</span>
+          <button class="btn btn-ghost" onclick="openPaycheckInput()" style="font-size:11px;padding:5px 12px;">+ 수동 추가</button>
+        </div>
+        <div id="paycheck-list"></div>
+        <div id="paycheck-summary" style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:12px;color:var(--t2);"></div>
+      </div>
+    </div>
 
     <div class="grid-2 section">
       <!-- 예산 설정 -->
@@ -578,6 +623,9 @@ let budgetCats = [
   {name:'기타',icon:'📦',color:'#8b90a5',budget:0,currency:'USD'},
 ];
 let parsedTxns = []; // parsed CSV transactions
+// Paycheck log: [{date:'2026-03-20', gross:0, net:0, note:''}]
+let paychecks = [];
+const PAY_ANCHOR = new Date('2026-03-20'); // first known payday (biweekly Friday)
 
 // cash 합계 헬퍼
 function cashSum(arr){ return Array.isArray(arr) ? arr.reduce((s,a)=>s+(a.value||0),0) : (arr||0); }
@@ -595,7 +643,7 @@ const ASSET_META = {
 // PERSIST
 // ═══════════════════════════════════════
 function save(){
-  try{ localStorage.setItem('dash_v2', JSON.stringify({ usAssets, krAssets, stocks, FX, snapshots, budgetIncomeUSD, budgetIncomeKRW, budgetCats, debts })); }catch(e){}
+  try{ localStorage.setItem('dash_v2', JSON.stringify({ usAssets, krAssets, stocks, FX, snapshots, budgetIncomeUSD, budgetIncomeKRW, budgetCats, debts, paychecks })); }catch(e){}
 }
 function load(){
   try{
@@ -613,6 +661,7 @@ function load(){
       if(d.budgetIncomeKRW!=null) budgetIncomeKRW = d.budgetIncomeKRW;
       if(d.budgetCats) budgetCats = d.budgetCats;
       if(d.debts) debts = d.debts;
+      if(d.paychecks) paychecks = d.paychecks;
     }
   }catch(e){}
 }
@@ -1298,6 +1347,9 @@ const SPEND_KEYWORDS = {
 };
 
 function renderBudgetTab(){
+  checkPaydayBanner();
+  renderPaychecks();
+
   const totalBudget = budgetCats.reduce((a,c)=>a+c.budget,0);
   const totalSpent = budgetCats.reduce((a,c)=>a+(c.spent||0),0);
   const remaining = totalBudget - totalSpent;
@@ -1350,6 +1402,101 @@ function renderBudgetTab(){
 // ═══════════════════════════════════════
 // BUDGET MODAL
 // ═══════════════════════════════════════
+// ── PAYCHECK FUNCTIONS ──
+function isPayday(date){
+  if(!date) date = new Date();
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  if(d.getDay() !== 5) return false; // not Friday
+  const diff = Math.round((d - new Date(PAY_ANCHOR.getFullYear(), PAY_ANCHOR.getMonth(), PAY_ANCHOR.getDate())) / 86400000);
+  return diff >= 0 && diff % 14 === 0;
+}
+
+function checkPaydayBanner(){
+  const banner = document.getElementById('payday-banner');
+  if(!banner) return;
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0,10);
+  const alreadyLogged = paychecks.some(p => p.date === todayStr);
+  if(isPayday(today) && !alreadyLogged){
+    banner.style.display = 'block';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function openPaycheckInput(){
+  const area = document.getElementById('paycheck-input-area');
+  area.style.display = 'block';
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('pc-date').value = today;
+  document.getElementById('pc-gross').value = '';
+  document.getElementById('pc-net').value = '';
+  document.getElementById('pc-note').value = '';
+  document.getElementById('pc-net').focus();
+}
+
+function closePaycheckInput(){
+  document.getElementById('paycheck-input-area').style.display = 'none';
+}
+
+function savePaycheck(){
+  const date = document.getElementById('pc-date').value;
+  const gross = +document.getElementById('pc-gross').value || 0;
+  const net = +document.getElementById('pc-net').value || 0;
+  const note = document.getElementById('pc-note').value.trim();
+  if(!net && !gross){ alert('금액을 입력해주세요'); return; }
+  paychecks.push({ date, gross, net, note });
+  paychecks.sort((a,b) => b.date.localeCompare(a.date));
+  save();
+  closePaycheckInput();
+  checkPaydayBanner();
+  renderPaychecks();
+  renderBudgetTab();
+}
+
+function deletePaycheck(idx){
+  if(!confirm('이 급여 기록을 삭제할까요?')) return;
+  paychecks.splice(idx, 1);
+  save();
+  checkPaydayBanner();
+  renderPaychecks();
+  renderBudgetTab();
+}
+
+function renderPaychecks(){
+  const section = document.getElementById('paycheck-section');
+  if(!paychecks.length){ section.style.display = 'none'; return; }
+  section.style.display = 'block';
+
+  const list = document.getElementById('paycheck-list');
+  list.innerHTML = paychecks.map((p, i) => {
+    const d = new Date(p.date+'T12:00:00');
+    const dateStr = `${d.getMonth()+1}/${d.getDate()} (${['일','월','화','수','목','금','토'][d.getDay()]})`;
+    return `<div class="pc-row">
+      <div class="pc-date">${dateStr}</div>
+      <div class="pc-amounts">
+        ${p.gross ? `<div><div class="pc-amt" style="color:var(--t2)">$${p.gross.toLocaleString()}</div><div class="pc-label">세전</div></div>` : ''}
+        <div><div class="pc-amt up">$${(p.net||p.gross).toLocaleString()}</div><div class="pc-label">세후</div></div>
+      </div>
+      ${p.note ? `<div class="pc-note" title="${p.note}">📝 ${p.note}</div>` : ''}
+      <button class="pc-del" onclick="deletePaycheck(${i})">🗑</button>
+    </div>`;
+  }).join('');
+
+  // Summary
+  const summary = document.getElementById('paycheck-summary');
+  const thisYear = paychecks.filter(p => p.date.startsWith(new Date().getFullYear().toString()));
+  const thisMonth = paychecks.filter(p => p.date.startsWith(new Date().toISOString().slice(0,7)));
+  const ytdNet = thisYear.reduce((s,p) => s + (p.net||p.gross||0), 0);
+  const monthNet = thisMonth.reduce((s,p) => s + (p.net||p.gross||0), 0);
+  const avgNet = thisYear.length ? ytdNet / thisYear.length : 0;
+  summary.innerHTML = `
+    이번 달: <strong>$${monthNet.toLocaleString()}</strong> (${thisMonth.length}회)
+    &nbsp;·&nbsp; YTD: <strong>$${ytdNet.toLocaleString()}</strong> (${thisYear.length}회)
+    &nbsp;·&nbsp; 평균: <strong>$${Math.round(avgNet).toLocaleString()}</strong>/회
+  `;
+}
+
 function openBudgetModal(){
   document.getElementById('f-income-usd').value = budgetIncomeUSD||'';
   document.getElementById('f-income-krw').value = budgetIncomeKRW||'';
