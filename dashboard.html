@@ -255,6 +255,7 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
   .debt-stats{grid-template-columns:1fr 1fr;}
   .stock-hdr{display:none;}
   .tabs{flex-wrap:wrap;}
+  #page-budget > .budget-strip + div{grid-template-columns:1fr !important;}
 }
 </style>
 </head>
@@ -439,99 +440,84 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
 
     <div class="budget-strip" id="bud-strip"></div>
 
-    <!-- PAYCHECK HISTORY -->
-    <div class="section" id="paycheck-section" style="display:none;">
-      <div class="card">
-        <div class="card-title">
-          <span>💵 급여 기록</span>
-          <button class="btn btn-ghost" onclick="openPaycheckInput()" style="font-size:11px;padding:5px 12px;">+ 수동 추가</button>
-        </div>
-        <div id="paycheck-list"></div>
-        <div id="paycheck-summary" style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:12px;color:var(--t2);"></div>
-      </div>
-    </div>
+    <!-- MAIN LAYOUT: sidebar budget + main spending -->
+    <div style="display:grid;grid-template-columns:240px 1fr;gap:12px;align-items:start;">
 
-    <div class="grid-2 section">
-      <!-- 예산 설정 -->
-      <div class="card">
-        <div class="card-title">
-          <span>🎯 월 예산 설정</span>
-          <button class="btn btn-ghost" onclick="openBudgetModal()" style="font-size:11px;padding:5px 12px;">✏️ 수정</button>
-        </div>
-        <div id="bud-category-rows"></div>
-      </div>
-
-      <!-- 지출 현황 도넛 -->
-      <div class="card">
-        <div class="card-title"><span>지출 배분</span></div>
-        <div class="donut-area">
-          <div class="donut-container"><canvas id="bud-donut" width="180" height="180"></canvas>
-            <div class="donut-center"><div class="donut-total" id="bud-donut-total">—</div><div class="donut-label">총 지출</div></div>
+      <!-- LEFT: 예산 설정 (compact) -->
+      <div style="position:sticky;top:12px;">
+        <div class="card" style="padding:14px;">
+          <div class="card-title" style="margin-bottom:8px;">
+            <span style="font-size:11px;">🎯 월 예산</span>
+            <button class="btn btn-ghost" onclick="openBudgetModal()" style="font-size:10px;padding:3px 8px;">✏️</button>
           </div>
-          <div class="legend" id="bud-donut-leg"></div>
+          <div id="bud-category-rows"></div>
+        </div>
+
+        <!-- PAYCHECK HISTORY -->
+        <div id="paycheck-section" style="display:none;margin-top:10px;">
+          <div class="card" style="padding:14px;">
+            <div class="card-title" style="margin-bottom:8px;">
+              <span style="font-size:11px;">💵 급여 기록</span>
+              <button class="btn btn-ghost" onclick="openPaycheckInput()" style="font-size:10px;padding:3px 8px;">+</button>
+            </div>
+            <div id="paycheck-list"></div>
+            <div id="paycheck-summary" style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border);font-size:11px;color:var(--t2);"></div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- CSV 업로드 -->
-    <div class="section">
-      <div class="section-hdr">
-        <div class="section-title">📂 카드 명세서 분석</div>
-        <div style="display:flex;align-items:center;gap:8px;">
+      <!-- RIGHT: 달별 지출 분석 (main) -->
+      <div>
+        <!-- 월별 탭 -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+          <div id="month-tab-list" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;"></div>
           <span id="csv-reset" style="font-size:11px;color:var(--blue);cursor:pointer;display:none;" onclick="showUploadArea()">+ 새로 업로드</span>
         </div>
-      </div>
 
-      <!-- 월별 탭 (저장된 달이 있을 때만 보임) -->
-      <div id="month-tabs" style="display:none;margin-bottom:12px;overflow-x:auto;">
-        <div id="month-tab-list" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;"></div>
-      </div>
-
-      <div id="csv-upload-area" class="card">
-        <div class="upload-zone" id="drop-zone">
-          <input type="file" accept=".csv,.txt,.tsv" onchange="handleCSV(this.files[0])"/>
-          <div class="upload-icon">📂</div>
-          <div class="upload-title">카드/은행 명세서 업로드</div>
-          <div class="upload-desc">
-            CSV 파일을 드래그하거나 클릭하세요<br>
-            Chase, BofA, 신한, 국민, 삼성카드 등 대부분 형식 자동 인식<br>
-            <span style="color:var(--t3);font-size:11px;margin-top:6px;display:inline-block;">날짜 · 설명 · 금액 컬럼이 포함되어야 합니다</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- CSV 분석 결과 (초기 숨김) -->
-      <div id="csv-result" style="display:none;">
-        <div class="budget-strip" id="sp-strip"></div>
-        <div class="grid-2 section">
-          <div class="card">
-            <div class="card-title"><span>카테고리별 실 지출 vs 예산</span></div>
-            <div id="sp-compare-rows"></div>
-          </div>
-          <div class="card">
-            <div class="card-title"><span>지출 분포</span></div>
-            <div class="donut-area">
-              <div class="donut-container"><canvas id="sp-donut" width="180" height="180"></canvas>
-                <div class="donut-center"><div class="donut-total" id="sp-donut-total">—</div><div class="donut-label">실 지출</div></div>
-              </div>
-              <div class="legend" id="sp-donut-leg"></div>
+        <div id="csv-upload-area" class="card">
+          <div class="upload-zone" id="drop-zone">
+            <input type="file" accept=".csv,.txt,.tsv" onchange="handleCSV(this.files[0])"/>
+            <div class="upload-icon">📂</div>
+            <div class="upload-title">카드 명세서 업로드</div>
+            <div class="upload-desc">
+              CSV 파일을 드래그하거나 클릭 · Chase, BofA 등 자동 인식<br>
+              <span style="color:var(--t3);font-size:11px;">날짜 · 설명 · 금액 컬럼 필요</span>
             </div>
           </div>
         </div>
 
-        <!-- 절약 추천 -->
-        <div class="section">
-          <div class="section-hdr"><div class="section-title">💡 절약 포인트</div></div>
-          <div id="sp-recs"></div>
-        </div>
+        <!-- CSV 분석 결과 -->
+        <div id="csv-result" style="display:none;">
+          <div class="budget-strip" id="sp-strip"></div>
+          <div class="grid-2 section">
+            <div class="card">
+              <div class="card-title"><span>카테고리별 지출 vs 예산</span></div>
+              <div id="sp-compare-rows"></div>
+            </div>
+            <div class="card">
+              <div class="card-title"><span>지출 분포</span></div>
+              <div class="donut-area">
+                <div class="donut-container"><canvas id="sp-donut" width="180" height="180"></canvas>
+                  <div class="donut-center"><div class="donut-total" id="sp-donut-total">—</div><div class="donut-label">실 지출</div></div>
+                </div>
+                <div class="legend" id="sp-donut-leg"></div>
+              </div>
+            </div>
+          </div>
 
-        <!-- 거래 내역 -->
-        <div class="card">
-          <div class="card-title"><span>거래 내역</span><span id="sp-txn-count" style="font-size:11px;color:var(--t2);"></span></div>
-          <div id="sp-txn-list" style="max-height:400px;overflow-y:auto;"></div>
+          <div class="section">
+            <div class="section-hdr"><div class="section-title">💡 절약 포인트</div></div>
+            <div id="sp-recs"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title"><span>거래 내역</span><span id="sp-txn-count" style="font-size:11px;color:var(--t2);"></span></div>
+            <div id="sp-txn-list" style="max-height:400px;overflow-y:auto;"></div>
+          </div>
         </div>
       </div>
-    </div>
+
+    </div><!-- end grid -->
   </div>
 
 </div>
@@ -1930,10 +1916,7 @@ function formatMonthLabel(m){
 
 function renderMonthTabs(){
   const months = Object.keys(spendingHistory).sort().reverse();
-  const container = document.getElementById('month-tabs');
   const list = document.getElementById('month-tab-list');
-  if(!months.length){ container.style.display='none'; return; }
-  container.style.display='block';
 
   list.innerHTML = months.map(m => {
     const data = spendingHistory[m];
