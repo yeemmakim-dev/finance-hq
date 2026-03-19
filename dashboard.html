@@ -1993,7 +1993,7 @@ function renderSpendingAnalysis(catSpent){
       </div>`;
     }).join('');
 
-    return `<div class="bud-row" onclick="toggleSub('${subId}',this)" style="cursor:pointer;">
+    return `<div class="bud-row" onclick="toggleSub('${subId}',this);filterTxnByCat('${cat}')" style="cursor:pointer;">
       <div class="bud-icon" style="background:${color}22">${icon}</div>
       <div class="bud-info">
         <div class="bud-name">${cat} <span style="font-size:10px;color:var(--t2);margin-left:4px;">${txnCount}건 ▶</span>${over?'<span style="font-size:10px;color:var(--red);margin-left:4px;">초과!</span>':''}</div>
@@ -2057,10 +2057,13 @@ function renderSpendingAnalysis(catSpent){
 let txnFilterCat = ''; // '' = show all
 
 function filterTxnByCat(cat){
-  txnFilterCat = (txnFilterCat === cat) ? '' : cat; // toggle
+  // Sync with sub-row: check if it's now open
+  const subId = 'sp-cat-'+cat.replace(/[^a-zA-Z0-9가-힣]/g,'_');
+  const subEl = document.getElementById(subId);
+  const isOpen = subEl && subEl.style.display !== 'none';
+  txnFilterCat = isOpen ? cat : '';
   renderTxnList();
-  // Scroll to txn list
-  document.getElementById('sp-txn-list')?.scrollIntoView({behavior:'smooth', block:'start'});
+  if(isOpen) document.getElementById('sp-txn-list')?.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 function renderTxnList(){
