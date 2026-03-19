@@ -1393,7 +1393,8 @@ document.getElementById('modal-overlay').addEventListener('click',e=>{ if(e.targ
 // ═══════════════════════════════════════
 // BUDGET TAB
 // ═══════════════════════════════════════
-const BUDGET_ICONS = {'식비':'🍔','교통/주유':'🚗','주거/공과금':'🏠','쇼핑':'🛍️','여가/외식':'🎬','구독서비스':'📱','의료/건강':'💊','기타':'📦','커피':'☕','술/유흥':'🍺','교육':'📚','선물':'🎁','미용':'💇','반려동물':'🐾'};
+function getBudgetIcon(cat){ const bc = budgetCats.find(c=>c.name===cat); return bc?.icon || '📦'; }
+const BUDGET_ICONS = new Proxy({}, { get(_, cat){ return getBudgetIcon(cat); } });
 const BUDGET_COLORS = ['#5b9cff','#34d399','#fbbf24','#a78bfa','#fb923c','#f472b6','#2dd4bf','#8b90a5','#e879f9','#f87171','#38bdf8','#a3e635'];
 
 // Auto-categorize keywords
