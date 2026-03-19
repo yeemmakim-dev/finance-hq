@@ -638,6 +638,8 @@ let parsedTxns = []; // parsed CSV transactions
 // Monthly spending history: { '2026-03': { txns:[...], catSpent:{...}, totalSpent:0 }, ... }
 let spendingHistory = {};
 let selectedMonth = ''; // currently viewing month
+// User category overrides: { 'description_lowercase': 'category_name' }
+let userCatMap = {};
 // Paycheck log: [{date:'2026-03-20', gross:0, net:0, note:''}]
 let paychecks = [];
 const PAY_ANCHOR = new Date('2026-03-20'); // first known payday (biweekly Friday)
@@ -658,7 +660,7 @@ const ASSET_META = {
 // PERSIST
 // ═══════════════════════════════════════
 function save(){
-  try{ localStorage.setItem('dash_v2', JSON.stringify({ usAssets, krAssets, stocks, FX, snapshots, budgetIncomeUSD, budgetIncomeKRW, budgetCats, debts, paychecks, spendingHistory })); }catch(e){}
+  try{ localStorage.setItem('dash_v2', JSON.stringify({ usAssets, krAssets, stocks, FX, snapshots, budgetIncomeUSD, budgetIncomeKRW, budgetCats, debts, paychecks, spendingHistory, userCatMap })); }catch(e){}
 }
 function load(){
   try{
@@ -678,6 +680,7 @@ function load(){
       if(d.debts) debts = d.debts;
       if(d.paychecks) paychecks = d.paychecks;
       if(d.spendingHistory) spendingHistory = d.spendingHistory;
+      if(d.userCatMap) userCatMap = d.userCatMap;
     }
   }catch(e){}
 }
@@ -1728,12 +1731,52 @@ function parseDate(str){
 
 function categorize(desc){
   const lower = desc.toLowerCase();
+  // Check user overrides first
+  if(userCatMap[lower]) return userCatMap[lower];
   for(const [cat, keywords] of Object.entries(SPEND_KEYWORDS)){
     for(const kw of keywords){
       if(lower.includes(kw.toLowerCase())) return cat;
     }
   }
   return '기타';
+}
+
+function getCatOptions(selected){
+  const allCats = [...new Set([...budgetCats.map(c=>c.name), ...Object.keys(BUDGET_ICONS)])];
+  return allCats.map(c => `<option value="${c}" ${c===selected?'selected':''}>${BUDGET_ICONS[c]||'📦'} ${c}</option>`).join('');
+}
+
+function changeTxnCategory(txnIdx, newCat){
+  const t = parsedTxns[txnIdx];
+  if(!t) return;
+  const oldCat = t.category;
+  t.category = newCat;
+
+  // Save user override so same merchant auto-categorizes next time
+  userCatMap[t.desc.toLowerCase()] = newCat;
+
+  // Update spending history for current month
+  if(selectedMonth && spendingHistory[selectedMonth]){
+    const data = spendingHistory[selectedMonth];
+    // Find and update the transaction in history
+    const histTxn = data.txns.find(h => h.desc===t.desc && h.date===t.date && h.amount===t.amount);
+    if(histTxn) histTxn.category = newCat;
+    // Recalculate catSpent
+    data.catSpent = {};
+    data.txns.forEach(tx => {
+      const amtUSD = tx.currency==='KRW' ? tx.amount/FX*10000 : tx.amount;
+      data.catSpent[tx.category] = (data.catSpent[tx.category]||0) + amtUSD;
+    });
+    data.totalSpent = Object.values(data.catSpent).reduce((a,b)=>a+b,0);
+  }
+
+  save();
+  applySpendingToBudget(selectedMonth);
+
+  // Re-render spending analysis
+  const data = spendingHistory[selectedMonth];
+  if(data) renderSpendingAnalysis(data.catSpent);
+  renderBudgetTab();
 }
 
 function analyzeSpending(){
@@ -1901,8 +1944,10 @@ function renderSpendingAnalysis(catSpent){
 
     const txnListHtml = catTxns.map(t=>{
       const sym = t.currency==='KRW'?'₩':'$';
+      const tIdx = parsedTxns.indexOf(t);
       return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0 7px 52px;font-size:12px;border-bottom:1px solid rgba(255,255,255,.03);">
         <span style="flex:1;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${t.desc}">${t.desc}</span>
+        <select onchange="changeTxnCategory(${tIdx},this.value)" style="font-size:11px;background:var(--bg2);color:var(--t2);border:1px solid var(--border);border-radius:5px;padding:2px 4px;cursor:pointer;max-width:110px;">${getCatOptions(t.category)}</select>
         <span style="color:var(--t2);font-size:11px;min-width:70px;">${t.date}</span>
         <span style="color:var(--t1);font-weight:500;min-width:70px;text-align:right;">${sym}${Math.round(t.amount).toLocaleString()}</span>
       </div>`;
@@ -1968,14 +2013,15 @@ function renderSpendingAnalysis(catSpent){
   // Transaction list
   document.getElementById('sp-txn-count').textContent = `총 ${txnCount}건`;
   const top50 = parsedTxns.slice(0,50);
-  document.getElementById('sp-txn-list').innerHTML = top50.map(t=>{
+  document.getElementById('sp-txn-list').innerHTML = top50.map((t,i)=>{
     const icon = BUDGET_ICONS[t.category]||'📦';
     const color = budgetCats.find(c=>c.name===t.category)?.color || '#8b90a5';
     const sym = t.currency==='KRW'?'₩':'$';
+    const tIdx = parsedTxns.indexOf(t);
     return `<div class="txn-row">
       <div class="txn-cat-icon" style="background:${color}22">${icon}</div>
       <div class="txn-info"><div class="txn-desc">${t.desc}</div><div class="txn-date">${t.date}</div></div>
-      <div class="txn-cat-tag">${t.category}</div>
+      <select onchange="changeTxnCategory(${tIdx},this.value)" style="font-size:11px;background:var(--bg2);color:var(--t2);border:1px solid var(--border);border-radius:6px;padding:3px 6px;cursor:pointer;">${getCatOptions(t.category)}</select>
       <div class="txn-amt">${sym}${Math.round(t.amount).toLocaleString()}</div>
     </div>`;
   }).join('');
