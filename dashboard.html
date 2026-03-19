@@ -1982,13 +1982,27 @@ function renderSpendingAnalysis(catSpent){
     const color = budCat?.color || '#8b90a5';
     const txnCount = parsedTxns.filter(t=>t.category===cat).length;
 
-    return `<div class="bud-row" onclick="filterTxnByCat('${cat}')" style="cursor:pointer;">
+    const subId = 'sp-cat-'+cat.replace(/[^a-zA-Z0-9가-힣]/g,'_');
+    const catTxns = parsedTxns.filter(t=>t.category===cat).sort((a,b)=>b.amount-a.amount);
+    const txnListHtml = catTxns.map(t=>{
+      const sym = t.currency==='KRW'?'₩':'$';
+      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0 6px 52px;font-size:12px;border-bottom:1px solid rgba(255,255,255,.03);">
+        <span style="flex:1;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${t.desc}">${t.desc}</span>
+        <span style="color:var(--t2);font-size:11px;min-width:70px;">${t.date}</span>
+        <span style="color:var(--t1);font-weight:500;min-width:70px;text-align:right;">${sym}${Math.round(t.amount).toLocaleString()}</span>
+      </div>`;
+    }).join('');
+
+    return `<div class="bud-row" onclick="toggleSub('${subId}',this)" style="cursor:pointer;">
       <div class="bud-icon" style="background:${color}22">${icon}</div>
       <div class="bud-info">
-        <div class="bud-name">${cat} <span style="font-size:10px;color:var(--t2);margin-left:4px;">${txnCount}건</span>${over?'<span style="font-size:10px;color:var(--red);margin-left:4px;">초과!</span>':''}</div>
+        <div class="bud-name">${cat} <span style="font-size:10px;color:var(--t2);margin-left:4px;">${txnCount}건 ▶</span>${over?'<span style="font-size:10px;color:var(--red);margin-left:4px;">초과!</span>':''}</div>
         ${budget>0?`<div class="bud-meter"><div class="bud-bar-bg"><div class="bud-bar-fill" style="width:${Math.min(pct,100)}%;background:${over?'var(--red)':color}"></div></div><div class="bud-pct-num" style="color:${over?'var(--red)':color}">${pct.toFixed(0)}%</div></div>`:''}
       </div>
       <div class="bud-right"><div class="bud-val" style="${over?'color:var(--red)':''}">$${Math.round(spent).toLocaleString()}</div>${budget>0?`<div class="bud-sub">/ $${Math.round(budget).toLocaleString()}</div>`:''}</div>
+    </div>
+    <div id="${subId}" class="sub-rows" style="display:none;background:rgba(255,255,255,.015);border-radius:0 0 8px 8px;margin-top:-1px;max-height:300px;overflow-y:auto;">
+      ${txnListHtml}
     </div>`;
   }).join('');
 
