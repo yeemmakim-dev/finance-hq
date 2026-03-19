@@ -2060,17 +2060,74 @@ function formatMonthLabel(m){
 function renderMonthTabs(){
   const months = Object.keys(spendingHistory).sort();
   const list = document.getElementById('month-tab-list');
+  if(!months.length){ list.innerHTML=''; return; }
 
-  list.innerHTML = months.map(m => {
-    const data = spendingHistory[m];
-    const label = formatMonthLabel(m);
-    const isActive = m === selectedMonth;
-    return `<div class="month-tab${isActive?' active':''}" onclick="switchMonth('${m}')">
-      <span>${label}</span>
-      <span style="font-size:11px;opacity:.7;">$${Math.round(data.totalSpent).toLocaleString()}</span>
-      <span class="month-del" onclick="deleteMonth('${m}',event)" title="삭제">✕</span>
-    </div>`;
-  }).join('');
+  const currentYear = new Date().getFullYear().toString();
+
+  // Group by year
+  const byYear = {};
+  months.forEach(m => {
+    const y = m.slice(0,4);
+    if(!byYear[y]) byYear[y]=[];
+    byYear[y].push(m);
+  });
+
+  const years = Object.keys(byYear).sort();
+  let html = '';
+
+  years.forEach(y => {
+    const isCurrentYear = y === currentYear;
+    const yearMonths = byYear[y];
+    const yearTotal = yearMonths.reduce((s,m)=>s+(spendingHistory[m]?.totalSpent||0),0);
+    const hasActive = yearMonths.includes(selectedMonth);
+
+    if(isCurrentYear){
+      // Current year: show months directly
+      html += yearMonths.map(m => {
+        const data = spendingHistory[m];
+        const [,mo] = m.split('-');
+        const isActive = m === selectedMonth;
+        return `<div class="month-tab${isActive?' active':''}" onclick="switchMonth('${m}')">
+          <span>${parseInt(mo)}월</span>
+          <span style="font-size:11px;opacity:.7;">$${Math.round(data.totalSpent).toLocaleString()}</span>
+          <span class="month-del" onclick="deleteMonth('${m}',event)" title="삭제">✕</span>
+        </div>`;
+      }).join('');
+    } else {
+      // Past years: collapsible group
+      const groupId = 'year-group-'+y;
+      const isOpen = hasActive || document.getElementById(groupId)?.style.display==='flex';
+      html += `<div class="month-tab" style="cursor:pointer;gap:4px;${hasActive?'border-color:var(--blue);':''}" onclick="toggleYearGroup('${y}')">
+        <span style="font-weight:600;">${y}년</span>
+        <span style="font-size:10px;opacity:.6;">${yearMonths.length}개월</span>
+        <span style="font-size:11px;opacity:.7;">$${Math.round(yearTotal).toLocaleString()}</span>
+        <span style="font-size:9px;opacity:.5;" id="year-arrow-${y}">${isOpen?'▼':'▶'}</span>
+      </div>`;
+      html += `<div id="${groupId}" style="display:${isOpen?'flex':'none'};gap:6px;flex-wrap:wrap;">`;
+      html += yearMonths.map(m => {
+        const data = spendingHistory[m];
+        const [,mo] = m.split('-');
+        const isActive = m === selectedMonth;
+        return `<div class="month-tab${isActive?' active':''}" onclick="switchMonth('${m}')" style="font-size:11px;padding:5px 10px;">
+          <span>${parseInt(mo)}월</span>
+          <span style="font-size:10px;opacity:.7;">$${Math.round(data.totalSpent).toLocaleString()}</span>
+          <span class="month-del" onclick="deleteMonth('${m}',event)" title="삭제">✕</span>
+        </div>`;
+      }).join('');
+      html += '</div>';
+    }
+  });
+
+  list.innerHTML = html;
+}
+
+function toggleYearGroup(year){
+  const el = document.getElementById('year-group-'+year);
+  const arrow = document.getElementById('year-arrow-'+year);
+  if(!el) return;
+  const open = el.style.display==='none';
+  el.style.display = open ? 'flex' : 'none';
+  if(arrow) arrow.textContent = open ? '▼' : '▶';
 }
 
 function resetCSV(){
