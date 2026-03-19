@@ -1737,7 +1737,8 @@ function parseCSV(text){
     ];
     if(excludePatterns.some(p => lowerDesc.includes(p))) continue;
 
-    const cat = categorize(desc);
+    const csvCat = catCol>=0 ? (cols[catCol]||'').replace(/"/g,'').trim() : '';
+    const cat = categorize(desc, csvCat);
     const date = parseDate(dateStr);
 
     txns.push({ date, desc, amount:amt, currency:isKRW?'KRW':'USD', category:cat });
@@ -1779,13 +1780,45 @@ function parseDate(str){
   return str.slice(0,10);
 }
 
-function categorize(desc){
+// Map bank CSV categories (Chase etc.) to our budget categories
+const CSV_CAT_MAP = {
+  'groceries': '식비',
+  'food & drink': '여가/외식',
+  'dining': '여가/외식',
+  'restaurants': '여가/외식',
+  'travel': '교통/주유',
+  'gas': '교통/주유',
+  'shopping': '쇼핑',
+  'merchandise': '쇼핑',
+  'entertainment': '여가/외식',
+  'bills & utilities': '구독서비스',
+  'health & wellness': '의료/건강',
+  'medical': '의료/건강',
+  'personal': '기타',
+  'home': '주거/공과금',
+  'automotive': '교통/주유',
+  'education': '교육',
+  'gifts & donations': '선물',
+  'professional services': '기타',
+  'fees & adjustments': '기타',
+};
+
+function categorize(desc, csvCat){
   const lower = desc.toLowerCase();
-  // Check user overrides first
+  // 1. User overrides first
   if(userCatMap[lower]) return userCatMap[lower];
+
   const validCats = new Set(budgetCats.map(c=>c.name));
+
+  // 2. Bank CSV category (Chase etc.)
+  if(csvCat){
+    const mapped = CSV_CAT_MAP[csvCat.toLowerCase()];
+    if(mapped && validCats.has(mapped)) return mapped;
+  }
+
+  // 3. Keyword matching
   for(const [cat, keywords] of Object.entries(SPEND_KEYWORDS)){
-    if(!validCats.has(cat)) continue; // Skip categories not in user's budget
+    if(!validCats.has(cat)) continue;
     for(const kw of keywords){
       if(lower.includes(kw.toLowerCase())) return cat;
     }
