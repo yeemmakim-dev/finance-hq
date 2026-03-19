@@ -527,7 +527,7 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
 
         <!-- 거래 내역 -->
         <div class="card">
-          <div class="card-title"><span>거래 내역 (최근 50건)</span><span id="sp-txn-count" style="font-size:11px;color:var(--t2);"></span></div>
+          <div class="card-title"><span>거래 내역</span><span id="sp-txn-count" style="font-size:11px;color:var(--t2);"></span></div>
           <div id="sp-txn-list" style="max-height:400px;overflow-y:auto;"></div>
         </div>
       </div>
@@ -2055,8 +2055,7 @@ function renderTxnList(){
   const label = txnFilterCat ? `${BUDGET_ICONS[txnFilterCat]||'📦'} ${txnFilterCat} ${txnCount}건` : `총 ${parsedTxns.length}건`;
   const resetBtn = txnFilterCat ? ` <span onclick="filterTxnByCat('')" style="color:var(--blue);cursor:pointer;font-size:11px;margin-left:6px;">✕ 전체 보기</span>` : '';
   document.getElementById('sp-txn-count').innerHTML = label + resetBtn;
-  const top50 = filtered.slice(0,50);
-  document.getElementById('sp-txn-list').innerHTML = top50.map((t,i)=>{
+  document.getElementById('sp-txn-list').innerHTML = filtered.map((t,i)=>{
     const icon = BUDGET_ICONS[t.category]||'📦';
     const color = budgetCats.find(c=>c.name===t.category)?.color || '#8b90a5';
     const sym = t.currency==='KRW'?'₩':'$';
