@@ -118,6 +118,48 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
 
 .up{color:var(--green);}.down{color:var(--red);}.neu{color:var(--t3);}
 
+/* BUDGET */
+.budget-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}
+.bud-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);}
+.bud-row:last-child{border-bottom:none;}
+.bud-icon{font-size:20px;width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.bud-info{flex:1;min-width:0;}
+.bud-name{font-size:13px;font-weight:500;margin-bottom:2px;}
+.bud-meter{display:flex;align-items:center;gap:8px;}
+.bud-bar-bg{flex:1;height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;}
+.bud-bar-fill{height:100%;border-radius:3px;transition:width .4s;}
+.bud-pct-num{font-size:11px;min-width:40px;text-align:right;font-weight:500;}
+.bud-right{text-align:right;flex-shrink:0;min-width:100px;}
+.bud-val{font-size:13px;font-weight:600;}
+.bud-sub{font-size:11px;color:var(--t3);margin-top:2px;}
+.bud-edit-row{display:grid;grid-template-columns:40px 1.2fr 1fr 1fr 40px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);}
+.bud-edit-row:last-child{border-bottom:none;}
+.bud-edit-row input,.bud-edit-row select{background:var(--card2);border:1px solid var(--border2);border-radius:6px;color:var(--t1);font-size:12px;font-family:var(--font);padding:6px 8px;outline:none;width:100%;}
+.bud-edit-row input:focus{border-color:var(--blue);}
+
+/* CSV UPLOAD */
+.upload-zone{border:2px dashed var(--border2);border-radius:14px;padding:3rem;text-align:center;cursor:pointer;transition:all .15s;position:relative;}
+.upload-zone:hover{border-color:var(--blue);background:rgba(91,156,255,.04);}
+.upload-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upload-icon{font-size:36px;margin-bottom:10px;}
+.upload-title{font-size:15px;font-weight:600;margin-bottom:4px;}
+.upload-desc{font-size:12px;color:var(--t3);line-height:1.6;}
+
+/* TXN LIST */
+.txn-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);}
+.txn-row:last-child{border-bottom:none;}
+.txn-cat-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.txn-info{flex:1;min-width:0;}
+.txn-desc{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.txn-date{font-size:10px;color:var(--t3);margin-top:2px;}
+.txn-amt{font-size:13px;font-weight:600;flex-shrink:0;}
+.txn-cat-tag{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--card3);color:var(--t2);flex-shrink:0;}
+
+/* SPENDING RECS */
+.spend-rec{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:8px;}
+.spend-rec-title{font-size:13px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:6px;}
+.spend-rec-desc{font-size:12px;color:var(--t2);line-height:1.55;}
+
 /* HISTORY */
 .history-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;}
 .history-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;}
@@ -201,6 +243,7 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
     <button class="tab on" onclick="switchTab('all',this)"><span class="tab-icon">🌐</span>통합</button>
     <button class="tab" onclick="switchTab('us',this)"><span class="tab-icon">🇺🇸</span>미국 자산</button>
     <button class="tab" onclick="switchTab('kr',this)"><span class="tab-icon">🇰🇷</span>한국 자산</button>
+    <button class="tab" onclick="switchTab('budget',this)"><span class="tab-icon">💳</span>예산 · 지출</button>
   </div>
 
   <!-- ====== ALL (통합) ====== -->
@@ -321,6 +364,109 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
     </div>
   </div>
 
+  <!-- ====== BUDGET (예산/지출) ====== -->
+  <div class="tab-page" id="page-budget">
+    <div class="budget-strip" id="bud-strip"></div>
+
+    <div class="grid-2 section">
+      <!-- 예산 설정 -->
+      <div class="card">
+        <div class="card-title">
+          <span>🎯 월 예산 설정</span>
+          <button class="btn btn-ghost" onclick="openBudgetModal()" style="font-size:11px;padding:5px 12px;">✏️ 수정</button>
+        </div>
+        <div id="bud-category-rows"></div>
+      </div>
+
+      <!-- 지출 현황 도넛 -->
+      <div class="card">
+        <div class="card-title"><span>지출 배분</span></div>
+        <div class="donut-area">
+          <div class="donut-container"><canvas id="bud-donut" width="180" height="180"></canvas>
+            <div class="donut-center"><div class="donut-total" id="bud-donut-total">—</div><div class="donut-label">총 지출</div></div>
+          </div>
+          <div class="legend" id="bud-donut-leg"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CSV 업로드 -->
+    <div class="section">
+      <div class="section-hdr">
+        <div class="section-title">📂 카드 명세서 분석</div>
+        <span id="csv-reset" style="font-size:11px;color:var(--blue);cursor:pointer;display:none;" onclick="resetCSV()">↩ 다시 업로드</span>
+      </div>
+
+      <div id="csv-upload-area" class="card">
+        <div class="upload-zone" id="drop-zone">
+          <input type="file" accept=".csv,.txt,.tsv" onchange="handleCSV(this.files[0])"/>
+          <div class="upload-icon">📂</div>
+          <div class="upload-title">카드/은행 명세서 업로드</div>
+          <div class="upload-desc">
+            CSV 파일을 드래그하거나 클릭하세요<br>
+            Chase, BofA, 신한, 국민, 삼성카드 등 대부분 형식 자동 인식<br>
+            <span style="color:var(--t3);font-size:11px;margin-top:6px;display:inline-block;">날짜 · 설명 · 금액 컬럼이 포함되어야 합니다</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CSV 분석 결과 (초기 숨김) -->
+      <div id="csv-result" style="display:none;">
+        <div class="budget-strip" id="sp-strip"></div>
+        <div class="grid-2 section">
+          <div class="card">
+            <div class="card-title"><span>카테고리별 실 지출 vs 예산</span></div>
+            <div id="sp-compare-rows"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span>지출 분포</span></div>
+            <div class="donut-area">
+              <div class="donut-container"><canvas id="sp-donut" width="180" height="180"></canvas>
+                <div class="donut-center"><div class="donut-total" id="sp-donut-total">—</div><div class="donut-label">실 지출</div></div>
+              </div>
+              <div class="legend" id="sp-donut-leg"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 절약 추천 -->
+        <div class="section">
+          <div class="section-hdr"><div class="section-title">💡 절약 포인트</div></div>
+          <div id="sp-recs"></div>
+        </div>
+
+        <!-- 거래 내역 -->
+        <div class="card">
+          <div class="card-title"><span>거래 내역 (최근 50건)</span><span id="sp-txn-count" style="font-size:11px;color:var(--t2);"></span></div>
+          <div id="sp-txn-list" style="max-height:400px;overflow-y:auto;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- BUDGET EDIT MODAL -->
+<div class="overlay" id="budget-modal-overlay">
+  <div class="modal" style="width:560px;">
+    <h2>월 예산 설정</h2>
+    <div class="modal-sub">카테고리별 한도를 설정하세요 (통화: 월급 기준)</div>
+
+    <div class="form-section">💰 월 수입</div>
+    <div class="form-grid">
+      <div class="field"><label>월 수입 ($)</label><input type="number" id="f-income-usd" min="0"/></div>
+      <div class="field"><label>월 수입 (만원)</label><input type="number" id="f-income-krw" min="0"/></div>
+    </div>
+
+    <div class="form-section">📋 예산 카테고리</div>
+    <div id="budget-edit-fields"></div>
+    <button class="add-row" onclick="addBudgetEditRow()" style="margin-top:8px;">+ 카테고리 추가</button>
+
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeBudgetModal()">취소</button>
+      <button class="btn btn-primary" onclick="saveBudgetModal()">저장</button>
+    </div>
+  </div>
 </div>
 
 <!-- MODAL -->
@@ -374,6 +520,21 @@ let krAssets = { cash:0, realty:0, crypto:0, retire:0 }; // 만원
 let stocks = [];
 let snapshots = [];
 
+// Budget state
+let budgetIncomeUSD = 0;
+let budgetIncomeKRW = 0;
+let budgetCats = [
+  {name:'식비',icon:'🍔',color:'#5b9cff',budget:0,currency:'USD'},
+  {name:'교통/주유',icon:'🚗',color:'#34d399',budget:0,currency:'USD'},
+  {name:'주거/공과금',icon:'🏠',color:'#fbbf24',budget:0,currency:'USD'},
+  {name:'쇼핑',icon:'🛍️',color:'#a78bfa',budget:0,currency:'USD'},
+  {name:'여가/외식',icon:'🎬',color:'#fb923c',budget:0,currency:'USD'},
+  {name:'구독서비스',icon:'📱',color:'#f472b6',budget:0,currency:'USD'},
+  {name:'의료/건강',icon:'💊',color:'#2dd4bf',budget:0,currency:'USD'},
+  {name:'기타',icon:'📦',color:'#8b90a5',budget:0,currency:'USD'},
+];
+let parsedTxns = []; // parsed CSV transactions
+
 const CATS = ['국내주식','미국주식','ETF','채권','원자재','암호화폐','기타'];
 const ASSET_META = {
   cash:  { label:'현금/예금', labelKR:'현금/예적금', icon:'💵', color:'#5b9cff', bg:'rgba(91,156,255,.12)' },
@@ -387,7 +548,7 @@ const ASSET_META = {
 // PERSIST
 // ═══════════════════════════════════════
 function save(){
-  try{ localStorage.setItem('dash_v2', JSON.stringify({ usAssets, krAssets, stocks, FX, snapshots })); }catch(e){}
+  try{ localStorage.setItem('dash_v2', JSON.stringify({ usAssets, krAssets, stocks, FX, snapshots, budgetIncomeUSD, budgetIncomeKRW, budgetCats })); }catch(e){}
 }
 function load(){
   try{
@@ -398,6 +559,9 @@ function load(){
       if(d.stocks) stocks = d.stocks;
       if(d.FX) FX = d.FX;
       if(d.snapshots) snapshots = d.snapshots;
+      if(d.budgetIncomeUSD!=null) budgetIncomeUSD = d.budgetIncomeUSD;
+      if(d.budgetIncomeKRW!=null) budgetIncomeKRW = d.budgetIncomeKRW;
+      if(d.budgetCats) budgetCats = d.budgetCats;
     }
   }catch(e){}
 }
@@ -527,6 +691,7 @@ function renderAll(){
   if(currentTab==='all') renderAllTab();
   else if(currentTab==='us') renderUSTab();
   else if(currentTab==='kr') renderKRTab();
+  else if(currentTab==='budget') renderBudgetTab();
 }
 
 // ── ALL TAB ──
@@ -884,6 +1049,404 @@ function saveModal(){
 }
 
 document.getElementById('modal-overlay').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeModal(); });
+
+// ═══════════════════════════════════════
+// BUDGET TAB
+// ═══════════════════════════════════════
+const BUDGET_ICONS = {'식비':'🍔','교통/주유':'🚗','주거/공과금':'🏠','쇼핑':'🛍️','여가/외식':'🎬','구독서비스':'📱','의료/건강':'💊','기타':'📦','커피':'☕','술/유흥':'🍺','교육':'📚','선물':'🎁','미용':'💇','반려동물':'🐾'};
+const BUDGET_COLORS = ['#5b9cff','#34d399','#fbbf24','#a78bfa','#fb923c','#f472b6','#2dd4bf','#8b90a5','#e879f9','#f87171','#38bdf8','#a3e635'];
+
+// Auto-categorize keywords
+const SPEND_KEYWORDS = {
+  '식비':['restaurant','food','grocery','grocer','whole foods','trader joe','h mart','kroger','costco food','market','mart','편의점','식당','마트','배달','요기요','배민','쿠팡이츠','식자재','반찬'],
+  '커피':['starbucks','coffee','cafe','dunkin','peet','카페','커피','스타벅스'],
+  '교통/주유':['uber','lyft','gas','shell','chevron','exxon','bp ','metro','transit','parking','toll','주유','교통','택시','카카오T','주차','기름'],
+  '주거/공과금':['rent','mortgage','electric','water','gas bill','utility','internet','at&t','verizon','t-mobile','comcast','전기','수도','가스','관리비','통신','인터넷','월세','보험'],
+  '쇼핑':['amazon','walmart','target','costco','best buy','apple store','nike','zara','h&m','uniqlo','쿠팡','네이버쇼핑','11번가','gmarket','옥션','무신사','올리브영'],
+  '여가/외식':['netflix','spotify','hulu','disney','cinema','movie','gym','hotel','airbnb','bar ','lounge','club','restaurant','grill','pub','영화','헬스','술집','노래방'],
+  '구독서비스':['subscription','google storage','icloud','microsoft','adobe','notion','chatgpt','openai','youtube premium','앱스토어','구독'],
+  '의료/건강':['pharmacy','cvs','walgreens','doctor','hospital','dental','health','clinic','약국','병원','의원','치과','안과'],
+};
+
+function renderBudgetTab(){
+  const totalBudget = budgetCats.reduce((a,c)=>a+c.budget,0);
+  const totalSpent = budgetCats.reduce((a,c)=>a+(c.spent||0),0);
+  const remaining = totalBudget - totalSpent;
+  const income = budgetIncomeUSD || budgetIncomeKRW*10000/FX || 0;
+  const savingsRate = income > 0 ? ((income-totalSpent)/income*100) : 0;
+
+  document.getElementById('bud-strip').innerHTML = `
+    <div class="stat"><div class="stat-label">💰 월 수입</div><div class="stat-val">${income?'$'+Math.round(income).toLocaleString():'미설정'}</div><div class="stat-sub neu">${budgetIncomeKRW?fmtMan(budgetIncomeKRW)+'원':''}</div></div>
+    <div class="stat"><div class="stat-label">🎯 총 예산</div><div class="stat-val">$${Math.round(totalBudget).toLocaleString()}</div><div class="stat-sub neu">${budgetCats.filter(c=>c.budget>0).length}개 카테고리</div></div>
+    <div class="stat"><div class="stat-label">💳 총 지출</div><div class="stat-val ${totalSpent>totalBudget?'down':''}">$${Math.round(totalSpent).toLocaleString()}</div><div class="stat-sub ${totalSpent>totalBudget?'down':'up'}">${totalBudget?(totalSpent/totalBudget*100).toFixed(0)+'% 사용':'—'}</div></div>
+    <div class="stat"><div class="stat-label">📊 저축률</div><div class="stat-val ${savingsRate>=20?'up':savingsRate>=0?'neu':'down'}">${income?savingsRate.toFixed(1)+'%':'—'}</div><div class="stat-sub ${remaining>=0?'up':'down'}">${totalBudget?'$'+Math.round(Math.abs(remaining)).toLocaleString()+(remaining>=0?' 남음':' 초과'):''}</div></div>
+  `;
+
+  // Category rows
+  const rows = budgetCats.filter(c=>c.budget>0);
+  document.getElementById('bud-category-rows').innerHTML = rows.length ? rows.map(c => {
+    const spent = c.spent||0;
+    const pct = c.budget ? Math.min(spent/c.budget*100, 150) : 0;
+    const over = spent > c.budget;
+    const color = over ? 'var(--red)' : c.color;
+    return `<div class="bud-row">
+      <div class="bud-icon" style="background:${c.color}22">${c.icon}</div>
+      <div class="bud-info">
+        <div class="bud-name">${c.name}</div>
+        <div class="bud-meter">
+          <div class="bud-bar-bg"><div class="bud-bar-fill" style="width:${Math.min(pct,100)}%;background:${color}"></div></div>
+          <div class="bud-pct-num" style="color:${color}">${pct.toFixed(0)}%</div>
+        </div>
+      </div>
+      <div class="bud-right"><div class="bud-val" style="${over?'color:var(--red)':''}">$${Math.round(spent).toLocaleString()}</div><div class="bud-sub">/ $${Math.round(c.budget).toLocaleString()}</div></div>
+    </div>`;
+  }).join('') : '<div style="text-align:center;color:var(--t3);padding:24px;">예산을 설정해주세요 → ✏️ 수정</div>';
+
+  // Donut
+  if(rows.length && rows.some(c=>(c.spent||0)>0)){
+    const data = rows.map(c=>c.spent||0);
+    const colors = rows.map(c=>c.color);
+    dc('bud-donut');
+    const ctx = document.getElementById('bud-donut');
+    charts['bud-donut'] = new Chart(ctx,{type:'doughnut',data:{datasets:[{data,backgroundColor:colors,borderWidth:0,hoverOffset:5}]},options:{responsive:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{enabled:false}}}});
+    document.getElementById('bud-donut-total').textContent = '$'+Math.round(totalSpent).toLocaleString();
+    document.getElementById('bud-donut-leg').innerHTML = rows.filter(c=>(c.spent||0)>0).map(c=>`<div class="leg-item"><div class="leg-dot" style="background:${c.color}"></div><span class="leg-name">${c.name}</span><span class="leg-val">$${Math.round(c.spent||0).toLocaleString()}</span></div>`).join('');
+  } else {
+    dc('bud-donut');
+    document.getElementById('bud-donut-total').textContent = '—';
+    document.getElementById('bud-donut-leg').innerHTML = '<div style="color:var(--t3);font-size:12px;">명세서를 업로드하면 지출 분포가 표시됩니다</div>';
+  }
+}
+
+// ═══════════════════════════════════════
+// BUDGET MODAL
+// ═══════════════════════════════════════
+function openBudgetModal(){
+  document.getElementById('f-income-usd').value = budgetIncomeUSD||'';
+  document.getElementById('f-income-krw').value = budgetIncomeKRW||'';
+  const c = document.getElementById('budget-edit-fields');
+  c.innerHTML='';
+  budgetCats.forEach(cat=>addBudgetEditRow(cat));
+  if(!budgetCats.length) addBudgetEditRow();
+  document.getElementById('budget-modal-overlay').classList.add('open');
+}
+function closeBudgetModal(){ document.getElementById('budget-modal-overlay').classList.remove('open'); }
+document.getElementById('budget-modal-overlay').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeBudgetModal(); });
+
+function addBudgetEditRow(data){
+  const c = document.getElementById('budget-edit-fields');
+  const d = document.createElement('div');
+  d.className='bud-edit-row';
+  const iconOpts = Object.entries(BUDGET_ICONS).map(([k,v])=>`<option value="${v}" ${data?.icon===v?'selected':''}>${v} ${k}</option>`).join('');
+  d.innerHTML=`
+    <select style="width:100%">${iconOpts}</select>
+    <input placeholder="카테고리명" value="${data?.name||''}"/>
+    <input type="number" placeholder="예산 ($)" value="${data?.budget||''}"/>
+    <select><option ${data?.currency==='USD'?'selected':''}>USD</option><option ${data?.currency==='KRW'?'selected':''}>KRW</option></select>
+    <button class="del-btn" onclick="this.parentElement.remove()">✕</button>`;
+  c.appendChild(d);
+}
+
+function saveBudgetModal(){
+  budgetIncomeUSD = +document.getElementById('f-income-usd').value||0;
+  budgetIncomeKRW = +document.getElementById('f-income-krw').value||0;
+  const oldSpent = {};
+  budgetCats.forEach(c=>{ if(c.spent) oldSpent[c.name]=c.spent; });
+  budgetCats = [];
+  document.querySelectorAll('.bud-edit-row').forEach((row,i)=>{
+    const sel = row.querySelectorAll('select');
+    const inp = row.querySelectorAll('input');
+    const icon = sel[0].value;
+    const name = inp[0].value.trim();
+    const budget = +inp[1].value||0;
+    const currency = sel[1].value;
+    if(name) budgetCats.push({name,icon,budget,currency,color:BUDGET_COLORS[i%BUDGET_COLORS.length],spent:oldSpent[name]||0});
+  });
+  save(); closeBudgetModal(); renderBudgetTab();
+}
+
+// ═══════════════════════════════════════
+// CSV PARSING & ANALYSIS
+// ═══════════════════════════════════════
+function handleCSV(file){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const text = e.target.result;
+      parsedTxns = parseCSV(text);
+      if(!parsedTxns.length){ alert('파싱 가능한 거래를 찾지 못했습니다. CSV 형식을 확인하세요.'); return; }
+      analyzeSpending();
+    }catch(err){ alert('CSV 파싱 오류: '+err.message); }
+  };
+  reader.readAsText(file);
+}
+
+function parseCSV(text){
+  const lines = text.split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2) return [];
+
+  // Detect delimiter
+  const headerLine = lines[0];
+  const delim = headerLine.includes('\t') ? '\t' : ',';
+
+  // Parse header
+  const headers = parseLine(headerLine, delim).map(h=>h.toLowerCase().trim().replace(/"/g,''));
+
+  // Detect column indices
+  let dateCol=-1, descCol=-1, amtCol=-1, debitCol=-1, creditCol=-1;
+
+  headers.forEach((h,i)=>{
+    if(dateCol<0 && /date|날짜|거래일|이용일|일시|transaction date|posting date/.test(h)) dateCol=i;
+    if(descCol<0 && /desc|description|memo|메모|내용|이용처|가맹점|적요|상세/.test(h)) descCol=i;
+    if(amtCol<0 && /^amount$|금액|이용금액|거래금액|결제금액/.test(h)) amtCol=i;
+    if(debitCol<0 && /debit|출금|지출/.test(h)) debitCol=i;
+    if(creditCol<0 && /credit|입금|수입/.test(h)) creditCol=i;
+  });
+
+  // Fallback: guess by position
+  if(dateCol<0) dateCol=0;
+  if(descCol<0) descCol = headers.length>2 ? 1 : 0;
+  if(amtCol<0 && debitCol<0){
+    // Find first numeric-looking column after desc
+    for(let i=descCol+1;i<headers.length;i++){
+      if(/amount|금액|price|total|debit|credit/.test(headers[i])||i>=2){ amtCol=i; break; }
+    }
+    if(amtCol<0) amtCol = headers.length-1;
+  }
+
+  const txns = [];
+  for(let i=1; i<lines.length; i++){
+    const cols = parseLine(lines[i], delim);
+    if(cols.length<3) continue;
+
+    const dateStr = (cols[dateCol]||'').replace(/"/g,'').trim();
+    const desc = (cols[descCol]||'').replace(/"/g,'').trim();
+
+    let amt = 0;
+    if(debitCol>=0){
+      amt = parseAmount(cols[debitCol]||'0');
+      if(creditCol>=0 && !amt) amt = -parseAmount(cols[creditCol]||'0'); // credit = negative
+    } else {
+      amt = parseAmount(cols[amtCol]||'0');
+    }
+
+    if(!desc || amt===0) continue;
+
+    // Detect currency from amount
+    const rawAmt = (cols[amtCol]||cols[debitCol]||'').replace(/"/g,'');
+    const isKRW = Math.abs(amt)>500 && !rawAmt.includes('$'); // heuristic
+
+    // Make spending positive
+    if(amt<0) amt = -amt; // Some banks use negative for spending
+
+    const cat = categorize(desc);
+    const date = parseDate(dateStr);
+
+    txns.push({ date, desc, amount:amt, currency:isKRW?'KRW':'USD', category:cat });
+  }
+
+  return txns.sort((a,b)=>b.date.localeCompare(a.date));
+}
+
+function parseLine(line, delim){
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for(let i=0; i<line.length; i++){
+    const ch = line[i];
+    if(ch==='"'){ inQuotes=!inQuotes; continue; }
+    if(ch===delim && !inQuotes){ result.push(current); current=''; continue; }
+    current+=ch;
+  }
+  result.push(current);
+  return result;
+}
+
+function parseAmount(str){
+  str = str.replace(/"/g,'').replace(/[₩$,\s원]/g,'').trim();
+  if(!str || str==='-') return 0;
+  const neg = str.includes('(') || str.startsWith('-');
+  str = str.replace(/[()]/g,'').replace('-','');
+  const val = parseFloat(str);
+  return isNaN(val) ? 0 : (neg ? -val : val);
+}
+
+function parseDate(str){
+  str = str.replace(/"/g,'').trim();
+  // Try various formats: YYYY-MM-DD, MM/DD/YYYY, YYYY.MM.DD, etc.
+  let m;
+  if(m=str.match(/(\d{4})[-./](\d{1,2})[-./](\d{1,2})/)) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  if(m=str.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/)) return `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+  if(m=str.match(/(\d{1,2})\/(\d{1,2})\/(\d{2})/)) return `20${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+  return str.slice(0,10);
+}
+
+function categorize(desc){
+  const lower = desc.toLowerCase();
+  for(const [cat, keywords] of Object.entries(SPEND_KEYWORDS)){
+    for(const kw of keywords){
+      if(lower.includes(kw.toLowerCase())) return cat;
+    }
+  }
+  return '기타';
+}
+
+function analyzeSpending(){
+  // Reset spent in budgetCats
+  budgetCats.forEach(c=>c.spent=0);
+
+  // Aggregate by category
+  const catSpent = {};
+  parsedTxns.forEach(t=>{
+    const amtUSD = t.currency==='KRW' ? t.amount/FX*10000 : t.amount;
+    const cat = t.category;
+    catSpent[cat] = (catSpent[cat]||0) + amtUSD;
+
+    // Match to budget category
+    const budCat = budgetCats.find(c=>c.name===cat);
+    if(budCat) budCat.spent = (budCat.spent||0) + (budCat.currency==='KRW' ? t.amount : amtUSD);
+    else {
+      const etc = budgetCats.find(c=>c.name==='기타');
+      if(etc) etc.spent = (etc.spent||0) + amtUSD;
+    }
+  });
+
+  save();
+
+  // Show results
+  document.getElementById('csv-upload-area').style.display='none';
+  document.getElementById('csv-result').style.display='block';
+  document.getElementById('csv-reset').style.display='inline';
+
+  renderSpendingAnalysis(catSpent);
+  renderBudgetTab();
+}
+
+function resetCSV(){
+  parsedTxns=[];
+  budgetCats.forEach(c=>c.spent=0);
+  save();
+  document.getElementById('csv-upload-area').style.display='block';
+  document.getElementById('csv-result').style.display='none';
+  document.getElementById('csv-reset').style.display='none';
+  renderBudgetTab();
+}
+
+function renderSpendingAnalysis(catSpent){
+  const totalSpent = Object.values(catSpent).reduce((a,b)=>a+b,0);
+  const totalBudget = budgetCats.reduce((a,c)=>a+c.budget,0);
+  const txnCount = parsedTxns.length;
+  const avgPerTxn = txnCount ? totalSpent/txnCount : 0;
+
+  // Top strip
+  document.getElementById('sp-strip').innerHTML = `
+    <div class="stat"><div class="stat-label">💳 총 지출</div><div class="stat-val">$${Math.round(totalSpent).toLocaleString()}</div><div class="stat-sub neu">${txnCount}건</div></div>
+    <div class="stat"><div class="stat-label">📊 건당 평균</div><div class="stat-val">$${Math.round(avgPerTxn).toLocaleString()}</div><div class="stat-sub neu">—</div></div>
+    <div class="stat"><div class="stat-label">🎯 예산 대비</div><div class="stat-val ${totalSpent>totalBudget?'down':'up'}">${totalBudget?(totalSpent/totalBudget*100).toFixed(0)+'%':'—'}</div><div class="stat-sub ${totalSpent<=totalBudget?'up':'down'}">${totalBudget?'$'+Math.round(Math.abs(totalBudget-totalSpent)).toLocaleString()+(totalSpent<=totalBudget?' 남음':' 초과'):''}</div></div>
+    <div class="stat"><div class="stat-label">🏆 최대 지출</div><div class="stat-val">${Object.keys(catSpent).length?Object.entries(catSpent).sort((a,b)=>b[1]-a[1])[0][0]:'—'}</div><div class="stat-sub neu">${Object.keys(catSpent).length?'$'+Math.round(Object.entries(catSpent).sort((a,b)=>b[1]-a[1])[0][1]).toLocaleString():''}</div></div>
+  `;
+
+  // Compare rows (budget vs spent)
+  const catEntries = Object.entries(catSpent).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('sp-compare-rows').innerHTML = catEntries.map(([cat, spent])=>{
+    const budCat = budgetCats.find(c=>c.name===cat);
+    const budget = budCat?.budget || 0;
+    const pct = budget ? (spent/budget*100) : 0;
+    const over = budget>0 && spent>budget;
+    const icon = BUDGET_ICONS[cat]||'📦';
+    const color = budCat?.color || '#8b90a5';
+    return `<div class="bud-row">
+      <div class="bud-icon" style="background:${color}22">${icon}</div>
+      <div class="bud-info">
+        <div class="bud-name">${cat} ${over?'<span style="font-size:10px;color:var(--red);margin-left:4px;">초과!</span>':''}</div>
+        ${budget>0?`<div class="bud-meter"><div class="bud-bar-bg"><div class="bud-bar-fill" style="width:${Math.min(pct,100)}%;background:${over?'var(--red)':color}"></div></div><div class="bud-pct-num" style="color:${over?'var(--red)':color}">${pct.toFixed(0)}%</div></div>`:''}
+      </div>
+      <div class="bud-right"><div class="bud-val" style="${over?'color:var(--red)':''}">$${Math.round(spent).toLocaleString()}</div>${budget>0?`<div class="bud-sub">/ $${Math.round(budget).toLocaleString()}</div>`:''}</div>
+    </div>`;
+  }).join('');
+
+  // Spending donut
+  dc('sp-donut');
+  const data = catEntries.map(([,v])=>v);
+  const colors = catEntries.map(([cat])=>(budgetCats.find(c=>c.name===cat)?.color || '#8b90a5'));
+  if(data.length){
+    const ctx = document.getElementById('sp-donut');
+    charts['sp-donut'] = new Chart(ctx,{type:'doughnut',data:{datasets:[{data,backgroundColor:colors,borderWidth:0,hoverOffset:5}]},options:{responsive:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{enabled:false}}}});
+    document.getElementById('sp-donut-total').textContent = '$'+Math.round(totalSpent).toLocaleString();
+    document.getElementById('sp-donut-leg').innerHTML = catEntries.map(([cat,v],i)=>`<div class="leg-item"><div class="leg-dot" style="background:${colors[i]}"></div><span class="leg-name">${cat}</span><span class="leg-val">${(v/totalSpent*100).toFixed(0)}%</span></div>`).join('');
+  }
+
+  // Spending recommendations
+  const recs = [];
+  catEntries.forEach(([cat, spent])=>{
+    const budCat = budgetCats.find(c=>c.name===cat);
+    if(budCat && budCat.budget>0 && spent>budCat.budget){
+      const overAmt = spent-budCat.budget;
+      recs.push({icon:'🚨',title:`${cat} 예산 $${Math.round(budCat.budget).toLocaleString()} 초과 (+$${Math.round(overAmt).toLocaleString()})`,desc:getSpendingAdvice(cat, spent, budCat.budget)});
+    }
+  });
+
+  // Top spending categories
+  if(catEntries.length>=2){
+    const [topCat, topAmt] = catEntries[0];
+    const topPct = (topAmt/totalSpent*100).toFixed(0);
+    if(topPct>40) recs.push({icon:'📊',title:`${topCat}이(가) 전체 지출의 ${topPct}%`,desc:`지출이 ${topCat}에 집중되어 있습니다. 대안을 찾거나 빈도를 줄여보세요.`});
+  }
+
+  // Small frequent txns
+  const smallTxns = parsedTxns.filter(t=>{
+    const amt = t.currency==='KRW'?t.amount/FX*10000:t.amount;
+    return amt<15;
+  });
+  if(smallTxns.length>10){
+    const smallTotal = smallTxns.reduce((a,t)=>a+(t.currency==='KRW'?t.amount/FX*10000:t.amount),0);
+    recs.push({icon:'💸',title:`$15 미만 소액 결제 ${smallTxns.length}건 ($${Math.round(smallTotal).toLocaleString()})`,desc:'커피, 간식 등 소액이 모이면 큽니다. 주 단위로 한도를 정해보세요.'});
+  }
+
+  if(recs.length===0) recs.push({icon:'✅',title:'지출 관리가 잘 되고 있어요!',desc:'모든 카테고리가 예산 내에 있습니다. 이 패턴을 유지하세요.'});
+
+  document.getElementById('sp-recs').innerHTML = recs.map(r=>`
+    <div class="spend-rec"><div class="spend-rec-title">${r.icon} ${r.title}</div><div class="spend-rec-desc">${r.desc}</div></div>
+  `).join('');
+
+  // Transaction list
+  document.getElementById('sp-txn-count').textContent = `총 ${txnCount}건`;
+  const top50 = parsedTxns.slice(0,50);
+  document.getElementById('sp-txn-list').innerHTML = top50.map(t=>{
+    const icon = BUDGET_ICONS[t.category]||'📦';
+    const color = budgetCats.find(c=>c.name===t.category)?.color || '#8b90a5';
+    const sym = t.currency==='KRW'?'₩':'$';
+    return `<div class="txn-row">
+      <div class="txn-cat-icon" style="background:${color}22">${icon}</div>
+      <div class="txn-info"><div class="txn-desc">${t.desc}</div><div class="txn-date">${t.date}</div></div>
+      <div class="txn-cat-tag">${t.category}</div>
+      <div class="txn-amt">${sym}${Math.round(t.amount).toLocaleString()}</div>
+    </div>`;
+  }).join('');
+}
+
+function getSpendingAdvice(cat, spent, budget){
+  const tips = {
+    '식비':'집밥 비율을 늘리거나, 밀프렙(meal prep)을 시도해보세요. 배달 횟수를 줄이는 것도 효과적입니다.',
+    '커피':'홈카페로 전환하거나 방문 횟수를 주 3회로 제한해보세요.',
+    '교통/주유':'카풀이나 대중교통 활용을 고려하세요. 주유 앱으로 할인도 받을 수 있습니다.',
+    '주거/공과금':'에너지 사용 패턴을 점검하고, 불필요한 통신 요금제를 다운그레이드하세요.',
+    '쇼핑':'장바구니에 넣고 24시간 후에 구매하는 규칙을 만들어보세요. 충동구매를 줄일 수 있습니다.',
+    '여가/외식':'무료 또는 저렴한 대안을 찾아보세요. 구독 서비스를 돌아가며 사용하는 것도 방법입니다.',
+    '구독서비스':'사용하지 않는 구독을 정리하세요. 연간 결제로 전환하면 할인받을 수 있습니다.',
+    '의료/건강':'예방 관리에 투자하고, 제네릭 약품을 활용하세요.',
+  };
+  return tips[cat] || `이번 달 $${Math.round(spent-budget).toLocaleString()} 초과했습니다. 다음 달 지출 계획을 세워보세요.`;
+}
+
+// Drag & drop support
+const dz = document.getElementById('drop-zone');
+if(dz){
+  ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.style.borderColor='var(--blue)';dz.style.background='rgba(91,156,255,.06)';}));
+  ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.style.borderColor='';dz.style.background='';}));
+  dz.addEventListener('drop',e=>{ if(e.dataTransfer.files.length) handleCSV(e.dataTransfer.files[0]); });
+}
 
 // ═══════════════════════════════════════
 // INIT
