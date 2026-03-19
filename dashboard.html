@@ -1076,7 +1076,7 @@ function renderStockTable(tbodyId, list, cur){
       plH = `<span class="${cls(plPct)}">${plSym}${sym}${Math.round(Math.abs(pl)).toLocaleString()}</span>
         <div style="font-size:10px;"><span class="${cls(plPct)}">${plSym}${plPct.toFixed(1)}%</span></div>`;
     } else if(s.avgCost && s.avgCost > 0){
-      plH = `<span class="neu" style="font-size:10px;">매수 ${sym}${s.avgCost.toLocaleString()}</span>`;
+      plH = `<span class="neu" style="font-size:10px;">평단 ${sym}${s.avgCost.toLocaleString()}</span>`;
     }
 
     return `<tr>
@@ -1351,7 +1351,7 @@ function addStockField(data){
     <div class="field"><select><option ${data?.currency==='KRW'?'selected':''}>KRW</option><option ${data?.currency==='USD'?'selected':''}>USD</option></select></div>
     <div class="field"><input placeholder="VOO" value="${data?.ticker||''}"/></div>
     <div class="field"><input type="number" placeholder="수량" value="${data?.qty||''}"/></div>
-    <div class="field"><input type="number" placeholder="매수가 (선택)" step="0.01" value="${data?.avgCost||''}"/></div>
+    <div class="field"><input type="number" placeholder="평단가 (선택)" step="0.01" value="${data?.avgCost||''}"/></div>
     <button class="del-btn" onclick="this.parentElement.remove()">✕</button>`;
   c.appendChild(d);
 }
