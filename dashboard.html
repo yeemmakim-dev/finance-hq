@@ -1927,7 +1927,7 @@ function analyzeSpending(){
   }
 
   // Apply to budget
-  applySpendingToBudget(month);
+  applySpendingToBudget(primaryMonth);
 
   // Show results
   document.getElementById('csv-upload-area').style.display='none';
@@ -1935,7 +1935,7 @@ function analyzeSpending(){
   document.getElementById('csv-reset').style.display='inline';
 
   renderMonthTabs();
-  renderSpendingAnalysis(catSpent);
+  renderSpendingAnalysis(spendingHistory[primaryMonth].catSpent);
   renderBudgetTab();
 }
 
