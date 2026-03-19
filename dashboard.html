@@ -1626,6 +1626,16 @@ function parseCSV(text){
     if(amtCol<0) amtCol = headers.length-1;
   }
 
+  // PRIORITY: if we found an "Amount" column, use ONLY that — ignore debit/credit
+  // Amount column: negative = spending, positive = refund/income
+  if(amtCol>=0){
+    debitCol = -1;
+    creditCol = -1;
+  }
+
+  console.log('[CSV Debug] Headers:', headers);
+  console.log('[CSV Debug] Columns → date:', dateCol, 'desc:', descCol, 'amount:', amtCol, 'debit:', debitCol, 'credit:', creditCol, 'type:', typeCol);
+
   const txns = [];
   for(let i=1; i<lines.length; i++){
     const cols = parseLine(lines[i], delim);
@@ -1634,28 +1644,24 @@ function parseCSV(text){
     const dateStr = (cols[dateCol]||'').replace(/"/g,'').trim();
     const desc = (cols[descCol]||'').replace(/"/g,'').trim();
 
+    // Read amount from the Amount column (or debit/credit as fallback)
     let amt = 0;
-    if(debitCol>=0){
-      amt = parseAmount(cols[debitCol]||'0');
-      if(creditCol>=0 && !amt) amt = -parseAmount(cols[creditCol]||'0'); // credit = negative
-    } else {
+    if(amtCol>=0){
       amt = parseAmount(cols[amtCol]||'0');
+    } else if(debitCol>=0){
+      amt = parseAmount(cols[debitCol]||'0');
+      if(creditCol>=0 && !amt) amt = -parseAmount(cols[creditCol]||'0');
     }
 
     if(!desc || amt===0) continue;
 
-    // Detect currency from amount
-    const rawAmt = (cols[amtCol]||cols[debitCol]||'').replace(/"/g,'');
-    const isKRW = Math.abs(amt)>500 && !rawAmt.includes('$'); // heuristic
+    // ★ ONLY negative amounts = real spending. Skip everything else.
+    if(amt>=0) continue;
+    amt = -amt; // flip to positive for display
 
-    // Only keep spending (negative amounts = money out)
-    // For debit/credit columns: debit is already positive spending
-    if(debitCol>=0){
-      if(amt<=0) continue; // credit/refund, skip
-    } else {
-      if(amt>0) continue; // income/refund, skip
-      amt = -amt; // flip to positive for display
-    }
+    // Detect currency
+    const rawAmt = (cols[amtCol>=0?amtCol:debitCol]||'').replace(/"/g,'');
+    const isKRW = amt>500 && !rawAmt.includes('$');
 
     // Skip non-purchase transaction types (e.g. Chase "Type" column)
     if(typeCol>=0){
@@ -1663,25 +1669,16 @@ function parseCSV(text){
       if(['payment','return','adjustment','fee'].includes(type)) continue;
     }
 
-    // Filter out non-spending transactions (payments, transfers, fees, etc.)
+    // Filter out non-spending descriptions
     const lowerDesc = desc.toLowerCase();
     const excludePatterns = [
-      // Card payments / bill pay
       'payment thank', 'automatic payment', 'autopay', 'online payment',
       'bill payment', 'payment received', 'payment to chase', 'payment - thank',
-      'mobile payment', 'epayment', 'web payment',
-      // Transfers
       'transfer to', 'transfer from', 'online transfer', 'wire transfer',
-      'ach transfer', 'zelle', 'venmo', 'cashapp', 'cash app',
-      'direct dep', 'direct deposit', 'payroll',
-      // Banking
-      'overdraft', 'nsf fee', 'annual fee', 'interest charge', 'finance charge',
-      'late fee', 'monthly fee', 'service fee', 'atm fee', 'foreign transaction fee',
-      'balance transfer', 'cash advance', 'credit adjustment', 'dispute',
-      'provisional credit', 'reversal',
-      // Korean banking
-      '이체', '입금', '급여', '월급', '상환', '대출', '이자', '수수료',
-      '카드대금', '자동이체', '적금', '예금',
+      'ach transfer', 'direct dep', 'direct deposit', 'payroll',
+      'interest charge', 'finance charge', 'annual fee', 'late fee',
+      'balance transfer', 'cash advance', 'credit adjustment', 'reversal',
+      '이체', '입금', '급여', '상환', '대출', '이자', '카드대금', '자동이체',
     ];
     if(excludePatterns.some(p => lowerDesc.includes(p))) continue;
 
