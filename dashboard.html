@@ -1779,6 +1779,35 @@ function changeTxnCategory(txnIdx, newCat){
   renderBudgetTab();
 }
 
+function deleteTxn(txnIdx){
+  const t = parsedTxns[txnIdx];
+  if(!t) return;
+
+  // Remove from parsedTxns
+  parsedTxns.splice(txnIdx, 1);
+
+  // Remove from spending history
+  if(selectedMonth && spendingHistory[selectedMonth]){
+    const data = spendingHistory[selectedMonth];
+    const hi = data.txns.findIndex(h => h.desc===t.desc && h.date===t.date && h.amount===t.amount);
+    if(hi>=0) data.txns.splice(hi, 1);
+    // Recalculate
+    data.catSpent = {};
+    data.txns.forEach(tx => {
+      const amtUSD = tx.currency==='KRW' ? tx.amount/FX*10000 : tx.amount;
+      data.catSpent[tx.category] = (data.catSpent[tx.category]||0) + amtUSD;
+    });
+    data.totalSpent = Object.values(data.catSpent).reduce((a,b)=>a+b,0);
+  }
+
+  save();
+  applySpendingToBudget(selectedMonth);
+  const data = spendingHistory[selectedMonth];
+  if(data) renderSpendingAnalysis(data.catSpent);
+  renderBudgetTab();
+  renderMonthTabs();
+}
+
 function analyzeSpending(){
   // Detect month from transactions
   let month = '';
@@ -1950,6 +1979,7 @@ function renderSpendingAnalysis(catSpent){
         <select onchange="changeTxnCategory(${tIdx},this.value)" style="font-size:11px;background:var(--bg2);color:var(--t2);border:1px solid var(--border);border-radius:5px;padding:2px 4px;cursor:pointer;max-width:110px;">${getCatOptions(t.category)}</select>
         <span style="color:var(--t2);font-size:11px;min-width:70px;">${t.date}</span>
         <span style="color:var(--t1);font-weight:500;min-width:70px;text-align:right;">${sym}${Math.round(t.amount).toLocaleString()}</span>
+        <span onclick="deleteTxn(${tIdx})" style="cursor:pointer;color:var(--t3);font-size:13px;padding:0 2px;transition:color .15s;" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--t3)'" title="삭제">✕</span>
       </div>`;
     }).join('');
 
@@ -2023,6 +2053,7 @@ function renderSpendingAnalysis(catSpent){
       <div class="txn-info"><div class="txn-desc">${t.desc}</div><div class="txn-date">${t.date}</div></div>
       <select onchange="changeTxnCategory(${tIdx},this.value)" style="font-size:11px;background:var(--bg2);color:var(--t2);border:1px solid var(--border);border-radius:6px;padding:3px 6px;cursor:pointer;">${getCatOptions(t.category)}</select>
       <div class="txn-amt">${sym}${Math.round(t.amount).toLocaleString()}</div>
+      <span onclick="deleteTxn(${tIdx})" style="cursor:pointer;color:var(--t3);font-size:14px;padding:0 4px;transition:color .15s;flex-shrink:0;" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--t3)'" title="삭제 (환불 등)">✕</span>
     </div>`;
   }).join('');
 }
