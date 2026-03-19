@@ -155,6 +155,11 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
 .pc-note{font-size:11px;color:var(--t2);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .pc-del{background:none;border:none;color:var(--t2);cursor:pointer;font-size:14px;padding:4px;transition:color .15s;}
 .pc-del:hover{color:var(--red);}
+.month-tab{padding:7px 14px;border-radius:8px;font-size:12px;border:1px solid var(--border);background:var(--card);color:var(--t2);cursor:pointer;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:6px;}
+.month-tab:hover{background:var(--hover);color:var(--t1);}
+.month-tab.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+.month-tab .month-del{font-size:10px;opacity:.5;transition:opacity .15s;}
+.month-tab .month-del:hover{opacity:1;}
 .bud-val{font-size:13px;font-weight:600;}
 .bud-sub{font-size:11px;color:var(--t3);margin-top:2px;}
 .bud-edit-row{display:grid;grid-template-columns:40px 1.2fr 1fr 1fr 40px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);}
@@ -472,7 +477,14 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
     <div class="section">
       <div class="section-hdr">
         <div class="section-title">📂 카드 명세서 분석</div>
-        <span id="csv-reset" style="font-size:11px;color:var(--blue);cursor:pointer;display:none;" onclick="resetCSV()">↩ 다시 업로드</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span id="csv-reset" style="font-size:11px;color:var(--blue);cursor:pointer;display:none;" onclick="showUploadArea()">+ 새로 업로드</span>
+        </div>
+      </div>
+
+      <!-- 월별 탭 (저장된 달이 있을 때만 보임) -->
+      <div id="month-tabs" style="display:none;margin-bottom:12px;overflow-x:auto;">
+        <div id="month-tab-list" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;"></div>
       </div>
 
       <div id="csv-upload-area" class="card">
@@ -623,6 +635,9 @@ let budgetCats = [
   {name:'기타',icon:'📦',color:'#8b90a5',budget:0,currency:'USD'},
 ];
 let parsedTxns = []; // parsed CSV transactions
+// Monthly spending history: { '2026-03': { txns:[...], catSpent:{...}, totalSpent:0 }, ... }
+let spendingHistory = {};
+let selectedMonth = ''; // currently viewing month
 // Paycheck log: [{date:'2026-03-20', gross:0, net:0, note:''}]
 let paychecks = [];
 const PAY_ANCHOR = new Date('2026-03-20'); // first known payday (biweekly Friday)
@@ -643,7 +658,7 @@ const ASSET_META = {
 // PERSIST
 // ═══════════════════════════════════════
 function save(){
-  try{ localStorage.setItem('dash_v2', JSON.stringify({ usAssets, krAssets, stocks, FX, snapshots, budgetIncomeUSD, budgetIncomeKRW, budgetCats, debts, paychecks })); }catch(e){}
+  try{ localStorage.setItem('dash_v2', JSON.stringify({ usAssets, krAssets, stocks, FX, snapshots, budgetIncomeUSD, budgetIncomeKRW, budgetCats, debts, paychecks, spendingHistory })); }catch(e){}
 }
 function load(){
   try{
@@ -662,6 +677,7 @@ function load(){
       if(d.budgetCats) budgetCats = d.budgetCats;
       if(d.debts) debts = d.debts;
       if(d.paychecks) paychecks = d.paychecks;
+      if(d.spendingHistory) spendingHistory = d.spendingHistory;
     }
   }catch(e){}
 }
@@ -1350,6 +1366,22 @@ function renderBudgetTab(){
   checkPaydayBanner();
   renderPaychecks();
 
+  // Restore saved month data if any
+  const months = Object.keys(spendingHistory).sort().reverse();
+  if(months.length){
+    renderMonthTabs();
+    if(!selectedMonth || !spendingHistory[selectedMonth]) selectedMonth = months[0];
+    const data = spendingHistory[selectedMonth];
+    if(data && data.txns){
+      parsedTxns = data.txns;
+      applySpendingToBudget(selectedMonth);
+      document.getElementById('csv-upload-area').style.display='none';
+      document.getElementById('csv-result').style.display='block';
+      document.getElementById('csv-reset').style.display='inline';
+      renderSpendingAnalysis(data.catSpent);
+    }
+  }
+
   const totalBudget = budgetCats.reduce((a,c)=>a+c.budget,0);
   const totalSpent = budgetCats.reduce((a,c)=>a+(c.spent||0),0);
   const remaining = totalBudget - totalSpent;
@@ -1677,34 +1709,127 @@ function categorize(desc){
 }
 
 function analyzeSpending(){
-  // Reset spent in budgetCats
-  budgetCats.forEach(c=>c.spent=0);
+  // Detect month from transactions
+  let month = '';
+  if(parsedTxns.length){
+    // Use the most common month in the data
+    const monthCounts = {};
+    parsedTxns.forEach(t => {
+      const m = t.date ? t.date.slice(0,7) : '';
+      if(m) monthCounts[m] = (monthCounts[m]||0) + 1;
+    });
+    month = Object.entries(monthCounts).sort((a,b)=>b[1]-a[1])[0]?.[0] || new Date().toISOString().slice(0,7);
+  } else {
+    month = new Date().toISOString().slice(0,7);
+  }
 
   // Aggregate by category
   const catSpent = {};
-  parsedTxns.forEach(t=>{
+  const totalSpent = parsedTxns.reduce((sum, t) => {
     const amtUSD = t.currency==='KRW' ? t.amount/FX*10000 : t.amount;
-    const cat = t.category;
-    catSpent[cat] = (catSpent[cat]||0) + amtUSD;
+    catSpent[t.category] = (catSpent[t.category]||0) + amtUSD;
+    return sum + amtUSD;
+  }, 0);
 
-    // Match to budget category
-    const budCat = budgetCats.find(c=>c.name===cat);
-    if(budCat) budCat.spent = (budCat.spent||0) + (budCat.currency==='KRW' ? t.amount : amtUSD);
-    else {
-      const etc = budgetCats.find(c=>c.name==='기타');
-      if(etc) etc.spent = (etc.spent||0) + amtUSD;
-    }
-  });
-
+  // Save to monthly history
+  spendingHistory[month] = { txns: parsedTxns, catSpent, totalSpent };
+  selectedMonth = month;
   save();
+
+  // Apply to budget
+  applySpendingToBudget(month);
 
   // Show results
   document.getElementById('csv-upload-area').style.display='none';
   document.getElementById('csv-result').style.display='block';
   document.getElementById('csv-reset').style.display='inline';
 
+  renderMonthTabs();
   renderSpendingAnalysis(catSpent);
   renderBudgetTab();
+}
+
+function applySpendingToBudget(month){
+  budgetCats.forEach(c=>c.spent=0);
+  const data = spendingHistory[month];
+  if(!data) return;
+  data.txns.forEach(t => {
+    const amtUSD = t.currency==='KRW' ? t.amount/FX*10000 : t.amount;
+    const budCat = budgetCats.find(c=>c.name===t.category);
+    if(budCat) budCat.spent = (budCat.spent||0) + (budCat.currency==='KRW' ? t.amount : amtUSD);
+    else {
+      const etc = budgetCats.find(c=>c.name==='기타');
+      if(etc) etc.spent = (etc.spent||0) + amtUSD;
+    }
+  });
+}
+
+function switchMonth(month){
+  selectedMonth = month;
+  const data = spendingHistory[month];
+  if(!data) return;
+  parsedTxns = data.txns;
+  applySpendingToBudget(month);
+
+  document.getElementById('csv-upload-area').style.display='none';
+  document.getElementById('csv-result').style.display='block';
+  document.getElementById('csv-reset').style.display='inline';
+
+  renderMonthTabs();
+  renderSpendingAnalysis(data.catSpent);
+  renderBudgetTab();
+}
+
+function deleteMonth(month, ev){
+  ev.stopPropagation();
+  const label = formatMonthLabel(month);
+  if(!confirm(`${label} 지출 데이터를 삭제할까요?`)) return;
+  delete spendingHistory[month];
+  save();
+
+  const months = Object.keys(spendingHistory).sort().reverse();
+  if(months.length){
+    switchMonth(months[0]);
+  } else {
+    selectedMonth = '';
+    parsedTxns = [];
+    budgetCats.forEach(c=>c.spent=0);
+    save();
+    document.getElementById('csv-upload-area').style.display='block';
+    document.getElementById('csv-result').style.display='none';
+    document.getElementById('csv-reset').style.display='none';
+    renderMonthTabs();
+    renderBudgetTab();
+  }
+}
+
+function showUploadArea(){
+  document.getElementById('csv-upload-area').style.display='block';
+  document.getElementById('csv-result').style.display='none';
+}
+
+function formatMonthLabel(m){
+  const [y, mo] = m.split('-');
+  return `${y}년 ${parseInt(mo)}월`;
+}
+
+function renderMonthTabs(){
+  const months = Object.keys(spendingHistory).sort().reverse();
+  const container = document.getElementById('month-tabs');
+  const list = document.getElementById('month-tab-list');
+  if(!months.length){ container.style.display='none'; return; }
+  container.style.display='block';
+
+  list.innerHTML = months.map(m => {
+    const data = spendingHistory[m];
+    const label = formatMonthLabel(m);
+    const isActive = m === selectedMonth;
+    return `<div class="month-tab${isActive?' active':''}" onclick="switchMonth('${m}')">
+      <span>${label}</span>
+      <span style="font-size:11px;opacity:.7;">$${Math.round(data.totalSpent).toLocaleString()}</span>
+      <span class="month-del" onclick="deleteMonth('${m}',event)" title="삭제">✕</span>
+    </div>`;
+  }).join('');
 }
 
 function resetCSV(){
