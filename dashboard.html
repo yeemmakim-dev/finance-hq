@@ -285,6 +285,7 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
     <button class="tab" onclick="switchTab('us',this)"><span class="tab-icon">🇺🇸</span>미국 자산</button>
     <button class="tab" onclick="switchTab('kr',this)"><span class="tab-icon">🇰🇷</span>한국 자산</button>
     <button class="tab" onclick="switchTab('budget',this)"><span class="tab-icon">💳</span>예산 · 지출</button>
+    <button class="tab" onclick="switchTab('trend',this)"><span class="tab-icon">📈</span>지출 추이</button>
   </div>
 
   <!-- ====== ALL (통합) ====== -->
@@ -522,6 +523,36 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
   </div>
 
 </div>
+
+  <!-- ═══ TREND TAB ═══ -->
+  <div class="tab-page" id="page-trend">
+    <div class="stat-strip" id="trend-strip"></div>
+
+    <div class="section">
+      <div class="card" style="padding:20px;">
+        <div class="card-title"><span>월별 지출 추이</span></div>
+        <canvas id="trend-line" height="260"></canvas>
+      </div>
+    </div>
+
+    <div class="grid-2 section">
+      <div class="card" style="padding:20px;">
+        <div class="card-title"><span>실지출 vs 고정지출</span></div>
+        <canvas id="trend-stacked" height="240"></canvas>
+      </div>
+      <div class="card" style="padding:20px;">
+        <div class="card-title"><span>카테고리별 추이</span></div>
+        <canvas id="trend-cat" height="240"></canvas>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="card" style="padding:20px;">
+        <div class="card-title"><span>월별 상세 비교</span></div>
+        <div id="trend-table"></div>
+      </div>
+    </div>
+  </div>
 
 <!-- BUDGET EDIT MODAL -->
 <div class="overlay" id="budget-modal-overlay">
@@ -818,6 +849,7 @@ function renderAll(){
   else if(currentTab==='us') renderUSTab();
   else if(currentTab==='kr') renderKRTab();
   else if(currentTab==='budget') renderBudgetTab();
+  else if(currentTab==='trend') renderTrendTab();
 }
 
 // ── ALL TAB ──
@@ -2113,6 +2145,171 @@ if(dz){
   ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.style.borderColor='var(--blue)';dz.style.background='rgba(91,156,255,.06)';}));
   ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.style.borderColor='';dz.style.background='';}));
   dz.addEventListener('drop',e=>{ if(e.dataTransfer.files.length) handleCSV(e.dataTransfer.files[0]); });
+}
+
+// ═══════════════════════════════════════
+// TREND TAB
+// ═══════════════════════════════════════
+function renderTrendTab(){
+  const months = Object.keys(spendingHistory).sort();
+  if(months.length < 1){
+    document.getElementById('trend-strip').innerHTML = '<div style="text-align:center;color:var(--t3);padding:40px;">지출 데이터가 없습니다. 예산·지출 탭에서 CSV를 먼저 업로드하세요.</div>';
+    document.getElementById('trend-table').innerHTML = '';
+    return;
+  }
+
+  const fixedTotal = budgetCats.filter(c=>c.fixed&&c.budget>0).reduce((a,c)=>a+c.budget,0);
+
+  // Gather per-month data
+  const monthData = months.map(m => {
+    const d = spendingHistory[m];
+    const total = d.totalSpent || 0;
+    const card = total - fixedTotal;
+    return { month: m, total, card: Math.max(card,0), fixed: fixedTotal, catSpent: d.catSpent || {} };
+  });
+
+  const labels = monthData.map(d => {
+    const [y,mo] = d.month.split('-');
+    return `${parseInt(mo)}월`;
+  });
+
+  // ── Strip stats ──
+  const latest = monthData[monthData.length-1];
+  const prev = monthData.length>=2 ? monthData[monthData.length-2] : null;
+  const avgTotal = monthData.reduce((a,d)=>a+d.total,0) / monthData.length;
+  const change = prev ? ((latest.total - prev.total) / prev.total * 100) : 0;
+  const changeDir = change > 0 ? 'down' : change < 0 ? 'up' : 'neu';
+  const changeSign = change > 0 ? '+' : '';
+
+  document.getElementById('trend-strip').innerHTML = `
+    <div class="stat"><div class="stat-label">📅 분석 기간</div><div class="stat-val">${monthData.length}개월</div><div class="stat-sub neu">${labels[0]}~${labels[labels.length-1]}</div></div>
+    <div class="stat"><div class="stat-label">📊 월평균 지출</div><div class="stat-val">$${Math.round(avgTotal).toLocaleString()}</div><div class="stat-sub neu">실지출 $${Math.round(avgTotal-fixedTotal).toLocaleString()}</div></div>
+    <div class="stat"><div class="stat-label">💳 이번달</div><div class="stat-val">$${Math.round(latest.total).toLocaleString()}</div><div class="stat-sub neu">실지출 $${Math.round(latest.card).toLocaleString()}</div></div>
+    ${prev ? `<div class="stat"><div class="stat-label">📈 전월 대비</div><div class="stat-val ${changeDir}">${changeSign}${change.toFixed(1)}%</div><div class="stat-sub ${changeDir}">${change>0?'$'+Math.round(latest.total-prev.total).toLocaleString()+' 증가':'$'+Math.round(Math.abs(latest.total-prev.total)).toLocaleString()+' 감소'}</div></div>` : ''}
+  `;
+
+  // ── Line chart: monthly total ──
+  dc('trend-line');
+  const ctxLine = document.getElementById('trend-line');
+  charts['trend-line'] = new Chart(ctxLine, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: '총 지출', data: monthData.map(d=>Math.round(d.total)), borderColor: '#6c5ce7', backgroundColor: 'rgba(108,92,231,.1)', fill: true, tension: .3, pointRadius: 5, pointBackgroundColor: '#6c5ce7' },
+        { label: '실지출', data: monthData.map(d=>Math.round(d.card)), borderColor: '#00cec9', backgroundColor: 'rgba(0,206,201,.1)', fill: true, tension: .3, pointRadius: 5, pointBackgroundColor: '#00cec9' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#b0b3c6', font: { size: 11 } } } },
+      scales: {
+        x: { ticks: { color: '#8b90a5' }, grid: { color: 'rgba(255,255,255,.04)' } },
+        y: { ticks: { color: '#8b90a5', callback: v=>'$'+v.toLocaleString() }, grid: { color: 'rgba(255,255,255,.04)' } }
+      }
+    }
+  });
+
+  // ── Stacked bar: card vs fixed ──
+  dc('trend-stacked');
+  const ctxStack = document.getElementById('trend-stacked');
+  charts['trend-stacked'] = new Chart(ctxStack, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: '실지출', data: monthData.map(d=>Math.round(d.card)), backgroundColor: '#00cec9', borderRadius: 4 },
+        { label: '고정지출', data: monthData.map(d=>Math.round(d.fixed)), backgroundColor: '#636e72', borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#b0b3c6', font: { size: 11 } } } },
+      scales: {
+        x: { stacked: true, ticks: { color: '#8b90a5' }, grid: { color: 'rgba(255,255,255,.04)' } },
+        y: { stacked: true, ticks: { color: '#8b90a5', callback: v=>'$'+v.toLocaleString() }, grid: { color: 'rgba(255,255,255,.04)' } }
+      }
+    }
+  });
+
+  // ── Category trend lines ──
+  const allCats = new Set();
+  monthData.forEach(d => Object.keys(d.catSpent).forEach(c => allCats.add(c)));
+  const catColors = {};
+  allCats.forEach(cat => {
+    const bc = budgetCats.find(c=>c.name===cat);
+    catColors[cat] = bc?.color || '#8b90a5';
+  });
+
+  dc('trend-cat');
+  const ctxCat = document.getElementById('trend-cat');
+  const catDatasets = [...allCats].filter(cat => {
+    // Only show categories with meaningful data
+    return monthData.some(d => (d.catSpent[cat]||0) > 0);
+  }).map(cat => ({
+    label: cat,
+    data: monthData.map(d => Math.round(d.catSpent[cat]||0)),
+    borderColor: catColors[cat],
+    backgroundColor: catColors[cat] + '22',
+    tension: .3,
+    pointRadius: 4,
+    pointBackgroundColor: catColors[cat],
+    borderWidth: 2
+  }));
+
+  charts['trend-cat'] = new Chart(ctxCat, {
+    type: 'line',
+    data: { labels, datasets: catDatasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#b0b3c6', font: { size: 10 } }, position: 'bottom' } },
+      scales: {
+        x: { ticks: { color: '#8b90a5' }, grid: { color: 'rgba(255,255,255,.04)' } },
+        y: { ticks: { color: '#8b90a5', callback: v=>'$'+v.toLocaleString() }, grid: { color: 'rgba(255,255,255,.04)' } }
+      }
+    }
+  });
+
+  // ── Monthly comparison table ──
+  const catList = [...allCats].sort((a,b) => {
+    const aTotal = monthData.reduce((s,d)=>s+(d.catSpent[a]||0),0);
+    const bTotal = monthData.reduce((s,d)=>s+(d.catSpent[b]||0),0);
+    return bTotal - aTotal;
+  });
+
+  let tableHTML = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <thead><tr style="border-bottom:1px solid var(--border);">
+      <th style="text-align:left;padding:8px;color:var(--t2);">카테고리</th>
+      ${labels.map(l=>`<th style="text-align:right;padding:8px;color:var(--t2);">${l}</th>`).join('')}
+      <th style="text-align:right;padding:8px;color:var(--t2);">평균</th>
+    </tr></thead><tbody>`;
+
+  catList.forEach(cat => {
+    const icon = BUDGET_ICONS[cat] || '📦';
+    const vals = monthData.map(d => d.catSpent[cat]||0);
+    const avg = vals.reduce((a,b)=>a+b,0) / vals.length;
+    const maxVal = Math.max(...vals);
+
+    tableHTML += `<tr style="border-bottom:1px solid rgba(255,255,255,.03);">
+      <td style="padding:8px;white-space:nowrap;">${icon} ${cat}</td>
+      ${vals.map(v => {
+        const intensity = maxVal > 0 ? v/maxVal : 0;
+        const bg = intensity > 0.8 ? 'rgba(214,48,49,.15)' : intensity > 0.5 ? 'rgba(253,203,110,.1)' : '';
+        return `<td style="text-align:right;padding:8px;${bg?'background:'+bg:''}">$${Math.round(v).toLocaleString()}</td>`;
+      }).join('')}
+      <td style="text-align:right;padding:8px;color:var(--t2);font-weight:500;">$${Math.round(avg).toLocaleString()}</td>
+    </tr>`;
+  });
+
+  // Total row
+  tableHTML += `<tr style="border-top:2px solid var(--border);font-weight:600;">
+    <td style="padding:8px;">합계</td>
+    ${monthData.map(d => `<td style="text-align:right;padding:8px;">$${Math.round(d.total).toLocaleString()}</td>`).join('')}
+    <td style="text-align:right;padding:8px;color:var(--accent);">$${Math.round(avgTotal).toLocaleString()}</td>
+  </tr>`;
+
+  tableHTML += '</tbody></table></div>';
+  document.getElementById('trend-table').innerHTML = tableHTML;
 }
 
 // ═══════════════════════════════════════
