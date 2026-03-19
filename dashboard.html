@@ -444,13 +444,13 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
     <div style="display:grid;grid-template-columns:240px 1fr;gap:12px;align-items:start;">
 
       <!-- LEFT: 예산 설정 (compact) -->
-      <div style="position:sticky;top:12px;">
-        <div class="card" style="padding:14px;">
-          <div class="card-title" style="margin-bottom:8px;">
-            <span style="font-size:11px;">🎯 월 예산</span>
-            <button class="btn btn-ghost" onclick="openBudgetModal()" style="font-size:10px;padding:3px 8px;">✏️</button>
+      <div style="position:sticky;top:12px;font-size:11px;">
+        <div class="card" style="padding:12px;">
+          <div class="card-title" style="margin-bottom:6px;">
+            <span style="font-size:10px;">🎯 월 예산</span>
+            <button class="btn btn-ghost" onclick="openBudgetModal()" style="font-size:9px;padding:2px 6px;">✏️</button>
           </div>
-          <div id="bud-category-rows"></div>
+          <div id="bud-category-rows" style="font-size:11px;"></div>
         </div>
 
         <!-- PAYCHECK HISTORY -->
@@ -1393,18 +1393,18 @@ function renderBudgetTab(){
     const pct = c.budget ? Math.min(spent/c.budget*100, 150) : 0;
     const over = spent > c.budget;
     const color = over ? 'var(--red)' : c.color;
-    return `<div class="bud-row">
-      <div class="bud-icon" style="background:${c.color}22">${c.icon}</div>
+    return `<div class="bud-row" style="padding:8px 0;gap:8px;">
+      <div class="bud-icon" style="background:${c.color}22;width:24px;height:24px;font-size:11px;border-radius:6px;">${c.icon}</div>
       <div class="bud-info">
-        <div class="bud-name">${c.name}</div>
+        <div class="bud-name" style="font-size:11px;">${c.name}</div>
         <div class="bud-meter">
           <div class="bud-bar-bg"><div class="bud-bar-fill" style="width:${Math.min(pct,100)}%;background:${color}"></div></div>
-          <div class="bud-pct-num" style="color:${color}">${pct.toFixed(0)}%</div>
+          <div class="bud-pct-num" style="color:${color};font-size:10px;">${pct.toFixed(0)}%</div>
         </div>
       </div>
-      <div class="bud-right"><div class="bud-val" style="${over?'color:var(--red)':''}">$${Math.round(spent).toLocaleString()}</div><div class="bud-sub">/ $${Math.round(c.budget).toLocaleString()}</div></div>
+      <div class="bud-right"><div class="bud-val" style="font-size:11px;${over?'color:var(--red)':''}">$${Math.round(spent).toLocaleString()}</div><div class="bud-sub" style="font-size:10px;">/ $${Math.round(c.budget).toLocaleString()}</div></div>
     </div>`;
-  }).join('') : '<div style="text-align:center;color:var(--t3);padding:24px;">예산을 설정해주세요 → ✏️ 수정</div>';
+  }).join('') : '<div style="text-align:center;color:var(--t3);padding:16px;font-size:11px;">예산을 설정해주세요 → ✏️</div>';
 
   // Donut
   if(rows.length && rows.some(c=>(c.spent||0)>0)){
