@@ -1781,6 +1781,7 @@ function _lightUpdate(){
     <div class="stat"><div class="stat-label">🎯 예산 대비</div><div class="stat-val ${totalSpent>totalBudget?'down':'up'}">${totalBudget?(totalSpent/totalBudget*100).toFixed(0)+'%':'—'}</div><div class="stat-sub ${totalSpent<=totalBudget?'up':'down'}">${totalBudget?'$'+Math.round(Math.abs(totalBudget-totalSpent)).toLocaleString()+(totalSpent<=totalBudget?' 남음':' 초과'):''}</div></div>
     <div class="stat"><div class="stat-label">🏆 최대 지출</div><div class="stat-val">${Object.keys(catSpent).length?Object.entries(catSpent).sort((a,b)=>b[1]-a[1])[0][0]:'—'}</div><div class="stat-sub neu">${Object.keys(catSpent).length?'$'+Math.round(Object.entries(catSpent).sort((a,b)=>b[1]-a[1])[0][1]).toLocaleString():''}</div></div>
   `;
+  renderTxnList();
   renderBudgetTab();
 }
 
@@ -2076,6 +2077,11 @@ function renderSpendingAnalysis(catSpent, preserveOpen){
   `).join('');
 
   // Transaction list
+  renderTxnList();
+}
+
+function renderTxnList(){
+  const txnCount = parsedTxns.length;
   document.getElementById('sp-txn-count').textContent = `총 ${txnCount}건`;
   const top50 = parsedTxns.slice(0,50);
   document.getElementById('sp-txn-list').innerHTML = top50.map((t,i)=>{
