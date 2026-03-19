@@ -1740,6 +1740,13 @@ function getCatOptions(selected){
   return allCats.map(c => `<option value="${c}" ${c===selected?'selected':''}>${BUDGET_ICONS[c]||'📦'} ${c}</option>`).join('');
 }
 
+// Add fixed expenses to catSpent
+function addFixedToCatSpent(catSpent){
+  budgetCats.forEach(c => {
+    if(c.fixed && c.budget > 0) catSpent[c.name] = (catSpent[c.name]||0) + c.budget;
+  });
+}
+
 // Recalc spending data without full re-render
 function _recalcSpending(){
   if(!selectedMonth || !spendingHistory[selectedMonth]) return;
@@ -1749,6 +1756,7 @@ function _recalcSpending(){
     const amtUSD = tx.currency==='KRW' ? tx.amount/FX*10000 : tx.amount;
     data.catSpent[tx.category] = (data.catSpent[tx.category]||0) + amtUSD;
   });
+  addFixedToCatSpent(data.catSpent);
   data.totalSpent = Object.values(data.catSpent).reduce((a,b)=>a+b,0);
   save();
   applySpendingToBudget(selectedMonth);
@@ -1830,11 +1838,12 @@ function analyzeSpending(){
 
   // Aggregate by category
   const catSpent = {};
-  const totalSpent = parsedTxns.reduce((sum, t) => {
+  parsedTxns.forEach(t => {
     const amtUSD = t.currency==='KRW' ? t.amount/FX*10000 : t.amount;
     catSpent[t.category] = (catSpent[t.category]||0) + amtUSD;
-    return sum + amtUSD;
-  }, 0);
+  });
+  addFixedToCatSpent(catSpent);
+  const totalSpent = Object.values(catSpent).reduce((a,b)=>a+b,0);
 
   // Save to monthly history
   spendingHistory[month] = { txns: parsedTxns, catSpent, totalSpent };
