@@ -1773,9 +1773,9 @@ function changeTxnCategory(txnIdx, newCat){
   save();
   applySpendingToBudget(selectedMonth);
 
-  // Re-render spending analysis
+  // Re-render but preserve open sub-rows
   const data = spendingHistory[selectedMonth];
-  if(data) renderSpendingAnalysis(data.catSpent);
+  if(data) renderSpendingAnalysis(data.catSpent, true);
   renderBudgetTab();
 }
 
@@ -1803,7 +1803,7 @@ function deleteTxn(txnIdx){
   save();
   applySpendingToBudget(selectedMonth);
   const data = spendingHistory[selectedMonth];
-  if(data) renderSpendingAnalysis(data.catSpent);
+  if(data) renderSpendingAnalysis(data.catSpent, true);
   renderBudgetTab();
   renderMonthTabs();
 }
@@ -1942,7 +1942,7 @@ function resetCSV(){
   renderBudgetTab();
 }
 
-function renderSpendingAnalysis(catSpent){
+function renderSpendingAnalysis(catSpent, preserveOpen){
   const totalSpent = Object.values(catSpent).reduce((a,b)=>a+b,0);
   const totalBudget = budgetCats.reduce((a,c)=>a+c.budget,0);
   const txnCount = parsedTxns.length;
@@ -1955,6 +1955,14 @@ function renderSpendingAnalysis(catSpent){
     <div class="stat"><div class="stat-label">🎯 예산 대비</div><div class="stat-val ${totalSpent>totalBudget?'down':'up'}">${totalBudget?(totalSpent/totalBudget*100).toFixed(0)+'%':'—'}</div><div class="stat-sub ${totalSpent<=totalBudget?'up':'down'}">${totalBudget?'$'+Math.round(Math.abs(totalBudget-totalSpent)).toLocaleString()+(totalSpent<=totalBudget?' 남음':' 초과'):''}</div></div>
     <div class="stat"><div class="stat-label">🏆 최대 지출</div><div class="stat-val">${Object.keys(catSpent).length?Object.entries(catSpent).sort((a,b)=>b[1]-a[1])[0][0]:'—'}</div><div class="stat-sub neu">${Object.keys(catSpent).length?'$'+Math.round(Object.entries(catSpent).sort((a,b)=>b[1]-a[1])[0][1]).toLocaleString():''}</div></div>
   `;
+
+  // Remember which sub-rows were open
+  const openSubs = new Set();
+  if(preserveOpen){
+    document.querySelectorAll('#sp-compare-rows .sub-rows').forEach(el => {
+      if(el.style.display !== 'none') openSubs.add(el.id);
+    });
+  }
 
   // Compare rows (budget vs spent) — expandable with transaction list
   const catEntries = Object.entries(catSpent).sort((a,b)=>b[1]-a[1]);
@@ -1995,6 +2003,18 @@ function renderSpendingAnalysis(catSpent){
       ${txnListHtml}
     </div>`;
   }).join('');
+
+  // Restore open sub-rows
+  if(preserveOpen && openSubs.size){
+    openSubs.forEach(id => {
+      const el = document.getElementById(id);
+      if(el){
+        el.style.display = 'block';
+        const row = el.previousElementSibling;
+        if(row){ const arrow = row.querySelector('.bud-name span'); if(arrow) arrow.textContent = arrow.textContent.replace('▶','▼'); }
+      }
+    });
+  }
 
   // Spending donut
   dc('sp-donut');
