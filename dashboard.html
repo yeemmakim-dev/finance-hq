@@ -1659,9 +1659,11 @@ function parseCSV(text){
     if(amt>=0) continue;
     amt = -amt; // flip to positive for display
 
-    // Detect currency
+    // Detect currency — only mark as KRW if amounts are clearly KRW scale (>100,000)
+    // Chase/US bank CSVs are always USD. KRW transactions are typically 10,000+ won.
     const rawAmt = (cols[amtCol>=0?amtCol:debitCol]||'').replace(/"/g,'');
-    const isKRW = amt>500 && !rawAmt.includes('$');
+    const hasWonSign = rawAmt.includes('₩') || rawAmt.includes('원');
+    const isKRW = hasWonSign || (amt>50000 && !rawAmt.includes('$'));
 
     // Skip non-purchase transaction types (e.g. Chase "Type" column)
     if(typeCol>=0){
