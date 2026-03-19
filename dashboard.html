@@ -722,9 +722,11 @@ function load(){
 // ═══════════════════════════════════════
 function switchTab(id, el){
   currentTab = id;
+  localStorage.setItem('dash_tab', id);
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
   document.querySelectorAll('.tab-page').forEach(p=>p.classList.remove('on'));
-  el.classList.add('on');
+  if(el) el.classList.add('on');
+  else document.querySelectorAll('.tab').forEach(t=>{ if(t.onclick?.toString().includes("'"+id+"'")) t.classList.add('on'); });
   document.getElementById('page-'+id).classList.add('on');
   renderAll();
 }
@@ -864,9 +866,10 @@ function renderAll(){
   else if(currentTab==='budget') renderBudgetTab();
 }
 
-let budgetSubTab = 'spending';
+let budgetSubTab = localStorage.getItem('dash_subtab') || 'spending';
 function switchBudgetSub(sub){
   budgetSubTab = sub;
+  localStorage.setItem('dash_subtab', sub);
   document.getElementById('sub-spending').style.display = sub==='spending' ? '' : 'none';
   document.getElementById('sub-trend').style.display = sub==='trend' ? '' : 'none';
   document.getElementById('subtab-spending').classList.toggle('on', sub==='spending');
@@ -1409,6 +1412,13 @@ const SPEND_KEYWORDS = {
 };
 
 function renderBudgetTab(){
+  // Sync sub-tab UI state
+  document.getElementById('sub-spending').style.display = budgetSubTab==='spending' ? '' : 'none';
+  document.getElementById('sub-trend').style.display = budgetSubTab==='trend' ? '' : 'none';
+  document.getElementById('subtab-spending').classList.toggle('on', budgetSubTab==='spending');
+  document.getElementById('subtab-trend').classList.toggle('on', budgetSubTab==='trend');
+  if(budgetSubTab==='trend'){ renderTrendTab(); return; }
+
   checkPaydayBanner();
   renderPaychecks();
 
@@ -2650,7 +2660,13 @@ function renderAIInsights(monthData, labels){
 // ═══════════════════════════════════════
 load();
 if(Object.keys(liveQuotes).length) setStatus('cached');
-renderAll();
+// Restore last tab
+const savedTab = localStorage.getItem('dash_tab');
+if(savedTab && document.getElementById('page-'+savedTab)){
+  switchTab(savedTab, null);
+} else {
+  renderAll();
+}
 </script>
 </body>
 </html>
