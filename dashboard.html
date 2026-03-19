@@ -1733,7 +1733,9 @@ function categorize(desc){
   const lower = desc.toLowerCase();
   // Check user overrides first
   if(userCatMap[lower]) return userCatMap[lower];
+  const validCats = new Set(budgetCats.map(c=>c.name));
   for(const [cat, keywords] of Object.entries(SPEND_KEYWORDS)){
+    if(!validCats.has(cat)) continue; // Skip categories not in user's budget
     for(const kw of keywords){
       if(lower.includes(kw.toLowerCase())) return cat;
     }
