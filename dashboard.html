@@ -1816,7 +1816,7 @@ function deleteTxn(txnIdx){
   // Full re-render needed for delete (row removed), but preserve open
   _recalcSpending();
   const data = spendingHistory[selectedMonth];
-  if(data) renderSpendingAnalysis(data.catSpent, true);
+  if(data) renderSpendingAnalysis(data.catSpent);
   renderBudgetTab();
   renderMonthTabs();
 }
@@ -1955,7 +1955,7 @@ function resetCSV(){
   renderBudgetTab();
 }
 
-function renderSpendingAnalysis(catSpent, preserveOpen){
+function renderSpendingAnalysis(catSpent){
   const totalSpent = Object.values(catSpent).reduce((a,b)=>a+b,0);
   const totalBudget = budgetCats.reduce((a,c)=>a+c.budget,0);
   const txnCount = parsedTxns.length;
@@ -1969,15 +1969,7 @@ function renderSpendingAnalysis(catSpent, preserveOpen){
     <div class="stat"><div class="stat-label">🏆 최대 지출</div><div class="stat-val">${Object.keys(catSpent).length?Object.entries(catSpent).sort((a,b)=>b[1]-a[1])[0][0]:'—'}</div><div class="stat-sub neu">${Object.keys(catSpent).length?'$'+Math.round(Object.entries(catSpent).sort((a,b)=>b[1]-a[1])[0][1]).toLocaleString():''}</div></div>
   `;
 
-  // Remember which sub-rows were open
-  const openSubs = new Set();
-  if(preserveOpen){
-    document.querySelectorAll('#sp-compare-rows .sub-rows').forEach(el => {
-      if(el.style.display !== 'none') openSubs.add(el.id);
-    });
-  }
-
-  // Compare rows (budget vs spent) — expandable with transaction list
+  // Compare rows (budget vs spent) — click to filter txn list below
   const catEntries = Object.entries(catSpent).sort((a,b)=>b[1]-a[1]);
   document.getElementById('sp-compare-rows').innerHTML = catEntries.map(([cat, spent], idx)=>{
     const budCat = budgetCats.find(c=>c.name===cat);
@@ -1986,51 +1978,17 @@ function renderSpendingAnalysis(catSpent, preserveOpen){
     const over = budget>0 && spent>budget;
     const icon = BUDGET_ICONS[cat]||'📦';
     const color = budCat?.color || '#8b90a5';
-    const subId = 'sp-cat-'+cat.replace(/[^a-zA-Z0-9가-힣]/g,'_');
+    const txnCount = parsedTxns.filter(t=>t.category===cat).length;
 
-    // Get transactions for this category
-    const catTxns = parsedTxns.filter(t=>t.category===cat).sort((a,b)=>b.amount-a.amount);
-    const txnCount = catTxns.length;
-
-    const txnListHtml = catTxns.map(t=>{
-      const sym = t.currency==='KRW'?'₩':'$';
-      const tIdx = parsedTxns.indexOf(t);
-      return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0 7px 52px;font-size:12px;border-bottom:1px solid rgba(255,255,255,.03);">
-        <span style="flex:1;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${t.desc}">${t.desc}</span>
-        <select onchange="changeTxnCategory(${tIdx},this.value)" style="font-size:11px;background:var(--bg2);color:var(--t2);border:1px solid var(--border);border-radius:5px;padding:2px 4px;cursor:pointer;max-width:110px;">${getCatOptions(t.category)}</select>
-        <span style="color:var(--t2);font-size:11px;min-width:70px;">${t.date}</span>
-        <span style="color:var(--t1);font-weight:500;min-width:70px;text-align:right;">${sym}${Math.round(t.amount).toLocaleString()}</span>
-        <span onclick="deleteTxn(${tIdx})" style="cursor:pointer;color:var(--t3);font-size:13px;padding:0 2px;transition:color .15s;" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--t3)'" title="삭제">✕</span>
-      </div>`;
-    }).join('');
-
-    return `<div class="bud-row" onclick="toggleSub('${subId}',this)" style="cursor:pointer;">
+    return `<div class="bud-row" onclick="filterTxnByCat('${cat}')" style="cursor:pointer;">
       <div class="bud-icon" style="background:${color}22">${icon}</div>
       <div class="bud-info">
-        <div class="bud-name">${cat} <span style="font-size:10px;color:var(--t2);margin-left:4px;">${txnCount}건 ▶</span>${over?'<span style="font-size:10px;color:var(--red);margin-left:4px;">초과!</span>':''}</div>
+        <div class="bud-name">${cat} <span style="font-size:10px;color:var(--t2);margin-left:4px;">${txnCount}건</span>${over?'<span style="font-size:10px;color:var(--red);margin-left:4px;">초과!</span>':''}</div>
         ${budget>0?`<div class="bud-meter"><div class="bud-bar-bg"><div class="bud-bar-fill" style="width:${Math.min(pct,100)}%;background:${over?'var(--red)':color}"></div></div><div class="bud-pct-num" style="color:${over?'var(--red)':color}">${pct.toFixed(0)}%</div></div>`:''}
       </div>
       <div class="bud-right"><div class="bud-val" style="${over?'color:var(--red)':''}">$${Math.round(spent).toLocaleString()}</div>${budget>0?`<div class="bud-sub">/ $${Math.round(budget).toLocaleString()}</div>`:''}</div>
-    </div>
-    <div id="${subId}" class="sub-rows" style="display:none;background:rgba(255,255,255,.015);border-radius:0 0 8px 8px;margin-top:-1px;max-height:300px;overflow-y:auto;">
-      ${txnListHtml}
     </div>`;
   }).join('');
-
-  // Restore open sub-rows
-  if(preserveOpen){
-    openSubs.forEach(id => {
-      const el = document.getElementById(id);
-      if(el){
-        el.style.display = 'block';
-        const row = el.previousElementSibling;
-        if(row){
-          const arrow = row.querySelector('.bud-name span');
-          if(arrow) arrow.textContent = arrow.textContent.replace('▶','▼');
-        }
-      }
-    });
-  }
 
   // Spending donut
   dc('sp-donut');
@@ -2080,10 +2038,22 @@ function renderSpendingAnalysis(catSpent, preserveOpen){
   renderTxnList();
 }
 
+let txnFilterCat = ''; // '' = show all
+
+function filterTxnByCat(cat){
+  txnFilterCat = (txnFilterCat === cat) ? '' : cat; // toggle
+  renderTxnList();
+  // Scroll to txn list
+  document.getElementById('sp-txn-list')?.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
 function renderTxnList(){
-  const txnCount = parsedTxns.length;
-  document.getElementById('sp-txn-count').textContent = `총 ${txnCount}건`;
-  const top50 = parsedTxns.slice(0,50);
+  const filtered = txnFilterCat ? parsedTxns.filter(t=>t.category===txnFilterCat) : parsedTxns;
+  const txnCount = filtered.length;
+  const label = txnFilterCat ? `${BUDGET_ICONS[txnFilterCat]||'📦'} ${txnFilterCat} ${txnCount}건` : `총 ${parsedTxns.length}건`;
+  const resetBtn = txnFilterCat ? ` <span onclick="filterTxnByCat('')" style="color:var(--blue);cursor:pointer;font-size:11px;margin-left:6px;">✕ 전체 보기</span>` : '';
+  document.getElementById('sp-txn-count').innerHTML = label + resetBtn;
+  const top50 = filtered.slice(0,50);
   document.getElementById('sp-txn-list').innerHTML = top50.map((t,i)=>{
     const icon = BUDGET_ICONS[t.category]||'📦';
     const color = budgetCats.find(c=>c.name===t.category)?.color || '#8b90a5';
