@@ -529,20 +529,20 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
     <div class="stat-strip" id="trend-strip"></div>
 
     <div class="section">
-      <div class="card" style="padding:20px;">
+      <div class="card" style="padding:16px;">
         <div class="card-title"><span>월별 지출 추이</span></div>
-        <canvas id="trend-line" height="260"></canvas>
+        <div style="position:relative;height:200px;"><canvas id="trend-line"></canvas></div>
       </div>
     </div>
 
     <div class="grid-2 section">
-      <div class="card" style="padding:20px;">
+      <div class="card" style="padding:16px;">
         <div class="card-title"><span>실지출 vs 고정지출</span></div>
-        <canvas id="trend-stacked" height="240"></canvas>
+        <div style="position:relative;height:180px;"><canvas id="trend-stacked"></canvas></div>
       </div>
-      <div class="card" style="padding:20px;">
+      <div class="card" style="padding:16px;">
         <div class="card-title"><span>카테고리별 추이</span></div>
-        <canvas id="trend-cat" height="240"></canvas>
+        <div style="position:relative;height:180px;"><canvas id="trend-cat"></canvas></div>
       </div>
     </div>
 
@@ -2196,8 +2196,8 @@ function renderTrendTab(){
     data: {
       labels,
       datasets: [
-        { label: '총 지출', data: monthData.map(d=>Math.round(d.total)), borderColor: '#6c5ce7', backgroundColor: 'rgba(108,92,231,.1)', fill: true, tension: .3, pointRadius: 5, pointBackgroundColor: '#6c5ce7' },
-        { label: '실지출', data: monthData.map(d=>Math.round(d.card)), borderColor: '#00cec9', backgroundColor: 'rgba(0,206,201,.1)', fill: true, tension: .3, pointRadius: 5, pointBackgroundColor: '#00cec9' }
+        { label: '총 지출', data: monthData.map(d=>Math.round(d.total)), borderColor: '#6c5ce7', backgroundColor: 'rgba(108,92,231,.1)', fill: true, tension: .3, pointRadius: 3, pointBackgroundColor: '#6c5ce7', borderWidth: 2 },
+        { label: '실지출', data: monthData.map(d=>Math.round(d.card)), borderColor: '#00cec9', backgroundColor: 'rgba(0,206,201,.1)', fill: true, tension: .3, pointRadius: 3, pointBackgroundColor: '#00cec9', borderWidth: 2 }
       ]
     },
     options: {
@@ -2252,7 +2252,7 @@ function renderTrendTab(){
     borderColor: catColors[cat],
     backgroundColor: catColors[cat] + '22',
     tension: .3,
-    pointRadius: 4,
+    pointRadius: 2,
     pointBackgroundColor: catColors[cat],
     borderWidth: 2
   }));
