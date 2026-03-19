@@ -785,15 +785,22 @@ function renderAllTab(){
   document.getElementById('all-kr-total').textContent = fmtMan(krMan) + '원';
   document.getElementById('all-kr-sub').textContent = `≈ ${fmtUSD(krMan*10000/FX)} · 현금 ${fmtMan(cashSum(krAssets.cash))}원 · ${stocks.filter(s=>s.currency==='KRW').length}종목`;
 
-  // Asset breakdown (통합, 만원 기준)
+  // Asset breakdown (통합, 만원 기준) with US/KR sub-details
+  const usStockMan = usStockUSD()*FX/10000;
+  const krStockManVal = krStockMan();
   const categories = [
-    { name:'현금/예금', icon:'💵', color:'#5b9cff', bg:'rgba(91,156,255,.12)', value: cashSum(usAssets.cash)*FX/10000 + cashSum(krAssets.cash) },
-    { name:'주식/ETF', icon:'📈', color:'#34d399', bg:'rgba(52,211,153,.12)', value: usStockUSD()*FX/10000 + krStockMan() },
-    { name:'부동산', icon:'🏠', color:'#fbbf24', bg:'rgba(251,191,36,.12)', value: usAssets.realty*FX/10000 + krAssets.realty },
-    { name:'암호화폐', icon:'🪙', color:'#fb923c', bg:'rgba(251,146,60,.12)', value: usAssets.crypto*FX/10000 + krAssets.crypto },
-    { name:'은퇴자금', icon:'📋', color:'#a78bfa', bg:'rgba(167,139,250,.12)', value: usAssets.retire*FX/10000 + krAssets.retire },
+    { name:'현금/예금', icon:'💵', color:'#5b9cff', bg:'rgba(91,156,255,.12)', value: cashSum(usAssets.cash)*FX/10000 + cashSum(krAssets.cash),
+      subs:[{flag:'🇺🇸',label:'미국',value:cashSum(usAssets.cash)*FX/10000},{flag:'🇰🇷',label:'한국',value:cashSum(krAssets.cash)}] },
+    { name:'주식/ETF', icon:'📈', color:'#34d399', bg:'rgba(52,211,153,.12)', value: usStockMan + krStockManVal,
+      subs:[{flag:'🇺🇸',label:`미국 (${stocks.filter(s=>s.currency==='USD').length}종목)`,value:usStockMan},{flag:'🇰🇷',label:`한국 (${stocks.filter(s=>s.currency==='KRW').length}종목)`,value:krStockManVal}] },
+    { name:'부동산', icon:'🏠', color:'#fbbf24', bg:'rgba(251,191,36,.12)', value: usAssets.realty*FX/10000 + krAssets.realty,
+      subs:[{flag:'🇺🇸',label:'미국',value:usAssets.realty*FX/10000},{flag:'🇰🇷',label:'한국',value:krAssets.realty}] },
+    { name:'암호화폐', icon:'🪙', color:'#fb923c', bg:'rgba(251,146,60,.12)', value: usAssets.crypto*FX/10000 + krAssets.crypto,
+      subs:[{flag:'🇺🇸',label:'미국',value:usAssets.crypto*FX/10000},{flag:'🇰🇷',label:'한국',value:krAssets.crypto}] },
+    { name:'은퇴자금', icon:'📋', color:'#a78bfa', bg:'rgba(167,139,250,.12)', value: usAssets.retire*FX/10000 + krAssets.retire,
+      subs:[{flag:'🇺🇸',label:'미국',value:usAssets.retire*FX/10000},{flag:'🇰🇷',label:'한국',value:krAssets.retire}] },
   ];
-  renderAssetRows('all-asset-rows', categories, tot);
+  renderAssetRows('all-asset-rows', categories, tot, null, true);
   renderDonut('all-donut', 'all-donut-total', 'all-donut-leg', categories, tot, fmtMan(tot)+'원');
   renderDebts();
   renderHistory();
@@ -886,21 +893,39 @@ function renderBankDetail(elId, cashArr, sym, isMan){
 // ═══════════════════════════════════════
 // SHARED RENDERERS
 // ═══════════════════════════════════════
-function renderAssetRows(elId, categories, total, fmt){
+function renderAssetRows(elId, categories, total, fmt, expandable){
   if(!fmt) fmt = v => fmtMan(v)+'원';
   const t = total || 1;
-  document.getElementById(elId).innerHTML = categories.map(c => {
+  document.getElementById(elId).innerHTML = categories.map((c,idx) => {
     const pct = c.value/t*100;
-    return `<div class="asset-row">
+    const hasSubs = expandable && c.subs && c.subs.some(s=>s.value>0);
+    const subId = elId+'-sub-'+idx;
+    const subHtml = hasSubs ? c.subs.filter(s=>s.value>0).map(s =>
+      `<div style="display:flex;align-items:center;gap:8px;padding:6px 0 6px 44px;font-size:12px;">
+        <span>${s.flag}</span>
+        <span style="flex:1;color:var(--t2)">${s.label}</span>
+        <span style="color:var(--t1);font-weight:500">${fmt(s.value)}</span>
+        <span style="color:var(--t2);font-size:11px;min-width:42px;text-align:right">${(s.value/t*100).toFixed(1)}%</span>
+      </div>`
+    ).join('') : '';
+    return `<div class="asset-row${hasSubs?' expandable':''}" ${hasSubs?`onclick="toggleSub('${subId}',this)" style="cursor:pointer"`:''}>
       <div class="asset-icon" style="background:${c.bg}">${c.icon}</div>
-      <div class="asset-info"><div class="asset-name">${c.name}</div>
+      <div class="asset-info"><div class="asset-name">${c.name}${hasSubs?'<span style="font-size:10px;color:var(--t2);margin-left:6px">▶</span>':''}</div>
         <div style="height:3px;background:rgba(255,255,255,.05);border-radius:2px;margin-top:6px;overflow:hidden;">
           <div style="height:100%;width:${pct}%;background:${c.color};border-radius:2px;"></div>
         </div>
       </div>
       <div class="asset-right"><div class="asset-val">${fmt(c.value)}</div><div class="asset-pct neu">${pct.toFixed(1)}%</div></div>
-    </div>`;
+    </div>${hasSubs?`<div id="${subId}" class="sub-rows" style="display:none;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02);border-radius:0 0 8px 8px;margin-top:-1px;padding:2px 0;">${subHtml}</div>`:''}`;
   }).join('');
+}
+function toggleSub(id,row){
+  const el=document.getElementById(id);
+  if(!el)return;
+  const open = el.style.display!=='none';
+  el.style.display=open?'none':'block';
+  const arrow=row.querySelector('.asset-name span');
+  if(arrow) arrow.textContent=open?'▶':'▼';
 }
 
 function renderDonut(canvasId, totalId, legId, categories, total, totalText){
