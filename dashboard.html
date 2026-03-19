@@ -285,7 +285,6 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
     <button class="tab" onclick="switchTab('us',this)"><span class="tab-icon">🇺🇸</span>미국 자산</button>
     <button class="tab" onclick="switchTab('kr',this)"><span class="tab-icon">🇰🇷</span>한국 자산</button>
     <button class="tab" onclick="switchTab('budget',this)"><span class="tab-icon">💳</span>예산 · 지출</button>
-    <button class="tab" onclick="switchTab('trend',this)"><span class="tab-icon">📈</span>지출 추이</button>
   </div>
 
   <!-- ====== ALL (통합) ====== -->
@@ -417,6 +416,13 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
   <!-- ====== BUDGET (예산/지출) ====== -->
   <div class="tab-page" id="page-budget">
 
+    <!-- SUB TABS -->
+    <div style="display:flex;gap:6px;margin-bottom:14px;">
+      <button class="tab on" id="subtab-spending" onclick="switchBudgetSub('spending')" style="font-size:12px;padding:6px 14px;">💳 예산 · 지출</button>
+      <button class="tab" id="subtab-trend" onclick="switchBudgetSub('trend')" style="font-size:12px;padding:6px 14px;">📈 지출 추이</button>
+    </div>
+
+    <div id="sub-spending">
     <!-- PAYDAY BANNER -->
     <div id="payday-banner" style="display:none;background:linear-gradient(135deg,rgba(52,211,153,.1),rgba(91,156,255,.1));border:1px solid rgba(52,211,153,.25);border-radius:14px;padding:20px 24px;margin-bottom:14px;">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
@@ -520,12 +526,10 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
       </div>
 
     </div><!-- end grid -->
-  </div>
+  </div><!-- end sub-spending -->
 
-</div>
-
-  <!-- ═══ TREND TAB ═══ -->
-  <div class="tab-page" id="page-trend">
+  <!-- ═══ TREND (sub-tab) ═══ -->
+  <div id="sub-trend" style="display:none;">
     <div class="stat-strip" id="trend-strip"></div>
 
     <div class="section">
@@ -553,6 +557,8 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
       </div>
     </div>
   </div>
+
+</div>
 
 <!-- BUDGET EDIT MODAL -->
 <div class="overlay" id="budget-modal-overlay">
@@ -849,7 +855,16 @@ function renderAll(){
   else if(currentTab==='us') renderUSTab();
   else if(currentTab==='kr') renderKRTab();
   else if(currentTab==='budget') renderBudgetTab();
-  else if(currentTab==='trend') renderTrendTab();
+}
+
+let budgetSubTab = 'spending';
+function switchBudgetSub(sub){
+  budgetSubTab = sub;
+  document.getElementById('sub-spending').style.display = sub==='spending' ? '' : 'none';
+  document.getElementById('sub-trend').style.display = sub==='trend' ? '' : 'none';
+  document.getElementById('subtab-spending').classList.toggle('on', sub==='spending');
+  document.getElementById('subtab-trend').classList.toggle('on', sub==='trend');
+  if(sub==='trend') renderTrendTab();
 }
 
 // ── ALL TAB ──
