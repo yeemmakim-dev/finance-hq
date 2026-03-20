@@ -53,7 +53,7 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
 .container{max-width:1280px;margin:0 auto;padding:24px 32px 80px;}
 
 /* STRIP */
-.top-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}
+.top-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px;}
 .stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
 .stat-label{font-size:11px;color:var(--t3);letter-spacing:.04em;margin-bottom:6px;display:flex;align-items:center;gap:5px;}
 .stat-val{font-size:22px;font-weight:700;letter-spacing:-.03em;}
@@ -349,11 +349,21 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
       <div class="section-hdr"><div class="section-title">💡 자산 관리 추천</div></div>
       <div id="all-rec-list"></div>
     </div>
-    <!-- AI ASSET ANALYSIS -->
+    <!-- ACTION PLAN TODO -->
+    <div class="section" id="action-plan-section" style="display:none;">
+      <div class="section-hdr"><div class="section-title">🎯 액션 플랜</div></div>
+      <div id="action-plan-list"></div>
+    </div>
+    <!-- AI ASSET ANALYSIS (collapsible) -->
     <div class="section">
-      <div class="card" style="padding:20px;">
-        <div class="card-title"><span>🤖 AI 자산 분석 & 종목 추천</span></div>
-        <div id="ai-asset-all"></div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div onclick="toggleAIPanel('all')" style="padding:16px 20px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;">
+          <div class="card-title" style="margin:0;"><span>🤖 AI 자산 분석 & 종목 추천</span></div>
+          <span id="ai-toggle-all" style="font-size:12px;color:var(--t3);transition:transform .2s;">▼</span>
+        </div>
+        <div id="ai-panel-all" style="display:none;padding:0 20px 20px;">
+          <div id="ai-asset-all"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -389,9 +399,14 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
       </div>
     </div>
     <div class="section">
-      <div class="card" style="padding:20px;">
-        <div class="card-title"><span>🤖 AI 미국 자산 분석 & 종목 추천</span></div>
-        <div id="ai-asset-us"></div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div onclick="toggleAIPanel('us')" style="padding:16px 20px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;">
+          <div class="card-title" style="margin:0;"><span>🤖 AI 미국 자산 분석 & 종목 추천</span></div>
+          <span id="ai-toggle-us" style="font-size:12px;color:var(--t3);transition:transform .2s;">▼</span>
+        </div>
+        <div id="ai-panel-us" style="display:none;padding:0 20px 20px;">
+          <div id="ai-asset-us"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -427,9 +442,14 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
       </div>
     </div>
     <div class="section">
-      <div class="card" style="padding:20px;">
-        <div class="card-title"><span>🤖 AI 한국 자산 분석 & 종목 추천</span></div>
-        <div id="ai-asset-kr"></div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div onclick="toggleAIPanel('kr')" style="padding:16px 20px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;">
+          <div class="card-title" style="margin:0;"><span>🤖 AI 한국 자산 분석 & 종목 추천</span></div>
+          <span id="ai-toggle-kr" style="font-size:12px;color:var(--t3);transition:transform .2s;">▼</span>
+        </div>
+        <div id="ai-panel-kr" style="display:none;padding:0 20px 20px;">
+          <div id="ai-asset-kr"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -757,6 +777,40 @@ function switchTab(id, el){
   renderAll();
 }
 
+function toggleAIPanel(tab){
+  const panel = document.getElementById('ai-panel-'+tab);
+  const arrow = document.getElementById('ai-toggle-'+tab);
+  const open = panel.style.display === 'none';
+  panel.style.display = open ? '' : 'none';
+  arrow.textContent = open ? '▲' : '▼';
+}
+
+// ── ACTION PLAN TODO ──
+let actionPlanDone = JSON.parse(localStorage.getItem('dash_action_done')||'{}');
+function toggleActionItem(key){
+  actionPlanDone[key] = !actionPlanDone[key];
+  localStorage.setItem('dash_action_done', JSON.stringify(actionPlanDone));
+  // re-render just the list
+  if(typeof _lastActionItems !== 'undefined') renderActionPlanList(_lastActionItems);
+}
+let _lastActionItems = [];
+function renderActionPlanList(actions){
+  _lastActionItems = actions;
+  const sec = document.getElementById('action-plan-section');
+  if(!actions.length){ sec.style.display='none'; return; }
+  sec.style.display='';
+  document.getElementById('action-plan-list').innerHTML = actions.map((a,i)=>{
+    const key = 'ap_'+a.replace(/[^a-zA-Z0-9가-힣]/g,'').slice(0,30);
+    const done = !!actionPlanDone[key];
+    return `<div onclick="toggleActionItem('${key}')" style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;cursor:pointer;transition:opacity .2s;${done?'opacity:.5;':''}">
+      <div style="flex-shrink:0;width:20px;height:20px;border-radius:6px;border:2px solid ${done?'var(--green)':'var(--border2)'};display:flex;align-items:center;justify-content:center;margin-top:1px;background:${done?'rgba(52,211,153,.15)':'transparent'};">
+        ${done?'<span style="color:var(--green);font-size:13px;font-weight:700;">✓</span>':''}
+      </div>
+      <div style="font-size:12px;line-height:1.6;${done?'text-decoration:line-through;color:var(--t3);':''}">${a}</div>
+    </div>`;
+  }).join('');
+}
+
 // ═══════════════════════════════════════
 // QUOTES (서버 없이 브라우저에서 직접 호출)
 // ═══════════════════════════════════════
@@ -912,11 +966,18 @@ function renderAllTab(){
   const stockTotalMan = usStockUSD()*FX/10000 + krStockMan();
   const stockPctAll = tot ? (stockTotalMan/tot*100) : 0;
 
+  const healthScore = calcHealthScore();
+  const hColor = healthScore.score >= 80 ? 'var(--green)' : healthScore.score >= 60 ? 'var(--amber)' : 'var(--red)';
   document.getElementById('all-strip').innerHTML = `
     <div class="stat"><div class="stat-label">💰 총 자산</div><div class="stat-val">${fmtMan(tot)}원</div><div class="stat-sub neu">≈ ${fmtUSD(tot*10000/FX)}</div></div>
     <div class="stat"><div class="stat-label">🇺🇸 미국</div><div class="stat-val">${fmtUSD(usUSD)}</div><div class="stat-sub neu">${tot?(usMan/tot*100).toFixed(0):0}%</div></div>
     <div class="stat"><div class="stat-label">🇰🇷 한국</div><div class="stat-val">${fmtMan(krMan)}원</div><div class="stat-sub neu">${tot?(krMan/tot*100).toFixed(0):0}%</div></div>
     <div class="stat"><div class="stat-label">📈 주식/ETF</div><div class="stat-val">${fmtMan(stockTotalMan)}원</div><div class="stat-sub neu">${stocks.length}종목 · ${stockPctAll.toFixed(0)}%</div></div>
+    <div class="stat" style="border-color:${hColor}22;">
+      <div class="stat-label">🏆 포트폴리오 건강</div>
+      <div class="stat-val" style="color:${hColor};">${healthScore.score}점</div>
+      <div class="stat-sub" style="color:${hColor};">${healthScore.grade}</div>
+    </div>
   `;
 
   // Country cards
@@ -1433,10 +1494,42 @@ function getStockSector(s){
   return {type: s.cat||'기타', style:'미분류'};
 }
 
+function calcHealthScore(){
+  const tot = grandTotalMan();
+  if(tot === 0) return {score:0,grade:'-'};
+  const usMan = usTotalUSD()*FX/10000;
+  const krMan = krTotalMan();
+  const cashMan = cashSum(usAssets.cash)*FX/10000 + cashSum(krAssets.cash);
+  const stockMan = usStockUSD()*FX/10000 + krStockMan();
+  const retireMan = usAssets.retire*FX/10000 + krAssets.retire;
+  const cashPct = cashMan/tot*100, stockPct = stockMan/tot*100, retirePct = retireMan/tot*100;
+
+  let score = 50;
+  if(cashPct >= 10 && cashPct <= 30) score += 8; else if(cashPct < 5 || cashPct > 50) score -= 5;
+  if(stockPct >= 20 && stockPct <= 60) score += 8; else if(stockPct > 80) score -= 5;
+  if(retirePct >= 10) score += 8; else if(retirePct >= 5) score += 4;
+  if(stocks.length >= 5) score += 8; else if(stocks.length >= 3) score += 4;
+  if(usMan > 0 && krMan > 0){ const r=Math.min(usMan,krMan)/Math.max(usMan,krMan); score += Math.round(r*8); }
+  if(stocks.length > 0){
+    const sectors = new Set(stocks.map(s=>getStockSector(s).style));
+    if(sectors.size >= 4) score += 8; else if(sectors.size >= 2) score += 4;
+  }
+  const etfCount = stocks.filter(s=>getStockSector(s).type==='ETF').length;
+  if(stocks.length > 0 && etfCount/stocks.length >= 0.3) score += 5;
+  const withPL = stocks.filter(s=>s.avgCost && s.avgCost > 0 && curPrice(s) > 0);
+  if(withPL.length > 0){
+    const totalPL = withPL.reduce((a,s)=>a+(curPrice(s)-s.avgCost)*s.qty*(s.currency==='KRW'?1/10000:FX/10000),0);
+    if(totalPL > 0) score += 5;
+  }
+  score = Math.min(100, Math.max(0, score));
+  const grade = score >= 90 ? 'A+' : score >= 80 ? 'A' : score >= 70 ? 'B+' : score >= 60 ? 'B' : score >= 50 ? 'C' : 'D';
+  return {score, grade};
+}
+
 function renderAIAssetAll(){
   const el = document.getElementById('ai-asset-all');
   const tot = grandTotalMan();
-  if(tot === 0){ el.innerHTML = '<div style="text-align:center;color:var(--t3);padding:20px;font-size:13px;">자산 정보를 입력하면 AI 분석이 시작됩니다.</div>'; return; }
+  if(tot === 0){ el.innerHTML = '<div style="text-align:center;color:var(--t3);padding:20px;font-size:13px;">자산 정보를 입력하면 AI 분석이 시작됩니다.</div>'; renderActionPlanList([]); return; }
 
   const items = [];
   const usMan = usTotalUSD()*FX/10000;
@@ -1450,48 +1543,10 @@ function renderAIAssetAll(){
   const cryptoPct = cryptoMan/tot*100, retirePct = retireMan/tot*100;
   const usStks = stocks.filter(s=>s.currency==='USD');
   const krStks = stocks.filter(s=>s.currency==='KRW');
-
-  // ── 1. 포트폴리오 종합 점수 ──
-  let score = 50;
-  // 유동성
-  if(cashPct >= 10 && cashPct <= 30) score += 8; else if(cashPct < 5 || cashPct > 50) score -= 5;
-  // 투자자산
-  if(stockPct >= 20 && stockPct <= 60) score += 8; else if(stockPct > 80) score -= 5;
-  // 은퇴준비
-  if(retirePct >= 10) score += 8; else if(retirePct >= 5) score += 4;
-  // 분산 — 종목 수
-  if(stocks.length >= 5) score += 8; else if(stocks.length >= 3) score += 4;
-  // 분산 — 국가
-  if(usMan > 0 && krMan > 0){ const r=Math.min(usMan,krMan)/Math.max(usMan,krMan); score += Math.round(r*8); }
-  // 분산 — 섹터
-  if(stocks.length > 0){
-    const sectors = new Set(stocks.map(s=>getStockSector(s).style));
-    if(sectors.size >= 4) score += 8; else if(sectors.size >= 2) score += 4;
-  }
-  // 개별주 vs ETF 비율
   const etfCount = stocks.filter(s=>getStockSector(s).type==='ETF').length;
-  if(stocks.length > 0 && etfCount/stocks.length >= 0.3) score += 5;
-  // 수익률 보너스
   const withPL = stocks.filter(s=>s.avgCost && s.avgCost > 0 && curPrice(s) > 0);
-  if(withPL.length > 0){
-    const totalPL = withPL.reduce((a,s)=>a+(curPrice(s)-s.avgCost)*s.qty*(s.currency==='KRW'?1/10000:FX/10000),0);
-    if(totalPL > 0) score += 5;
-  }
-  score = Math.min(100, Math.max(0, score));
-  const scoreColor = score >= 80 ? 'var(--green)' : score >= 60 ? 'var(--amber)' : 'var(--red)';
-  const scoreGrade = score >= 90 ? 'A+' : score >= 80 ? 'A' : score >= 70 ? 'B+' : score >= 60 ? 'B' : score >= 50 ? 'C' : 'D';
-  const scoreDetails = [];
-  if(cashPct < 10) scoreDetails.push('비상금 부족 (-점)');
-  if(cashPct > 40) scoreDetails.push('유휴 현금 과다 (-점)');
-  if(stocks.length < 3) scoreDetails.push('종목 수 부족 (-점)');
-  if(retirePct < 5) scoreDetails.push('은퇴자금 미비 (-점)');
-  items.push({icon:'🏆',type: score>=70?'good':'warn',
-    title:`포트폴리오 건강 점수: <span style="color:${scoreColor};font-size:16px;">${score}점 (${scoreGrade})</span>`,
-    desc:`현금 ${cashPct.toFixed(0)}% · 투자 ${stockPct.toFixed(0)}% · 부동산 ${realtyPct.toFixed(0)}% · 암호화폐 ${cryptoPct.toFixed(0)}% · 은퇴 ${retirePct.toFixed(0)}%` +
-      (scoreDetails.length ? '<br><span style="color:var(--t3);font-size:11px;">감점 요인: '+scoreDetails.join(', ')+'</span>' : '')
-  });
 
-  // ── 2. 보유 종목 섹터 맵 ──
+  // ── 보유 종목 섹터 맵 ──
   if(stocks.length > 0){
     const sectorMap = {};
     const typeMap = {ETF:0, 개별주:0};
@@ -1606,17 +1661,18 @@ function renderAIAssetAll(){
     }
   }
 
-  // ── 5. 리밸런싱 액션 플랜 ──
+  renderAICards(el, items);
+
+  // ── 액션 플랜 (별도 투두 리스트) ──
   const actions = [];
   if(cashPct > 30) actions.push(`💰 현금 ${cashPct.toFixed(0)}% → 20% 목표: 약 ${fmtMan(cashMan - tot*0.2)}원을 투자자산으로 이동`);
   if(cashPct < 5) actions.push(`🚨 비상금 확보: 최소 ${fmtMan(tot*0.1)}원(10%)을 현금성 자산으로 유지`);
   if(retirePct < 5 && tot > 0) actions.push(`🏦 은퇴자금 비중 ${retirePct.toFixed(1)}% → 10% 이상 목표. 401k/IRA/IRP 적극 활용`);
-  if(etfCount === 0 && stocks.length > 0) actions.push('📊 ETF가 없어요. 개별주 리스크를 낮추기 위해 인덱스 ETF를 최소 1개 추가하세요');
-  if(actions.length){
-    items.push({icon:'🎯',type:'info',title:'액션 플랜',desc:actions.join('<br>')});
-  }
-
-  renderAICards(el, items);
+  if(etfCount === 0 && stocks.length > 0) actions.push('📊 인덱스 ETF를 최소 1개 추가해서 개별주 리스크 낮추기');
+  if(stockPct < 20 && tot > 0) actions.push('📈 주식/ETF 비중을 최소 20%까지 확대');
+  if(usMan > 0 && krMan === 0) actions.push('🇰🇷 한국 자산으로 지역 분산 시작하기');
+  if(krMan > 0 && usMan === 0) actions.push('🇺🇸 미국 자산으로 글로벌 분산 시작하기');
+  renderActionPlanList(actions);
 }
 
 function renderAIAssetUS(){
