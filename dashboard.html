@@ -290,6 +290,21 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
   <!-- ====== ALL (통합) ====== -->
   <div class="tab-page on" id="page-all">
     <div class="top-strip" id="all-strip"></div>
+    <!-- AI Analysis (opens from health score) -->
+    <div id="health-detail-panel" style="display:none;margin-bottom:16px;">
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="display:flex;gap:0;">
+          <div onclick="switchHealthTab('analysis')" id="htab-analysis" class="htab on" style="flex:1;padding:12px;text-align:center;cursor:pointer;font-size:12px;font-weight:600;border-bottom:2px solid var(--blue);color:var(--blue);">🤖 AI 분석</div>
+          <div onclick="switchHealthTab('action')" id="htab-action" class="htab" style="flex:1;padding:12px;text-align:center;cursor:pointer;font-size:12px;font-weight:600;border-bottom:2px solid transparent;color:var(--t3);">🎯 액션 플랜</div>
+        </div>
+        <div id="health-tab-analysis" style="padding:16px 20px;">
+          <div id="ai-asset-all"></div>
+        </div>
+        <div id="health-tab-action" style="padding:16px 20px;display:none;">
+          <div id="action-plan-list"></div>
+        </div>
+      </div>
+    </div>
     <div class="grid-2 section" style="margin-bottom:20px;">
       <div class="country-card" onclick="switchTab('us',document.querySelectorAll('.tab')[1])">
         <div class="country-flag">🇺🇸</div>
@@ -348,23 +363,6 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
     <div class="section">
       <div class="section-hdr"><div class="section-title">💡 자산 관리 추천</div></div>
       <div id="all-rec-list"></div>
-    </div>
-    <!-- ACTION PLAN TODO -->
-    <div class="section" id="action-plan-section" style="display:none;">
-      <div class="section-hdr"><div class="section-title">🎯 액션 플랜</div></div>
-      <div id="action-plan-list"></div>
-    </div>
-    <!-- AI ASSET ANALYSIS (collapsible) -->
-    <div class="section">
-      <div class="card" style="padding:0;overflow:hidden;">
-        <div onclick="toggleAIPanel('all')" style="padding:16px 20px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;">
-          <div class="card-title" style="margin:0;"><span>🤖 AI 자산 분석 & 종목 추천</span></div>
-          <span id="ai-toggle-all" style="font-size:12px;color:var(--t3);transition:transform .2s;">▼</span>
-        </div>
-        <div id="ai-panel-all" style="display:none;padding:0 20px 20px;">
-          <div id="ai-asset-all"></div>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -785,24 +783,41 @@ function toggleAIPanel(tab){
   arrow.textContent = open ? '▲' : '▼';
 }
 
+function toggleHealthPanel(){
+  const panel = document.getElementById('health-detail-panel');
+  const open = panel.style.display === 'none';
+  panel.style.display = open ? '' : 'none';
+  if(open) panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function switchHealthTab(tab){
+  document.getElementById('health-tab-analysis').style.display = tab==='analysis'?'':'none';
+  document.getElementById('health-tab-action').style.display = tab==='action'?'':'none';
+  const aTab = document.getElementById('htab-analysis');
+  const bTab = document.getElementById('htab-action');
+  aTab.style.borderBottomColor = tab==='analysis'?'var(--blue)':'transparent';
+  aTab.style.color = tab==='analysis'?'var(--blue)':'var(--t3)';
+  bTab.style.borderBottomColor = tab==='action'?'var(--blue)':'transparent';
+  bTab.style.color = tab==='action'?'var(--blue)':'var(--t3)';
+}
+
 // ── ACTION PLAN TODO ──
 let actionPlanDone = JSON.parse(localStorage.getItem('dash_action_done')||'{}');
 function toggleActionItem(key){
   actionPlanDone[key] = !actionPlanDone[key];
   localStorage.setItem('dash_action_done', JSON.stringify(actionPlanDone));
-  // re-render just the list
   if(typeof _lastActionItems !== 'undefined') renderActionPlanList(_lastActionItems);
 }
 let _lastActionItems = [];
 function renderActionPlanList(actions){
   _lastActionItems = actions;
-  const sec = document.getElementById('action-plan-section');
-  if(!actions.length){ sec.style.display='none'; return; }
-  sec.style.display='';
-  document.getElementById('action-plan-list').innerHTML = actions.map((a,i)=>{
+  const el = document.getElementById('action-plan-list');
+  if(!el) return;
+  if(!actions.length){ el.innerHTML = '<div style="text-align:center;color:var(--t3);padding:16px;font-size:12px;">현재 필요한 액션이 없어요! 잘 하고 있습니다 👏</div>'; return; }
+  el.innerHTML = actions.map((a,i)=>{
     const key = 'ap_'+a.replace(/[^a-zA-Z0-9가-힣]/g,'').slice(0,30);
     const done = !!actionPlanDone[key];
-    return `<div onclick="toggleActionItem('${key}')" style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;cursor:pointer;transition:opacity .2s;${done?'opacity:.5;':''}">
+    return `<div onclick="toggleActionItem('${key}')" style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;cursor:pointer;transition:opacity .2s;${done?'opacity:.5;':''}">
       <div style="flex-shrink:0;width:20px;height:20px;border-radius:6px;border:2px solid ${done?'var(--green)':'var(--border2)'};display:flex;align-items:center;justify-content:center;margin-top:1px;background:${done?'rgba(52,211,153,.15)':'transparent'};">
         ${done?'<span style="color:var(--green);font-size:13px;font-weight:700;">✓</span>':''}
       </div>
@@ -973,10 +988,10 @@ function renderAllTab(){
     <div class="stat"><div class="stat-label">🇺🇸 미국</div><div class="stat-val">${fmtUSD(usUSD)}</div><div class="stat-sub neu">${tot?(usMan/tot*100).toFixed(0):0}%</div></div>
     <div class="stat"><div class="stat-label">🇰🇷 한국</div><div class="stat-val">${fmtMan(krMan)}원</div><div class="stat-sub neu">${tot?(krMan/tot*100).toFixed(0):0}%</div></div>
     <div class="stat"><div class="stat-label">📈 주식/ETF</div><div class="stat-val">${fmtMan(stockTotalMan)}원</div><div class="stat-sub neu">${stocks.length}종목 · ${stockPctAll.toFixed(0)}%</div></div>
-    <div class="stat" style="border-color:${hColor}22;">
+    <div class="stat" style="border-color:${hColor}22;cursor:pointer;" onclick="toggleHealthPanel()">
       <div class="stat-label">🏆 포트폴리오 건강</div>
       <div class="stat-val" style="color:${hColor};">${healthScore.score}점</div>
-      <div class="stat-sub" style="color:${hColor};">${healthScore.grade}</div>
+      <div class="stat-sub" style="color:${hColor};">${healthScore.grade} <span style="font-size:10px;color:var(--t3);">▼ 상세</span></div>
     </div>
   `;
 
@@ -1458,18 +1473,37 @@ const SECTOR_DB = {
 };
 // ETF → 자산 클래스/스타일 매핑
 const ETF_STYLE = {
+  // S&P 500 인덱스
   VOO:'대형성장(S&P500)',VTI:'전체시장',SPY:'대형성장(S&P500)',IVV:'대형성장(S&P500)',
+  VFIAX:'대형성장(S&P500)',VTSAX:'전체시장',FXAIX:'대형성장(S&P500)',SWPPX:'대형성장(S&P500)',
+  VINIX:'대형성장(S&P500)',VIIIX:'대형성장(S&P500)',VFINX:'대형성장(S&P500)',
+  // 나스닥/기술 성장
   QQQ:'기술성장(나스닥)',QQQM:'기술성장(나스닥)',
-  VUG:'대형성장',SCHG:'대형성장',IWF:'대형성장',MGK:'메가캡성장',
-  VTV:'대형가치',SCHV:'대형가치',IWD:'대형가치',
+  // 대형 성장/가치
+  VUG:'대형성장',SCHG:'대형성장',IWF:'대형성장',MGK:'메가캡성장',VIGAX:'대형성장',
+  VTV:'대형가치',SCHV:'대형가치',IWD:'대형가치',VVIAX:'대형가치',
+  // 중소형
+  VB:'소형주',IJR:'소형주',IWM:'소형주',SCHA:'소형주',VO:'중형주',IJH:'중형주',
+  // 배당
   VYM:'배당',SCHD:'배당성장',HDV:'고배당',DGRO:'배당성장',JEPI:'월배당(커버드콜)',JEPQ:'월배당(커버드콜)',
+  VHYAX:'고배당',VDIGX:'배당성장',
+  // 채권
   BND:'미국채권',AGG:'미국채권',TLT:'장기국채',SHY:'단기국채',SCHZ:'채권',TIP:'물가연동채',
+  VBTLX:'미국채권',VBMFX:'미국채권',FXNAX:'미국채권',
+  // 국제
   VXUS:'국제주식',VEA:'선진국',VWO:'신흥국',EFA:'선진국',IXUS:'국제주식',
-  VNQ:'리츠',SCHH:'리츠',IYR:'리츠',XLRE:'리츠',
+  VTIAX:'국제주식',VGTSX:'국제주식',VTPSX:'국제주식',
+  // 리츠
+  VNQ:'리츠',SCHH:'리츠',IYR:'리츠',XLRE:'리츠',VGSLX:'리츠',
+  // 원자재
   GLD:'금',IAU:'금',SLV:'은',
+  // 섹터
   XLK:'기술섹터',XLF:'금융섹터',XLE:'에너지섹터',XLV:'헬스케어섹터',XLI:'산업재섹터',XLU:'유틸리티섹터',XLP:'필수소비재섹터',XLY:'경기소비재섹터',
+  // 테마
   ARKK:'혁신성장',ARKF:'핀테크',ARKG:'유전체학',
   SMH:'반도체',SOXX:'반도체',
+  // 타겟데이트/밸런스드
+  VBIAX:'밸런스드(60/40)',VBINX:'밸런스드(60/40)',
 };
 function getStockSector(s){
   const t = s.ticker.toUpperCase().replace(/\..*/,'');
@@ -1491,6 +1525,19 @@ function getStockSector(s){
     if(/2차전지|배터리/.test(n)) return {type:'ETF',style:'2차전지'};
     return {type:'ETF',style:'테마ETF'};
   }
+  // 영문 이름 기반 추론
+  const nl = n.toLowerCase();
+  if(/s&p\s*500|500\s*index|large.cap.index|total.stock|total.market/i.test(n)) return {type:'ETF',style:'대형성장(S&P500)'};
+  if(/nasdaq|나스닥/i.test(n)) return {type:'ETF',style:'기술성장(나스닥)'};
+  if(/bond|채권|treasury|fixed.income/i.test(n)) return {type:'ETF',style:'채권'};
+  if(/dividend|배당/i.test(n)) return {type:'ETF',style:'배당'};
+  if(/international|global|world|emerg/i.test(n)) return {type:'ETF',style:'국제주식'};
+  if(/reit|real.estate|부동산/i.test(n)) return {type:'ETF',style:'리츠'};
+  if(/gold|silver|commodity/i.test(n)) return {type:'ETF',style:'원자재'};
+  if(/target.*20\d\d|retirement.*20\d\d/i.test(n)) return {type:'ETF',style:'타겟데이트'};
+  if(/balanced|lifecycle/i.test(n)) return {type:'ETF',style:'밸런스드'};
+  // ETF/펀드 카테고리로 분류
+  if(s.cat==='ETF') return {type:'ETF',style:'기타ETF'};
   return {type: s.cat||'기타', style:'미분류'};
 }
 
