@@ -229,9 +229,9 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
 .field label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;}
 .field input,.field select{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:8px;color:var(--t1);font-size:13px;font-family:var(--font);padding:8px 12px;outline:none;}
 .field input:focus,.field select:focus{border-color:var(--blue);}
-.stock-entry{display:grid;grid-template-columns:1.5fr .8fr .6fr .8fr .7fr 32px;gap:6px;align-items:end;background:var(--card2);border-radius:10px;padding:10px;margin-bottom:6px;}
+.stock-entry{display:grid;grid-template-columns:1.5fr .8fr .6fr .8fr .7fr .9fr 32px;gap:6px;align-items:end;background:var(--card2);border-radius:10px;padding:10px;margin-bottom:6px;}
 .stock-entry .field{margin-bottom:0;}
-.stock-hdr{display:grid;grid-template-columns:1.5fr .8fr .6fr .8fr .7fr 32px;gap:6px;padding:0 10px 6px;font-size:10px;color:var(--t3);}
+.stock-hdr{display:grid;grid-template-columns:1.5fr .8fr .6fr .8fr .7fr .9fr 32px;gap:6px;padding:0 10px 6px;font-size:10px;color:var(--t3);}
 .del-btn{background:transparent;border:none;color:var(--t3);font-size:16px;cursor:pointer;padding:6px;border-radius:6px;}
 .del-btn:hover{color:var(--red);background:rgba(248,113,113,.1);}
 .cash-entry{display:grid;grid-template-columns:1fr 1fr 32px;gap:6px;align-items:end;background:var(--card2);border-radius:10px;padding:10px;margin-bottom:6px;}
@@ -656,12 +656,12 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
     </div>
 
     <div class="form-section">🇺🇸 미국 주식 / ETF (USD)</div>
-    <div class="stock-hdr"><span>종목명</span><span>카테고리</span><span>티커</span><span>수량</span><span>평단가</span><span></span></div>
+    <div class="stock-hdr"><span>종목명</span><span>카테고리</span><span>티커</span><span>수량</span><span>평단가</span><span>섹터</span><span></span></div>
     <div id="stock-fields-us"></div>
     <button class="add-row" onclick="addStockField('USD')">+ 미국 종목 추가</button>
 
     <div class="form-section">🇰🇷 한국 주식 / ETF (KRW)</div>
-    <div class="stock-hdr"><span>종목명</span><span>카테고리</span><span>티커</span><span>수량</span><span>평단가</span><span></span></div>
+    <div class="stock-hdr"><span>종목명</span><span>카테고리</span><span>티커</span><span>수량</span><span>평단가</span><span>섹터</span><span></span></div>
     <div id="stock-fields-kr"></div>
     <button class="add-row" onclick="addStockField('KRW')">+ 한국 종목 추가</button>
 
@@ -1197,7 +1197,7 @@ function renderStockTable(tbodyId, list, cur){
     const qtyF = s.qty % 1 !== 0 ? s.qty.toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:3}) : s.qty.toLocaleString();
 
     return `<tr>
-      <td><div class="stk-name">${s.name}</div><div class="stk-ticker">${s.ticker} · ${s.cat}</div></td>
+      <td><div class="stk-name">${s.name}</div><div class="stk-ticker">${s.ticker} · ${getStockSector(s).style}</div></td>
       <td class="stk-live">${live?`<span class="${cls(chg)}">${curF}</span>`:`<span class="stk-loading">${curF}</span>`}</td>
       <td>${qtyF}</td>
       <td style="font-weight:500;">${valF}</td>
@@ -1506,6 +1506,8 @@ const ETF_STYLE = {
   VBIAX:'밸런스드(60/40)',VBINX:'밸런스드(60/40)',
 };
 function getStockSector(s){
+  // 사용자가 직접 설정한 섹터 우선
+  if(s.sector && s.sector.trim()) return {type: s.cat==='ETF'?'ETF':'개별주', style: s.sector.trim()};
   const t = s.ticker.toUpperCase().replace(/\..*/,'');
   if(ETF_STYLE[t]) return {type:'ETF',style:ETF_STYLE[t]};
   if(SECTOR_DB[t]) return {type:'개별주',style:SECTOR_DB[t]};
@@ -1986,8 +1988,16 @@ function addStockField(currency, data){
     <div class="field"><input placeholder="${currency==='USD'?'VOO':'005930.KS'}" value="${data?.ticker||''}"/></div>
     <div class="field"><input type="number" placeholder="수량" step="0.001" value="${data?.qty||''}"/></div>
     <div class="field"><input type="number" placeholder="평단가" step="0.01" value="${data?.avgCost||''}"/></div>
+    <div class="field"><input class="sector-input" placeholder="자동분류" value="${data?.sector||''}" style="font-size:11px;"/></div>
     <button class="del-btn" onclick="this.parentElement.remove()">✕</button>`;
   c.appendChild(d);
+  // 섹터 자동 채우기: 티커가 있고 섹터가 비어있으면 자동 분류
+  if(data?.ticker && !data?.sector){
+    const autoSec = getStockSector({ticker:data.ticker, name:data.name||'', cat:data.cat||'기타'});
+    const secInput = d.querySelector('.sector-input');
+    secInput.value = autoSec.style;
+    secInput.placeholder = autoSec.style;
+  }
 }
 
 // 한국 주요 종목 DB (한글 검색용)
@@ -2131,6 +2141,13 @@ function selectTicker(el){
   var inputs = entry.querySelectorAll('input');
   inputs[0].value = el.dataset.name;
   inputs[1].value = el.dataset.ticker;
+  // 섹터 자동 채우기
+  var secInput = entry.querySelector('.sector-input');
+  if(secInput && !secInput.value){
+    var cat = entry.querySelector('select')?.value||'기타';
+    var autoSec = getStockSector({ticker:el.dataset.ticker, name:el.dataset.name, cat:cat, sector:''});
+    secInput.value = autoSec.style;
+  }
   el.closest('.ticker-suggest').style.display='none';
 }
 
@@ -2174,7 +2191,8 @@ function saveModal(){
     const inp=row.querySelectorAll('input'), sel=row.querySelectorAll('select');
     const currency = row.dataset.currency || 'USD';
     const name=inp[0].value.trim(), ticker=inp[1].value.trim(), qty=+inp[2].value, avgCost=+inp[3].value||0;
-    if(name&&ticker&&qty) stocks.push({name,cat:sel[0].value,currency,ticker,qty,avgCost});
+    const sectorVal = inp[4]?.value.trim()||'';
+    if(name&&ticker&&qty) stocks.push({name,cat:sel[0].value,currency,ticker,qty,avgCost,sector:sectorVal});
   });
   debts=[];
   document.querySelectorAll('.debt-entry').forEach(row=>{
