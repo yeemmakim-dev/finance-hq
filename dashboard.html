@@ -1072,17 +1072,27 @@ function renderStockTable(tbodyId, list, cur){
       const costTotal = s.avgCost * s.qty;
       const pl = val - costTotal;
       const plPct = (pl / costTotal * 100);
-      const plSym = pl >= 0 ? '+' : '';
-      plH = `<span class="${cls(plPct)}">${plSym}${sym}${Math.round(Math.abs(pl)).toLocaleString()}</span>
-        <div style="font-size:10px;"><span class="${cls(plPct)}">${plSym}${plPct.toFixed(1)}%</span></div>`;
+      const plSym = pl >= 0 ? '+' : '-';
+      const plAbs = Math.abs(pl);
+      let plStr;
+      if(cur==='KRW'){
+        plStr = plAbs >= 100000000 ? (plAbs/100000000).toFixed(1)+'억' : plAbs >= 10000 ? Math.round(plAbs/10000).toLocaleString()+'만' : '₩'+Math.round(plAbs).toLocaleString();
+        plStr = plSym + plStr;
+      } else {
+        plStr = plAbs >= 10000 ? plSym+'$'+(plAbs/1000).toFixed(1)+'K' : plSym+'$'+Math.round(plAbs).toLocaleString();
+      }
+      plH = `<span class="${cls(plPct)}">${plStr}</span>
+        <div style="font-size:10px;"><span class="${cls(plPct)}">${pl>=0?'+':''}${plPct.toFixed(1)}%</span></div>`;
     } else if(s.avgCost && s.avgCost > 0){
       plH = `<span class="neu" style="font-size:10px;">평단 ${sym}${s.avgCost.toLocaleString()}</span>`;
     }
 
+    const qtyF = s.qty % 1 !== 0 ? s.qty.toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:3}) : s.qty.toLocaleString();
+
     return `<tr>
       <td><div class="stk-name">${s.name}</div><div class="stk-ticker">${s.ticker} · ${s.cat}</div></td>
       <td class="stk-live">${live?`<span class="${cls(chg)}">${curF}</span>`:`<span class="stk-loading">${curF}</span>`}</td>
-      <td>${s.qty.toLocaleString()}</td>
+      <td>${qtyF}</td>
       <td style="font-weight:500;">${valF}</td>
       <td>${chgH}</td>
       <td>${plH}</td>
@@ -1350,7 +1360,7 @@ function addStockField(data){
     <div class="field"><select>${CATS.map(c=>`<option ${data?.cat===c?'selected':''}>${c}</option>`).join('')}</select></div>
     <div class="field"><select><option ${data?.currency==='KRW'?'selected':''}>KRW</option><option ${data?.currency==='USD'?'selected':''}>USD</option></select></div>
     <div class="field"><input placeholder="VOO" value="${data?.ticker||''}"/></div>
-    <div class="field"><input type="number" placeholder="수량" value="${data?.qty||''}"/></div>
+    <div class="field"><input type="number" placeholder="수량" step="0.001" value="${data?.qty||''}"/></div>
     <div class="field"><input type="number" placeholder="평단가 (선택)" step="0.01" value="${data?.avgCost||''}"/></div>
     <button class="del-btn" onclick="this.parentElement.remove()">✕</button>`;
   c.appendChild(d);
