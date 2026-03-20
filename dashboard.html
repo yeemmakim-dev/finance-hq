@@ -88,6 +88,11 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
 .stk-tbl td:not(:first-child){text-align:right;}
 .stk-name{font-weight:500;}
 .stk-ticker{font-size:10px;color:var(--t3);margin-top:2px;font-family:'SF Mono',monospace;}
+.sector-badge{cursor:pointer;padding:1px 5px;border-radius:4px;background:rgba(255,255,255,.06);transition:background .15s,color .15s;}.sector-badge:hover{background:var(--blue);color:#fff;}
+.manual-exp-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px;background:var(--bg2);border-radius:10px;border:1px solid var(--border);margin-bottom:12px;}
+.manual-exp-form input,.manual-exp-form select{font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--t1);}
+.manual-exp-form input:focus,.manual-exp-form select:focus{border-color:var(--blue);outline:none;}
+.manual-exp-form button{font-size:12px;padding:6px 14px;border-radius:6px;border:none;background:var(--blue);color:#fff;cursor:pointer;font-weight:500;}.manual-exp-form button:hover{opacity:.85;}
 .stk-live{font-family:'SF Mono',monospace;font-size:12px;}
 .stk-loading{color:var(--t3);animation:shimmer 1.5s infinite;}
 @keyframes shimmer{0%,100%{opacity:.3;}50%{opacity:1;}}
@@ -519,6 +524,18 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
           <div id="month-tab-list" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;"></div>
           <span id="csv-reset" style="font-size:11px;color:var(--blue);cursor:pointer;display:none;" onclick="showUploadArea()">+ 새로 업로드</span>
+          <span style="font-size:11px;color:var(--accent);cursor:pointer;" onclick="toggleManualExpForm()">✏️ 직접 입력</span>
+        </div>
+
+        <!-- 현금/직접 지출 입력 폼 -->
+        <div id="manual-exp-form" style="display:none;" class="manual-exp-form">
+          <input type="date" id="mexp-date" style="width:130px;"/>
+          <input type="text" id="mexp-desc" placeholder="내역 (예: 마트, 현금결제)" style="flex:1;min-width:120px;"/>
+          <input type="number" id="mexp-amount" placeholder="금액" style="width:90px;" step="0.01"/>
+          <select id="mexp-currency"><option value="USD">$</option><option value="KRW">₩</option></select>
+          <select id="mexp-cat"></select>
+          <button onclick="addManualExpense()">추가</button>
+          <span onclick="toggleManualExpForm()" style="cursor:pointer;color:var(--t3);font-size:14px;padding:0 4px;">✕</span>
         </div>
 
         <div id="csv-upload-area" class="card">
@@ -1297,7 +1314,7 @@ function renderStockTable(tbodyId, list, cur){
     const qtyF = s.qty % 1 !== 0 ? s.qty.toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:3}) : s.qty.toLocaleString();
 
     return `<tr>
-      <td><div class="stk-name">${s.name}</div><div class="stk-ticker">${s.ticker} · ${getStockSector(s).style}</div></td>
+      <td><div class="stk-name">${s.name}</div><div class="stk-ticker">${s.ticker} · <span class="sector-badge" onclick="editSectorInline(this,'${s.ticker}')" title="클릭하여 섹터 변경">${getStockSector(s).style}</span></div></td>
       <td class="stk-live">${live?`<span class="${cls(chg)}">${curF}</span>`:`<span class="stk-loading">${curF}</span>`}</td>
       <td>${qtyF}</td>
       <td style="font-weight:500;">${valF}</td>
@@ -3226,6 +3243,111 @@ function renderTxnList(){
       <span onclick="deleteTxn(${tIdx})" style="cursor:pointer;color:var(--t3);font-size:14px;padding:0 4px;transition:color .15s;flex-shrink:0;" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--t3)'" title="삭제 (환불 등)">✕</span>
     </div>`;
   }).join('');
+}
+
+// ── 섹터 인라인 편집 ──
+function editSectorInline(el, ticker){
+  const stk = stocks.find(s=>s.ticker===ticker);
+  if(!stk) return;
+  const current = getStockSector(stk).style;
+  const allSectors = ['기술','반도체','소프트웨어','금융','헬스케어','바이오','에너지','필수소비재','경기소비재','통신','산업재','유틸리티','리츠/부동산','원자재','방산/항공','미디어','핀테크','인터넷/플랫폼',
+    '대형성장(S&P500)','전체시장','기술성장(나스닥)','배당','채권','국제주식','신흥국','리츠','원자재','타겟데이트','밸런스드(60/40)','코스피인덱스','해외지수','테마ETF','기타ETF'];
+  const uniqueSectors = [...new Set(allSectors)];
+  const rect = el.getBoundingClientRect();
+  // Create dropdown
+  const dd = document.createElement('div');
+  dd.style.cssText = `position:fixed;top:${rect.bottom+4}px;left:${rect.left}px;z-index:9999;background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.4);max-height:260px;overflow-y:auto;min-width:160px;padding:4px;`;
+  // Search input
+  const inp = document.createElement('input');
+  inp.style.cssText = 'width:calc(100% - 12px);margin:4px 6px;padding:5px 8px;font-size:11px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--t1);';
+  inp.placeholder = '섹터 검색 또는 직접 입력...';
+  inp.value = current==='미분류'?'':current;
+  dd.appendChild(inp);
+  const list = document.createElement('div');
+  dd.appendChild(list);
+  function renderList(filter){
+    const f = filter.toLowerCase();
+    list.innerHTML = uniqueSectors.filter(s=>!f||s.toLowerCase().includes(f)).map(s=>`<div style="padding:6px 10px;font-size:12px;cursor:pointer;border-radius:4px;color:var(--t1);${s===current?'background:var(--blue);color:#fff;':''}" onmouseover="this.style.background=this.style.background||'rgba(255,255,255,.08)'" onmouseout="this.style.background='${s===current?'var(--blue)':''}'" onclick="applySector('${ticker}','${s}')">${s}</div>`).join('');
+  }
+  renderList('');
+  inp.oninput = ()=>renderList(inp.value);
+  inp.onkeydown = (e)=>{
+    if(e.key==='Enter'){
+      const v = inp.value.trim();
+      if(v){ applySector(ticker, v); }
+    } else if(e.key==='Escape'){ dd.remove(); _sectorDD=null; }
+  };
+  // Remove previous
+  if(window._sectorDD) window._sectorDD.remove();
+  document.body.appendChild(dd);
+  window._sectorDD = dd;
+  inp.focus(); inp.select();
+  // Close on outside click
+  setTimeout(()=>{
+    const closer = (e)=>{ if(!dd.contains(e.target)){ dd.remove(); window._sectorDD=null; document.removeEventListener('mousedown',closer); }};
+    document.addEventListener('mousedown', closer);
+  }, 50);
+}
+function applySector(ticker, sector){
+  const stk = stocks.find(s=>s.ticker===ticker);
+  if(stk){ stk.sector = sector; save(); renderAll(); }
+  if(window._sectorDD){ window._sectorDD.remove(); window._sectorDD=null; }
+}
+
+// ── 현금/직접 지출 입력 ──
+function toggleManualExpForm(){
+  const form = document.getElementById('manual-exp-form');
+  const show = form.style.display==='none';
+  form.style.display = show ? 'flex' : 'none';
+  if(show){
+    document.getElementById('mexp-date').value = new Date().toISOString().slice(0,10);
+    document.getElementById('mexp-desc').value = '';
+    document.getElementById('mexp-amount').value = '';
+    // Populate category select
+    const catSel = document.getElementById('mexp-cat');
+    const allCats = [...new Set([...budgetCats.map(c=>c.name), ...Object.keys(BUDGET_ICONS)])];
+    catSel.innerHTML = allCats.map(c=>`<option value="${c}">${BUDGET_ICONS[c]||'📦'} ${c}</option>`).join('');
+    document.getElementById('mexp-desc').focus();
+  }
+}
+function addManualExpense(){
+  const date = document.getElementById('mexp-date').value;
+  const desc = document.getElementById('mexp-desc').value.trim();
+  const amount = +document.getElementById('mexp-amount').value;
+  const currency = document.getElementById('mexp-currency').value;
+  const category = document.getElementById('mexp-cat').value;
+  if(!date){ alert('날짜를 선택해주세요'); return; }
+  if(!desc){ alert('내역을 입력해주세요'); return; }
+  if(!amount || amount<=0){ alert('금액을 입력해주세요'); return; }
+  const txn = { date, desc, amount, currency, category };
+  const month = date.slice(0,7);
+  // Add to spendingHistory
+  if(!spendingHistory[month]) spendingHistory[month] = { txns:[], catSpent:{}, totalSpent:0 };
+  spendingHistory[month].txns.push(txn);
+  // Recalc
+  const data = spendingHistory[month];
+  data.catSpent = {};
+  data.txns.forEach(tx=>{
+    const amtUSD = tx.currency==='KRW' ? tx.amount/FX*10000 : tx.amount;
+    data.catSpent[tx.category] = (data.catSpent[tx.category]||0) + amtUSD;
+  });
+  addFixedToCatSpent(data.catSpent);
+  data.totalSpent = Object.values(data.catSpent).reduce((a,b)=>a+b,0);
+  // Set as current month and update UI
+  selectedMonth = month;
+  parsedTxns = data.txns;
+  save();
+  applySpendingToBudget(month);
+  document.getElementById('csv-upload-area').style.display='none';
+  document.getElementById('csv-result').style.display='block';
+  document.getElementById('csv-reset').style.display='inline';
+  renderMonthTabs();
+  renderSpendingAnalysis(data.catSpent);
+  renderBudgetTab();
+  // Clear form but keep open for next entry
+  document.getElementById('mexp-desc').value = '';
+  document.getElementById('mexp-amount').value = '';
+  document.getElementById('mexp-desc').focus();
 }
 
 function getSpendingAdvice(cat, spent, budget){
