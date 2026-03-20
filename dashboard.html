@@ -988,9 +988,9 @@ async function fetchAllQuotes(){
 
     // 1) 먼저 로컬 DB로 즉시 채우기
     stocks.forEach(s=>{
-      if(!s.sector && s.ticker){
+      if((!s.sector || s.sector==='미분류') && (s.ticker || s.name)){
         const auto = getStockSector({...s, sector:''});
-        if(auto.style !== '미분류') s.sector = auto.style;
+        if(auto.style && auto.style !== '미분류') s.sector = auto.style;
       }
     });
     save(); renderAll();
@@ -3779,6 +3779,34 @@ function renderAIInsights(monthData, labels){
 // INIT
 // ═══════════════════════════════════════
 load();
+// 페이지 로드 시 자동 섹터 분류 (로컬 DB + 이름 매칭)
+(function autoClassifySectors(){
+  let updated = 0;
+  stocks.forEach(s=>{
+    if((!s.sector || s.sector==='미분류') && (s.ticker || s.name)){
+      const auto = getStockSector({...s, sector:''});
+      if(auto.style && auto.style !== '미분류'){
+        s.sector = auto.style;
+        updated++;
+      }
+    }
+  });
+  if(updated){ save(); }
+  // 아직 미분류인 종목 → Yahoo API로 백그라운드 분류
+  const needSec = stocks.filter(s=>(!s.sector || s.sector==='미분류') && s.ticker);
+  if(needSec.length){
+    Promise.allSettled(needSec.map(s=>fetchStockProfile(s.ticker))).then(results=>{
+      let u2 = 0;
+      results.forEach((r,i)=>{
+        if(r.status==='fulfilled' && r.value){
+          const sec = profileToSector(r.value, needSec[i].ticker);
+          if(sec && sec!=='미분류'){ needSec[i].sector = sec; u2++; }
+        }
+      });
+      if(u2){ save(); renderAll(); }
+    });
+  }
+})();
 if(Object.keys(liveQuotes).length) setStatus('cached');
 // Restore last tab
 const savedTab = localStorage.getItem('dash_tab');
