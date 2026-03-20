@@ -88,7 +88,9 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
 .stk-tbl td:not(:first-child){text-align:right;}
 .stk-name{font-weight:500;}
 .stk-ticker{font-size:10px;color:var(--t3);margin-top:2px;font-family:'SF Mono',monospace;}
-.sector-badge{cursor:pointer;padding:1px 5px;border-radius:4px;background:rgba(255,255,255,.06);transition:background .15s,color .15s;}.sector-badge:hover{background:var(--blue);color:#fff;}
+.sector-sel{font-size:10px;background:transparent;color:var(--t3);border:none;cursor:pointer;padding:0 2px;appearance:none;-webkit-appearance:none;outline:none;max-width:110px;text-overflow:ellipsis;}
+.sector-sel:hover,.sector-sel:focus{color:var(--blue);background:rgba(91,156,255,.1);border-radius:4px;}
+.sector-sel option,.sector-sel optgroup{background:var(--card);color:var(--t1);font-size:12px;}
 .manual-exp-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px;background:var(--bg2);border-radius:10px;border:1px solid var(--border);margin-bottom:12px;}
 .manual-exp-form input,.manual-exp-form select{font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--t1);}
 .manual-exp-form input:focus,.manual-exp-form select:focus{border-color:var(--blue);outline:none;}
@@ -1314,7 +1316,7 @@ function renderStockTable(tbodyId, list, cur){
     const qtyF = s.qty % 1 !== 0 ? s.qty.toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:3}) : s.qty.toLocaleString();
 
     return `<tr>
-      <td><div class="stk-name">${s.name}</div><div class="stk-ticker">${s.ticker} · <span class="sector-badge" onclick="editSectorInline(this,'${s.ticker}')" title="클릭하여 섹터 변경">${getStockSector(s).style}</span></div></td>
+      <td><div class="stk-name">${s.name}</div><div class="stk-ticker">${s.ticker} · <select class="sector-sel" onchange="applySector('${s.ticker}',this.value)">${sectorOptions(getStockSector(s).style)}</select></div></td>
       <td class="stk-live">${live?`<span class="${cls(chg)}">${curF}</span>`:`<span class="stk-loading">${curF}</span>`}</td>
       <td>${qtyF}</td>
       <td style="font-weight:500;">${valF}</td>
@@ -3245,53 +3247,36 @@ function renderTxnList(){
   }).join('');
 }
 
-// ── 섹터 인라인 편집 ──
-function editSectorInline(el, ticker){
-  const stk = stocks.find(s=>s.ticker===ticker);
-  if(!stk) return;
-  const current = getStockSector(stk).style;
-  const allSectors = ['기술','반도체','소프트웨어','금융','헬스케어','바이오','에너지','필수소비재','경기소비재','통신','산업재','유틸리티','리츠/부동산','원자재','방산/항공','미디어','핀테크','인터넷/플랫폼',
-    '대형성장(S&P500)','전체시장','기술성장(나스닥)','배당','채권','국제주식','신흥국','리츠','원자재','타겟데이트','밸런스드(60/40)','코스피인덱스','해외지수','테마ETF','기타ETF'];
-  const uniqueSectors = [...new Set(allSectors)];
-  const rect = el.getBoundingClientRect();
-  // Create dropdown
-  const dd = document.createElement('div');
-  dd.style.cssText = `position:fixed;top:${rect.bottom+4}px;left:${rect.left}px;z-index:9999;background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.4);max-height:260px;overflow-y:auto;min-width:160px;padding:4px;`;
-  // Search input
-  const inp = document.createElement('input');
-  inp.style.cssText = 'width:calc(100% - 12px);margin:4px 6px;padding:5px 8px;font-size:11px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--t1);';
-  inp.placeholder = '섹터 검색 또는 직접 입력...';
-  inp.value = current==='미분류'?'':current;
-  dd.appendChild(inp);
-  const list = document.createElement('div');
-  dd.appendChild(list);
-  function renderList(filter){
-    const f = filter.toLowerCase();
-    list.innerHTML = uniqueSectors.filter(s=>!f||s.toLowerCase().includes(f)).map(s=>`<div style="padding:6px 10px;font-size:12px;cursor:pointer;border-radius:4px;color:var(--t1);${s===current?'background:var(--blue);color:#fff;':''}" onmouseover="this.style.background=this.style.background||'rgba(255,255,255,.08)'" onmouseout="this.style.background='${s===current?'var(--blue)':''}'" onclick="applySector('${ticker}','${s}')">${s}</div>`).join('');
+// ── 섹터 인라인 편집 (select 기반) ──
+const SECTOR_GROUPS = {
+  '개별주':{
+    '기술':['기술','반도체','소프트웨어','인터넷/플랫폼','핀테크'],
+    '소비재':['필수소비재','경기소비재'],
+    '의료':['헬스케어','바이오'],
+    '금융/산업':['금융','산업재','방산/항공'],
+    '인프라':['에너지','유틸리티','통신','리츠/부동산','원자재'],
+    '기타':['미디어','미분류']
+  },
+  'ETF/펀드':{
+    '지수추종':['대형성장(S&P500)','전체시장','기술성장(나스닥)','코스피인덱스','해외지수'],
+    '테마/섹터':['배당','채권','국제주식','신흥국','리츠','원자재','테마ETF'],
+    '혼합':['타겟데이트','밸런스드(60/40)','기타ETF']
   }
-  renderList('');
-  inp.oninput = ()=>renderList(inp.value);
-  inp.onkeydown = (e)=>{
-    if(e.key==='Enter'){
-      const v = inp.value.trim();
-      if(v){ applySector(ticker, v); }
-    } else if(e.key==='Escape'){ dd.remove(); _sectorDD=null; }
-  };
-  // Remove previous
-  if(window._sectorDD) window._sectorDD.remove();
-  document.body.appendChild(dd);
-  window._sectorDD = dd;
-  inp.focus(); inp.select();
-  // Close on outside click
-  setTimeout(()=>{
-    const closer = (e)=>{ if(!dd.contains(e.target)){ dd.remove(); window._sectorDD=null; document.removeEventListener('mousedown',closer); }};
-    document.addEventListener('mousedown', closer);
-  }, 50);
+};
+function sectorOptions(current){
+  let html = '';
+  for(const [group, cats] of Object.entries(SECTOR_GROUPS)){
+    for(const [label, items] of Object.entries(cats)){
+      html += `<optgroup label="${group} › ${label}">`;
+      items.forEach(s=>{ html += `<option value="${s}" ${s===current?'selected':''}>${s}</option>`; });
+      html += '</optgroup>';
+    }
+  }
+  return html;
 }
 function applySector(ticker, sector){
   const stk = stocks.find(s=>s.ticker===ticker);
   if(stk){ stk.sector = sector; save(); renderAll(); }
-  if(window._sectorDD){ window._sectorDD.remove(); window._sectorDD=null; }
 }
 
 // ── 현금/직접 지출 입력 ──
