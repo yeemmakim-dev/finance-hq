@@ -382,6 +382,7 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
         <div class="section-title">📈 미국 주식/ETF <span class="section-badge" id="us-stock-count">0</span></div>
         <button class="btn btn-ghost" onclick="fetchAllQuotes()" style="font-size:11px;padding:6px 12px;">🔄 시세 갱신</button>
       </div>
+      <div id="us-stock-pl-summary"></div>
       <div class="card" style="overflow-x:auto;">
         <table class="stk-tbl"><thead><tr><th>종목</th><th>현재가</th><th>수량</th><th>평가금액</th><th>전일비</th><th>수익</th></tr></thead>
         <tbody id="us-stock-tbody"></tbody></table>
@@ -419,6 +420,7 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
         <div class="section-title">📈 한국 주식/ETF <span class="section-badge" id="kr-stock-count">0</span></div>
         <button class="btn btn-ghost" onclick="fetchAllQuotes()" style="font-size:11px;padding:6px 12px;">🔄 시세 갱신</button>
       </div>
+      <div id="kr-stock-pl-summary"></div>
       <div class="card" style="overflow-x:auto;">
         <table class="stk-tbl"><thead><tr><th>종목</th><th>현재가</th><th>수량</th><th>평가금액</th><th>전일비</th><th>수익</th></tr></thead>
         <tbody id="kr-stock-tbody"></tbody></table>
@@ -971,6 +973,7 @@ function renderUSTab(){
 
   const usStocks = [...stocks.filter(s=>s.currency==='USD')].sort((a,b)=>stockValUSD(b)-stockValUSD(a));
   document.getElementById('us-stock-count').textContent = usStocks.length+'종목';
+  renderStockPLSummary('us-stock-pl-summary', usStocks, 'USD');
   renderStockTable('us-stock-tbody', usStocks, 'USD');
   try{ renderAIAssetUS(); }catch(e){ console.error('AI asset US error:',e); }
 }
@@ -1000,6 +1003,7 @@ function renderKRTab(){
 
   const krStocks = [...stocks.filter(s=>s.currency==='KRW')].sort((a,b)=>curPrice(b)*b.qty-curPrice(a)*a.qty);
   document.getElementById('kr-stock-count').textContent = krStocks.length+'종목';
+  renderStockPLSummary('kr-stock-pl-summary', krStocks, 'KRW');
   renderStockTable('kr-stock-tbody', krStocks, 'KRW');
   try{ renderAIAssetKR(); }catch(e){ console.error('AI asset KR error:',e); }
 }
@@ -1125,6 +1129,50 @@ function renderStockTable(tbodyId, list, cur){
       <td>${plH}</td>
     </tr>`;
   }).join('');
+}
+
+function renderStockPLSummary(elId, stks, cur){
+  const el = document.getElementById(elId);
+  const withPL = stks.filter(s=>s.avgCost && s.avgCost > 0 && curPrice(s) > 0);
+  if(!withPL.length){ el.innerHTML=''; return; }
+  const sym = cur==='USD'?'$':'₩';
+  const totalInv = withPL.reduce((a,s)=>a+s.avgCost*s.qty,0);
+  const totalCur = withPL.reduce((a,s)=>a+curPrice(s)*s.qty,0);
+  const totalPL = totalCur - totalInv;
+  const totalPLPct = totalInv>0 ? totalPL/totalInv*100 : 0;
+  const plCls = totalPL>=0?'up':'down';
+  const plSign = totalPL>=0?'+':'';
+
+  const fmtV = v => {
+    if(cur==='USD') return '$'+Math.round(Math.abs(v)).toLocaleString('en');
+    const av=Math.abs(v);
+    return av>=100000000?(av/100000000).toFixed(1)+'억원':av>=10000?Math.round(av/10000).toLocaleString()+'만원':'₩'+Math.round(av).toLocaleString();
+  };
+  const fmtPL = v => {
+    const sign = v>=0?'+':'-';
+    if(cur==='USD') return sign+'$'+Math.round(Math.abs(v)).toLocaleString('en');
+    const av=Math.abs(v);
+    return sign+(av>=100000000?(av/100000000).toFixed(1)+'억원':av>=10000?Math.round(av/10000).toLocaleString()+'만원':'₩'+Math.round(av).toLocaleString());
+  };
+
+  el.innerHTML = `<div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:120px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;">
+      <div style="font-size:11px;color:var(--t3);margin-bottom:2px;">투자원금</div>
+      <div style="font-size:15px;font-weight:600;">${sym}${Math.round(totalInv).toLocaleString()}</div>
+    </div>
+    <div style="flex:1;min-width:120px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;">
+      <div style="font-size:11px;color:var(--t3);margin-bottom:2px;">평가금액</div>
+      <div style="font-size:15px;font-weight:600;">${sym}${Math.round(totalCur).toLocaleString()}</div>
+    </div>
+    <div style="flex:1;min-width:120px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;">
+      <div style="font-size:11px;color:var(--t3);margin-bottom:2px;">수익금</div>
+      <div style="font-size:15px;font-weight:600;" class="${plCls}">${fmtPL(totalPL)}</div>
+    </div>
+    <div style="flex:1;min-width:120px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;">
+      <div style="font-size:11px;color:var(--t3);margin-bottom:2px;">수익률</div>
+      <div style="font-size:15px;font-weight:600;" class="${plCls}">${plSign}${totalPLPct.toFixed(2)}%</div>
+    </div>
+  </div>`;
 }
 
 // ═══════════════════════════════════════
@@ -1595,19 +1643,6 @@ function renderAIAssetUS(){
     const stot = analyzed.reduce((a,s)=>a+s.val,0);
 
     if(stot > 0){
-      // 종목별 비중 + 역할 분석
-      const sorted = [...analyzed].sort((a,b)=>b.val-a.val);
-      const breakdown = sorted.map(s=>{
-        const pct = (s.val/stot*100);
-        const plTag = s.plPct!==null ? ` <span class="${s.plPct>=0?'up':'down'}">${s.plPct>=0?'+':''}${s.plPct.toFixed(1)}%</span>` : '';
-        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);">
-          <div><strong>${s.name}</strong> <span style="color:var(--t3);font-size:10px;">${s.info.type}·${s.info.style}</span></div>
-          <div style="text-align:right;"><span style="font-weight:500;">${pct.toFixed(1)}%</span>${plTag}</div>
-        </div>`;
-      });
-      items.push({icon:'📋',type:'info',title:`미국 보유 종목 분석 (${usStks.length}종목, $${Math.round(stot).toLocaleString()})`,
-        desc:breakdown.join('')});
-
       // 섹터 분포
       const sectorMap = {};
       analyzed.forEach(s=>{ sectorMap[s.info.style] = (sectorMap[s.info.style]||0) + s.val; });
@@ -1649,23 +1684,15 @@ function renderAIAssetUS(){
           desc:'인덱스, 채권, 배당, 국제분산 등 주요 영역을 잘 커버하고 있습니다.'});
       }
 
-      // 수익/손실 상세
+      // 종목 주의 알림
       const plStocks = analyzed.filter(s=>s.plPct!==null);
       if(plStocks.length > 0){
-        const totalInv = plStocks.reduce((a,s)=>a+s.avgCost*s.qty,0);
-        const totalCur = plStocks.reduce((a,s)=>a+s.val,0);
-        const totalPL = totalCur - totalInv;
-        const totalPLPct = totalInv>0 ? totalPL/totalInv*100 : 0;
+        const alerts = [];
         const best = [...plStocks].sort((a,b)=>b.plPct-a.plPct)[0];
         const worst = [...plStocks].sort((a,b)=>a.plPct-b.plPct)[0];
-
-        let desc = `투자원금 $${Math.round(totalInv).toLocaleString()} → 현재 $${Math.round(totalCur).toLocaleString()} (<span class="${totalPLPct>=0?'up':'down'}">${totalPLPct>=0?'+':''}${totalPLPct.toFixed(1)}%</span>)`;
-        if(best && best.plPct > 0) desc += `<br>🏆 최고: ${best.name} <span class="up">+${best.plPct.toFixed(1)}%</span>`;
-        if(worst && worst.plPct < 0) desc += `<br>📉 최저: ${worst.name} <span class="down">${worst.plPct.toFixed(1)}%</span>`;
-        if(worst && worst.plPct < -30) desc += `<br><span style="color:var(--amber);font-size:11px;">→ ${worst.name}은 -30% 이상 하락. 펀더멘탈 재점검 또는 손절을 고려하세요.</span>`;
-        if(best && best.plPct > 50) desc += `<br><span style="color:var(--amber);font-size:11px;">→ ${best.name}은 +50% 이상 상승. 일부 차익실현으로 리스크를 관리하세요.</span>`;
-
-        items.push({icon:'💹',type:totalPLPct>=0?'good':'warn',title:`미국 주식 수익 현황`,desc});
+        if(worst && worst.plPct < -30) alerts.push(`📉 <strong>${worst.name}</strong> ${worst.plPct.toFixed(1)}% — 펀더멘탈 재점검 또는 손절을 고려하세요.`);
+        if(best && best.plPct > 50) alerts.push(`🏆 <strong>${best.name}</strong> +${best.plPct.toFixed(1)}% — 일부 차익실현으로 리스크를 관리하세요.`);
+        if(alerts.length) items.push({icon:'💡',type:'warn',title:'종목 알림',desc:alerts.join('<br>')});
       }
     }
   }
@@ -1705,18 +1732,6 @@ function renderAIAssetKR(){
     const stot = analyzed.reduce((a,s)=>a+s.val,0);
 
     if(stot > 0){
-      const sorted = [...analyzed].sort((a,b)=>b.val-a.val);
-      const breakdown = sorted.map(s=>{
-        const pct = (s.val/stot*100);
-        const plTag = s.plPct!==null ? ` <span class="${s.plPct>=0?'up':'down'}">${s.plPct>=0?'+':''}${s.plPct.toFixed(1)}%</span>` : '';
-        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);">
-          <div><strong>${s.name}</strong> <span style="color:var(--t3);font-size:10px;">${s.info.type}·${s.info.style}</span></div>
-          <div style="text-align:right;"><span style="font-weight:500;">${pct.toFixed(1)}%</span>${plTag}</div>
-        </div>`;
-      });
-      items.push({icon:'📋',type:'info',title:`한국 보유 종목 분석 (${krStks.length}종목)`,
-        desc:breakdown.join('')});
-
       // GAP 분석
       const sectorMap = {};
       analyzed.forEach(s=>{ sectorMap[s.info.style] = (sectorMap[s.info.style]||0) + s.val; });
@@ -1753,22 +1768,15 @@ function renderAIAssetKR(){
         items.push({icon:'✅',type:'good',title:'한국 포트폴리오 구성이 균형잡혀 있어요!',desc:'주요 영역을 잘 커버하고 있습니다.'});
       }
 
-      // 수익/손실
+      // 종목 주의 알림
       const plStocks = analyzed.filter(s=>s.plPct!==null);
       if(plStocks.length > 0){
-        const totalInv = plStocks.reduce((a,s)=>a+s.avgCost*s.qty/10000,0);
-        const totalCur = plStocks.reduce((a,s)=>a+s.valMan,0);
-        const totalPL = totalCur - totalInv;
-        const totalPLPct = totalInv>0 ? totalPL/totalInv*100 : 0;
+        const alerts = [];
         const best = [...plStocks].sort((a,b)=>b.plPct-a.plPct)[0];
         const worst = [...plStocks].sort((a,b)=>a.plPct-b.plPct)[0];
-
-        let desc = `투자원금 ${fmtMan(totalInv)}원 → 현재 ${fmtMan(totalCur)}원 (<span class="${totalPLPct>=0?'up':'down'}">${totalPLPct>=0?'+':''}${totalPLPct.toFixed(1)}%</span>)`;
-        if(best && best.plPct > 0) desc += `<br>🏆 최고: ${best.name} <span class="up">+${best.plPct.toFixed(1)}%</span>`;
-        if(worst && worst.plPct < 0) desc += `<br>📉 최저: ${worst.name} <span class="down">${worst.plPct.toFixed(1)}%</span>`;
-        if(worst && worst.plPct < -30) desc += `<br><span style="color:var(--amber);font-size:11px;">→ ${worst.name} 펀더멘탈 재점검을 권장합니다.</span>`;
-
-        items.push({icon:'💹',type:totalPLPct>=0?'good':'warn',title:'한국 주식 수익 현황',desc});
+        if(worst && worst.plPct < -30) alerts.push(`📉 <strong>${worst.name}</strong> ${worst.plPct.toFixed(1)}% — 펀더멘탈 재점검을 권장합니다.`);
+        if(best && best.plPct > 50) alerts.push(`🏆 <strong>${best.name}</strong> +${best.plPct.toFixed(1)}% — 일부 차익실현을 고려하세요.`);
+        if(alerts.length) items.push({icon:'💡',type:'warn',title:'종목 알림',desc:alerts.join('<br>')});
       }
     }
   }
