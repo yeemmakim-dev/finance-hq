@@ -1368,7 +1368,7 @@ function addStockField(currency, data){
   d.dataset.currency = currency;
   d.innerHTML=`
     <div class="field" style="position:relative;">
-      <input placeholder="종목명 검색" value="${data?.name||''}" oninput="searchTicker(this,'${currency}')"/>
+      <input placeholder="${currency==='KRW'?'종목명 (영문 검색: Samsung)':'종목명 검색 (예: Apple)'}" value="${data?.name||''}" oninput="searchTicker(this,'${currency}')"/>
       <div class="ticker-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:999;background:var(--card);border:1px solid var(--border);border-radius:8px;max-height:180px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.4);"></div>
     </div>
     <div class="field"><select>${CATS.map(c=>`<option ${data?.cat===c?'selected':''}>${c}</option>`).join('')}</select></div>
