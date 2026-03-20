@@ -830,6 +830,79 @@ function renderActionPlanList(actions){
 // QUOTES (서버 없이 브라우저에서 직접 호출)
 // ═══════════════════════════════════════
 // 개별 종목 조회 (Yahoo Finance v8 chart API - 가장 안정적)
+// 야후 파이낸스에서 섹터/산업 정보 조회
+async function fetchStockProfile(ticker){
+  const profileUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${ticker}?modules=assetProfile,quoteType`;
+  const urls = [
+    `https://corsproxy.io/?${encodeURIComponent(profileUrl)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(profileUrl)}`,
+  ];
+  for(const url of urls){
+    try{
+      const res = await fetch(url);
+      if(!res.ok) continue;
+      const data = await res.json();
+      const profile = data?.quoteSummary?.result?.[0]?.assetProfile;
+      const quoteType = data?.quoteSummary?.result?.[0]?.quoteType;
+      const qType = quoteType?.quoteType||''; // EQUITY, ETF, MUTUALFUND
+      if(profile?.sector || profile?.industry){
+        return { sector: profile.sector||'', industry: profile.industry||'', type: qType };
+      }
+      // ETF/뮤추얼펀드는 assetProfile에 sector 없을 수 있음 → quoteType으로 판별
+      if(qType === 'ETF' || qType === 'MUTUALFUND'){
+        const cat = profile?.category || '';
+        return { sector: '', industry: '', type: qType, category: cat };
+      }
+    }catch(e){ continue; }
+  }
+  return null;
+}
+
+// 섹터 한글 변환
+const SECTOR_KO = {
+  'Technology':'기술','Healthcare':'헬스케어','Financial Services':'금융','Consumer Cyclical':'경기소비재',
+  'Consumer Defensive':'필수소비재','Communication Services':'커뮤니케이션','Industrials':'산업재',
+  'Energy':'에너지','Utilities':'유틸리티','Real Estate':'리츠/부동산','Basic Materials':'소재',
+};
+const INDUSTRY_KO = {
+  'Semiconductors':'반도체','Software':'소프트웨어','Internet Content & Information':'인터넷/플랫폼',
+  'Consumer Electronics':'가전','Auto Manufacturers':'자동차','Drug Manufacturers':'제약',
+  'Biotechnology':'바이오','Banks':'은행','Insurance':'보험','Oil & Gas':'석유/가스',
+  'Aerospace & Defense':'항공/방위','Restaurants':'요식업','Specialty Retail':'소매/유통',
+  'Internet Retail':'이커머스','Entertainment':'엔터테인먼트','Credit Services':'신용/결제',
+};
+function profileToSector(profile, ticker){
+  if(!profile) return null;
+  const t = ticker.toUpperCase().replace(/\..*/,'');
+  // ETF/뮤추얼펀드 → 기존 ETF_STYLE 먼저, 없으면 카테고리 활용
+  if(profile.type==='ETF' || profile.type==='MUTUALFUND'){
+    if(ETF_STYLE[t]) return ETF_STYLE[t];
+    const cat = profile.category||'';
+    if(/Large Blend|S&P 500/i.test(cat)) return '대형성장(S&P500)';
+    if(/Large Growth/i.test(cat)) return '대형성장';
+    if(/Large Value/i.test(cat)) return '대형가치';
+    if(/Mid.*Cap/i.test(cat)) return '중형주';
+    if(/Small.*Cap/i.test(cat)) return '소형주';
+    if(/Foreign|International|World/i.test(cat)) return '국제주식';
+    if(/Emerging/i.test(cat)) return '신흥국';
+    if(/Bond|Fixed/i.test(cat)) return '채권';
+    if(/Real Estate/i.test(cat)) return '리츠';
+    if(/Target/i.test(cat)) return '타겟데이트';
+    if(/Dividend/i.test(cat)) return '배당';
+    if(/Technology/i.test(cat)) return '기술섹터';
+    if(cat) return cat;
+    return '기타ETF';
+  }
+  // 개별주: industry 우선 (더 구체적), 없으면 sector
+  const ind = profile.industry||'';
+  const sec = profile.sector||'';
+  if(INDUSTRY_KO[ind]) return INDUSTRY_KO[ind];
+  if(SECTOR_KO[sec]) return SECTOR_KO[sec];
+  if(ind) return ind;
+  if(sec) return sec;
+  return null;
+}
+
 async function fetchSingleQuote(ticker){
   const urls = [
     `https://corsproxy.io/?${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=2d&interval=1d`)}`,
@@ -895,6 +968,24 @@ async function fetchAllQuotes(){
     setStatus('live');
     save();
     renderAll();
+
+    // 섹터 미설정 종목 → 야후에서 섹터 정보 가져오기 (백그라운드)
+    const needSector = stocks.filter(s=>!s.sector && s.ticker);
+    if(needSector.length){
+      Promise.allSettled(needSector.map(s=>fetchStockProfile(s.ticker))).then(results=>{
+        let updated = 0;
+        results.forEach((r,i)=>{
+          if(r.status==='fulfilled' && r.value){
+            const sec = profileToSector(r.value, needSector[i].ticker);
+            if(sec){
+              needSector[i].sector = sec;
+              updated++;
+            }
+          }
+        });
+        if(updated){ save(); renderAll(); }
+      });
+    }
   }catch(e){
     console.error('Quote error:', e);
     setStatus('error', e.message);
@@ -2141,12 +2232,26 @@ function selectTicker(el){
   var inputs = entry.querySelectorAll('input');
   inputs[0].value = el.dataset.name;
   inputs[1].value = el.dataset.ticker;
-  // 섹터 자동 채우기
   var secInput = entry.querySelector('.sector-input');
-  if(secInput && !secInput.value){
+  // 먼저 로컬 DB로 빠르게 채우기
+  if(secInput){
     var cat = entry.querySelector('select')?.value||'기타';
     var autoSec = getStockSector({ticker:el.dataset.ticker, name:el.dataset.name, cat:cat, sector:''});
-    secInput.value = autoSec.style;
+    if(autoSec.style !== '미분류'){
+      secInput.value = autoSec.style;
+    } else {
+      secInput.value = '';
+      secInput.placeholder = '조회 중...';
+    }
+    // 야후에서 정확한 섹터 가져오기
+    fetchStockProfile(el.dataset.ticker).then(function(profile){
+      if(!profile) return;
+      var sec = profileToSector(profile, el.dataset.ticker);
+      if(sec && secInput){
+        secInput.value = sec;
+        secInput.placeholder = sec;
+      }
+    }).catch(function(){});
   }
   el.closest('.ticker-suggest').style.display='none';
 }
