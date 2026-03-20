@@ -969,15 +969,24 @@ async function fetchAllQuotes(){
     save();
     renderAll();
 
-    // 섹터 미설정 종목 → 야후에서 섹터 정보 가져오기 (백그라운드)
-    const needSector = stocks.filter(s=>!s.sector && s.ticker);
+    // 1) 먼저 로컬 DB로 즉시 채우기
+    stocks.forEach(s=>{
+      if(!s.sector && s.ticker){
+        const auto = getStockSector({...s, sector:''});
+        if(auto.style !== '미분류') s.sector = auto.style;
+      }
+    });
+    save(); renderAll();
+
+    // 2) 아직 미분류인 종목 → 야후에서 섹터 정보 가져오기 (백그라운드)
+    const needSector = stocks.filter(s=>(!s.sector || s.sector==='미분류') && s.ticker);
     if(needSector.length){
       Promise.allSettled(needSector.map(s=>fetchStockProfile(s.ticker))).then(results=>{
         let updated = 0;
         results.forEach((r,i)=>{
           if(r.status==='fulfilled' && r.value){
             const sec = profileToSector(r.value, needSector[i].ticker);
-            if(sec){
+            if(sec && sec!=='미분류'){
               needSector[i].sector = sec;
               updated++;
             }
@@ -1547,20 +1556,40 @@ function renderRecs(){
 // ═══════════════════════════════════════
 // ── 종목 특성 분석 헬퍼 ──
 const SECTOR_DB = {
-  // 미국 개별주 섹터 매핑 (ticker → sector)
-  AAPL:'기술',MSFT:'기술',GOOGL:'기술',GOOG:'기술',AMZN:'소비재/기술',META:'기술',NVDA:'반도체',
-  TSLA:'자동차/에너지',AMD:'반도체',INTC:'반도체',AVGO:'반도체',QCOM:'반도체',MU:'반도체',
-  JPM:'금융',BAC:'금융',GS:'금융',MS:'금융',V:'금융',MA:'금융',BRK:'금융',
-  JNJ:'헬스케어',UNH:'헬스케어',PFE:'헬스케어',ABBV:'헬스케어',LLY:'헬스케어',MRK:'헬스케어',
-  XOM:'에너지',CVX:'에너지',COP:'에너지',
-  PG:'필수소비재',KO:'필수소비재',PEP:'필수소비재',WMT:'필수소비재',COST:'필수소비재',
-  DIS:'커뮤니케이션',NFLX:'커뮤니케이션',CMCSA:'커뮤니케이션',
-  HD:'경기소비재',NKE:'경기소비재',SBUX:'경기소비재',MCD:'경기소비재',TGT:'경기소비재',
-  BA:'산업재',CAT:'산업재',HON:'산업재',UPS:'산업재',LMT:'산업재',RTX:'산업재',
-  NEE:'유틸리티',SO:'유틸리티',DUK:'유틸리티',
-  AMT:'리츠',CCI:'리츠',SPG:'리츠',O:'리츠',
-  CRM:'기술',ADBE:'기술',ORCL:'기술',NOW:'기술',SNOW:'기술',PLTR:'기술',
+  // 기술
+  AAPL:'기술',MSFT:'기술',GOOGL:'기술',GOOG:'기술',META:'기술',NVDA:'반도체',
+  AMD:'반도체',INTC:'반도체',AVGO:'반도체',QCOM:'반도체',MU:'반도체',MRVL:'반도체',LRCX:'반도체',KLAC:'반도체',AMAT:'반도체',
+  CRM:'기술',ADBE:'기술',ORCL:'기술',NOW:'기술',SNOW:'기술',PLTR:'기술',SHOP:'기술',UBER:'기술',
+  IBM:'기술',CSCO:'기술',TXN:'반도체',DELL:'기술',HPQ:'기술',PANW:'기술',CRWD:'기술',ZS:'기술',
+  // 소비재/이커머스
+  AMZN:'이커머스/클라우드',TSLA:'자동차/에너지',
+  // 금융
+  JPM:'금융',BAC:'금융',GS:'금융',MS:'금융',V:'결제/핀테크',MA:'결제/핀테크',BRK:'금융',
+  WFC:'금융',C:'금융',SCHW:'금융',BLK:'금융',AXP:'금융',
   COIN:'암호화폐/핀테크',SQ:'핀테크',PYPL:'핀테크',SOFI:'핀테크',
+  // 헬스케어
+  JNJ:'헬스케어',UNH:'헬스케어',PFE:'헬스케어',ABBV:'헬스케어',LLY:'헬스케어',MRK:'헬스케어',
+  TMO:'헬스케어',ABT:'헬스케어',AMGN:'바이오',GILD:'바이오',MRNA:'바이오',ISRG:'의료기기',MDT:'의료기기',
+  // 에너지
+  XOM:'에너지',CVX:'에너지',COP:'에너지',SLB:'에너지',EOG:'에너지',OXY:'에너지',
+  // 필수소비재
+  PG:'필수소비재',KO:'필수소비재',PEP:'필수소비재',WMT:'필수소비재',COST:'필수소비재',
+  PM:'필수소비재',MO:'필수소비재',CL:'필수소비재',MDLZ:'필수소비재',KHC:'필수소비재',STZ:'필수소비재',
+  // 커뮤니케이션/미디어
+  DIS:'미디어/엔터',NFLX:'미디어/엔터',CMCSA:'커뮤니케이션',
+  T:'통신',VZ:'통신',TMUS:'통신',
+  // 경기소비재
+  HD:'경기소비재',NKE:'경기소비재',SBUX:'경기소비재',MCD:'경기소비재',TGT:'경기소비재',
+  LOW:'경기소비재',BKNG:'여행/레저',MAR:'여행/레저',ABNB:'여행/레저',
+  // 산업재
+  BA:'항공/방위',CAT:'산업재',HON:'산업재',UPS:'물류',LMT:'항공/방위',RTX:'항공/방위',
+  GE:'산업재',MMM:'산업재',FDX:'물류',DE:'산업재',
+  // 유틸리티
+  NEE:'유틸리티',SO:'유틸리티',DUK:'유틸리티',AEP:'유틸리티',
+  // 리츠
+  AMT:'리츠',CCI:'리츠',SPG:'리츠',O:'리츠',PLD:'리츠',EQIX:'리츠/데이터센터',
+  // 소재
+  LIN:'소재',APD:'소재',FCX:'소재',NEM:'금광',
 };
 // ETF → 자산 클래스/스타일 매핑
 const ETF_STYLE = {
