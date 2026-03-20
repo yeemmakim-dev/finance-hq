@@ -616,10 +616,15 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
       <div class="field"><label>연금/퇴직금 (만원)</label><input type="number" id="f-kr-retire" min="0"/></div>
     </div>
 
-    <div class="form-section">📈 주식 / ETF</div>
-    <div class="stock-hdr"><span>종목명</span><span>카테고리</span><span>통화</span><span>티커</span><span>수량</span><span></span></div>
-    <div id="stock-fields"></div>
-    <button class="add-row" onclick="addStockField()">+ 종목 추가</button>
+    <div class="form-section">🇺🇸 미국 주식 / ETF (USD)</div>
+    <div class="stock-hdr"><span>종목명</span><span>카테고리</span><span>티커</span><span>수량</span><span>평단가</span><span></span></div>
+    <div id="stock-fields-us"></div>
+    <button class="add-row" onclick="addStockField('USD')">+ 미국 종목 추가</button>
+
+    <div class="form-section">🇰🇷 한국 주식 / ETF (KRW)</div>
+    <div class="stock-hdr"><span>종목명</span><span>카테고리</span><span>티커</span><span>수량</span><span>평단가</span><span></span></div>
+    <div id="stock-fields-kr"></div>
+    <button class="add-row" onclick="addStockField('KRW')">+ 한국 종목 추가</button>
 
     <div class="form-section">📋 부채 / 상환 계획</div>
     <div class="debt-hdr-grid"><span>대상/설명</span><span>총 금액</span><span>모은 금액</span><span>통화</span><span>목표(년)</span><span></span></div>
@@ -1337,10 +1342,14 @@ function openModal(){
   document.getElementById('f-kr-crypto').value = krAssets.crypto||'';
   document.getElementById('f-kr-retire').value = krAssets.retire||'';
   document.getElementById('f-fx').value = FX;
-  const c = document.getElementById('stock-fields');
-  c.innerHTML='';
-  stocks.forEach(s=>addStockField(s));
-  if(!stocks.length) addStockField();
+  document.getElementById('stock-fields-us').innerHTML='';
+  document.getElementById('stock-fields-kr').innerHTML='';
+  const usStks = stocks.filter(s=>s.currency==='USD');
+  const krStks = stocks.filter(s=>s.currency==='KRW');
+  usStks.forEach(s=>addStockField('USD',s));
+  if(!usStks.length) addStockField('USD');
+  krStks.forEach(s=>addStockField('KRW',s));
+  if(!krStks.length) addStockField('KRW');
 
   // Debt fields
   const dc = document.getElementById('debt-fields');
@@ -1351,17 +1360,18 @@ function openModal(){
 }
 function closeModal(){ document.getElementById('modal-overlay').classList.remove('open'); }
 
-function addStockField(data){
-  const c = document.getElementById('stock-fields');
+function addStockField(currency, data){
+  const containerId = currency==='KRW' ? 'stock-fields-kr' : 'stock-fields-us';
+  const c = document.getElementById(containerId);
   const d = document.createElement('div');
   d.className='stock-entry';
+  d.dataset.currency = currency;
   d.innerHTML=`
     <div class="field"><input placeholder="종목명" value="${data?.name||''}"/></div>
     <div class="field"><select>${CATS.map(c=>`<option ${data?.cat===c?'selected':''}>${c}</option>`).join('')}</select></div>
-    <div class="field"><select><option ${data?.currency==='KRW'?'selected':''}>KRW</option><option ${data?.currency==='USD'?'selected':''}>USD</option></select></div>
-    <div class="field"><input placeholder="VOO" value="${data?.ticker||''}"/></div>
+    <div class="field"><input placeholder="${currency==='USD'?'VOO':'005930.KS'}" value="${data?.ticker||''}"/></div>
     <div class="field"><input type="number" placeholder="수량" step="0.001" value="${data?.qty||''}"/></div>
-    <div class="field"><input type="number" placeholder="평단가 (선택)" step="0.01" value="${data?.avgCost||''}"/></div>
+    <div class="field"><input type="number" placeholder="평단가" step="0.01" value="${data?.avgCost||''}"/></div>
     <button class="del-btn" onclick="this.parentElement.remove()">✕</button>`;
   c.appendChild(d);
 }
@@ -1404,8 +1414,9 @@ function saveModal(){
   stocks=[];
   document.querySelectorAll('.stock-entry').forEach(row=>{
     const inp=row.querySelectorAll('input'), sel=row.querySelectorAll('select');
+    const currency = row.dataset.currency || 'USD';
     const name=inp[0].value.trim(), ticker=inp[1].value.trim(), qty=+inp[2].value, avgCost=+inp[3].value||0;
-    if(name&&ticker&&qty) stocks.push({name,cat:sel[0].value,currency:sel[1].value,ticker,qty,avgCost});
+    if(name&&ticker&&qty) stocks.push({name,cat:sel[0].value,currency,ticker,qty,avgCost});
   });
   debts=[];
   document.querySelectorAll('.debt-entry').forEach(row=>{
