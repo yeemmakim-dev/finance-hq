@@ -943,7 +943,7 @@ function renderAllTab(){
   renderDebts();
   renderHistory();
   renderRecs();
-  renderAIAssetAll();
+  try{ renderAIAssetAll(); }catch(e){ console.error('AI asset all error:',e); }
 }
 
 // ── US TAB ──
@@ -972,7 +972,7 @@ function renderUSTab(){
   const usStocks = [...stocks.filter(s=>s.currency==='USD')].sort((a,b)=>stockValUSD(b)-stockValUSD(a));
   document.getElementById('us-stock-count').textContent = usStocks.length+'종목';
   renderStockTable('us-stock-tbody', usStocks, 'USD');
-  renderAIAssetUS();
+  try{ renderAIAssetUS(); }catch(e){ console.error('AI asset US error:',e); }
 }
 
 // ── KR TAB ──
@@ -1001,7 +1001,7 @@ function renderKRTab(){
   const krStocks = [...stocks.filter(s=>s.currency==='KRW')].sort((a,b)=>curPrice(b)*b.qty-curPrice(a)*a.qty);
   document.getElementById('kr-stock-count').textContent = krStocks.length+'종목';
   renderStockTable('kr-stock-tbody', krStocks, 'KRW');
-  renderAIAssetKR();
+  try{ renderAIAssetKR(); }catch(e){ console.error('AI asset KR error:',e); }
 }
 
 // ═══════════════════════════════════════
