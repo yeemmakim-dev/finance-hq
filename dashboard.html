@@ -1368,7 +1368,7 @@ function addStockField(currency, data){
   d.dataset.currency = currency;
   d.innerHTML=`
     <div class="field" style="position:relative;">
-      <input placeholder="${currency==='KRW'?'종목명 (영문 검색: Samsung)':'종목명 검색 (예: Apple)'}" value="${data?.name||''}" oninput="searchTicker(this,'${currency}')"/>
+      <input placeholder="${currency==='KRW'?'종목명 검색 (예: 삼성전자)':'종목명 검색 (예: Apple)'}" value="${data?.name||''}" oninput="searchTicker(this,'${currency}')"/>
       <div class="ticker-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:999;background:var(--card);border:1px solid var(--border);border-radius:8px;max-height:180px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.4);"></div>
     </div>
     <div class="field"><select>${CATS.map(c=>`<option ${data?.cat===c?'selected':''}>${c}</option>`).join('')}</select></div>
@@ -1379,39 +1379,140 @@ function addStockField(currency, data){
   c.appendChild(d);
 }
 
+// 한국 주요 종목 DB (한글 검색용)
+const KR_STOCKS = [
+  {symbol:'005930.KS',name:'삼성전자',eng:'Samsung Electronics'},
+  {symbol:'000660.KS',name:'SK하이닉스',eng:'SK Hynix'},
+  {symbol:'373220.KS',name:'LG에너지솔루션',eng:'LG Energy Solution'},
+  {symbol:'207940.KS',name:'삼성바이오로직스',eng:'Samsung Biologics'},
+  {symbol:'005935.KS',name:'삼성전자우',eng:'Samsung Electronics Pref'},
+  {symbol:'006400.KS',name:'삼성SDI',eng:'Samsung SDI'},
+  {symbol:'051910.KS',name:'LG화학',eng:'LG Chem'},
+  {symbol:'005380.KS',name:'현대차',eng:'Hyundai Motor'},
+  {symbol:'000270.KS',name:'기아',eng:'Kia'},
+  {symbol:'068270.KS',name:'셀트리온',eng:'Celltrion'},
+  {symbol:'035420.KS',name:'NAVER',eng:'NAVER Corp'},
+  {symbol:'035720.KS',name:'카카오',eng:'Kakao'},
+  {symbol:'105560.KS',name:'KB금융',eng:'KB Financial'},
+  {symbol:'055550.KS',name:'신한지주',eng:'Shinhan Financial'},
+  {symbol:'086790.KS',name:'하나금융지주',eng:'Hana Financial'},
+  {symbol:'096770.KS',name:'SK이노베이션',eng:'SK Innovation'},
+  {symbol:'034730.KS',name:'SK',eng:'SK Inc'},
+  {symbol:'028260.KS',name:'삼성물산',eng:'Samsung C&T'},
+  {symbol:'012330.KS',name:'현대모비스',eng:'Hyundai Mobis'},
+  {symbol:'066570.KS',name:'LG전자',eng:'LG Electronics'},
+  {symbol:'003550.KS',name:'LG',eng:'LG Corp'},
+  {symbol:'032830.KS',name:'삼성생명',eng:'Samsung Life'},
+  {symbol:'003670.KS',name:'포스코홀딩스',eng:'POSCO Holdings'},
+  {symbol:'010130.KS',name:'고려아연',eng:'Korea Zinc'},
+  {symbol:'009150.KS',name:'삼성전기',eng:'Samsung Electro-Mechanics'},
+  {symbol:'018260.KS',name:'삼성에스디에스',eng:'Samsung SDS'},
+  {symbol:'033780.KS',name:'KT&G',eng:'KT&G'},
+  {symbol:'030200.KS',name:'KT',eng:'KT Corp'},
+  {symbol:'017670.KS',name:'SK텔레콤',eng:'SK Telecom'},
+  {symbol:'316140.KS',name:'우리금융지주',eng:'Woori Financial'},
+  {symbol:'259960.KS',name:'크래프톤',eng:'Krafton'},
+  {symbol:'352820.KS',name:'하이브',eng:'HYBE'},
+  {symbol:'263750.KS',name:'펄어비스',eng:'Pearl Abyss'},
+  {symbol:'036570.KS',name:'엔씨소프트',eng:'NCSoft'},
+  {symbol:'251270.KS',name:'넷마블',eng:'Netmarble'},
+  {symbol:'011200.KS',name:'HMM',eng:'HMM Co'},
+  {symbol:'010950.KS',name:'S-Oil',eng:'S-Oil'},
+  {symbol:'034020.KS',name:'두산에너빌리티',eng:'Doosan Enerbility'},
+  {symbol:'000810.KS',name:'삼성화재',eng:'Samsung Fire & Marine'},
+  {symbol:'090430.KS',name:'아모레퍼시픽',eng:'Amorepacific'},
+  {symbol:'051900.KS',name:'LG생활건강',eng:'LG H&H'},
+  {symbol:'326030.KS',name:'SK바이오팜',eng:'SK Biopharmaceuticals'},
+  {symbol:'323410.KS',name:'카카오뱅크',eng:'KakaoBank'},
+  {symbol:'377300.KS',name:'카카오페이',eng:'KakaoPay'},
+  {symbol:'011070.KS',name:'LG이노텍',eng:'LG Innotek'},
+  {symbol:'402340.KS',name:'SK스퀘어',eng:'SK Square'},
+  {symbol:'000100.KS',name:'유한양행',eng:'Yuhan'},
+  {symbol:'047050.KS',name:'포스코인터내셔널',eng:'POSCO International'},
+  {symbol:'241560.KS',name:'두산밥캣',eng:'Doosan Bobcat'},
+  {symbol:'138040.KS',name:'메리츠금융지주',eng:'Meritz Financial'},
+  // ETFs
+  {symbol:'069500.KS',name:'KODEX 200',eng:'KODEX 200 ETF'},
+  {symbol:'229200.KS',name:'KODEX 코스닥150',eng:'KODEX KOSDAQ150'},
+  {symbol:'114800.KS',name:'KODEX 인버스',eng:'KODEX Inverse'},
+  {symbol:'252670.KS',name:'KODEX 200선물인버스2X',eng:'KODEX 200 Futures Inverse 2X'},
+  {symbol:'122630.KS',name:'KODEX 레버리지',eng:'KODEX Leverage'},
+  {symbol:'091160.KS',name:'KODEX 반도체',eng:'KODEX Semiconductor'},
+  {symbol:'305720.KS',name:'KODEX 2차전지',eng:'KODEX Secondary Battery'},
+  {symbol:'364690.KS',name:'KODEX 은행',eng:'KODEX Banks'},
+  {symbol:'102110.KS',name:'TIGER 200',eng:'TIGER 200 ETF'},
+  {symbol:'371460.KS',name:'TIGER 차이나전기차',eng:'TIGER China EV'},
+  {symbol:'381180.KS',name:'TIGER 미국테크TOP10',eng:'TIGER US Tech Top10'},
+  {symbol:'360750.KS',name:'TIGER 미국S&P500',eng:'TIGER US S&P500'},
+  {symbol:'133690.KS',name:'TIGER 미국나스닥100',eng:'TIGER US NASDAQ100'},
+];
+
+function isKorean(str){ return /[가-힣]/.test(str); }
+
 let _searchTimer = null;
+function renderSuggest(sugBox, items){
+  if(!items.length){ sugBox.style.display='none'; return; }
+  sugBox.innerHTML = items.map(function(q){
+    var name = (q.name||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    var exch = q.exch||'';
+    return '<div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px;display:flex;justify-content:space-between;align-items:center;" onmousedown="selectTicker(this)" data-ticker="'+q.symbol+'" data-name="'+name+'">'
+      +'<div><div style="font-weight:600;color:var(--t1);">'+q.symbol+'</div>'
+      +'<div style="color:var(--t3);font-size:10px;margin-top:1px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+name+'</div></div>'
+      +'<span style="font-size:9px;color:var(--t3);background:rgba(255,255,255,.06);padding:2px 6px;border-radius:4px;">'+exch+'</span>'
+      +'</div>';
+  }).join('');
+  sugBox.style.display='block';
+}
+
 function searchTicker(input, currency){
   const query = input.value.trim();
   const sugBox = input.parentElement.querySelector('.ticker-suggest');
   if(query.length < 1){ sugBox.style.display='none'; return; }
 
+  // Korean input → search local KR_STOCKS DB instantly
+  if(isKorean(query)){
+    var matches = KR_STOCKS.filter(function(s){
+      return s.name.includes(query) || s.eng.toLowerCase().includes(query.toLowerCase());
+    }).slice(0,6).map(function(s){
+      return {symbol:s.symbol, name:s.name+' ('+s.eng+')', exch:'KRX'};
+    });
+    renderSuggest(sugBox, matches);
+    return;
+  }
+
+  // English/number input → Yahoo Finance API
   clearTimeout(_searchTimer);
   _searchTimer = setTimeout(function(){
-    const yahooUrl = 'https://query2.finance.yahoo.com/v1/finance/search?q='+encodeURIComponent(query)+'&quotesCount=6&newsCount=0&enableFuzzyQuery=true';
-    const url = 'https://api.allorigins.win/raw?url='+encodeURIComponent(yahooUrl);
+    // Also check local KR DB for English names
+    var localMatches = KR_STOCKS.filter(function(s){
+      return s.eng.toLowerCase().includes(query.toLowerCase()) || s.symbol.toLowerCase().includes(query.toLowerCase());
+    }).slice(0,3).map(function(s){
+      return {symbol:s.symbol, name:s.name+' ('+s.eng+')', exch:'KRX'};
+    });
+
+    var yahooUrl = 'https://query2.finance.yahoo.com/v1/finance/search?q='+encodeURIComponent(query)+'&quotesCount=6&newsCount=0&enableFuzzyQuery=true';
+    var url = 'https://api.allorigins.win/raw?url='+encodeURIComponent(yahooUrl);
 
     fetch(url).then(function(res){
       if(!res.ok) throw new Error('HTTP '+res.status);
       return res.json();
     }).then(function(json){
-      var quotes = (json.quotes||[]).filter(function(q){ return q.symbol; });
-      if(!quotes.length){ sugBox.style.display='none'; return; }
-
-      sugBox.innerHTML = quotes.map(function(q){
-        var name = (q.shortname||q.longname||q.symbol).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-        var exch = q.exchDisp||q.exchange||'';
-        return '<div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px;display:flex;justify-content:space-between;align-items:center;" onmousedown="selectTicker(this)" data-ticker="'+q.symbol+'" data-name="'+name+'">'
-          +'<div><div style="font-weight:600;color:var(--t1);">'+q.symbol+'</div>'
-          +'<div style="color:var(--t3);font-size:10px;margin-top:1px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+name+'</div></div>'
-          +'<span style="font-size:9px;color:var(--t3);background:rgba(255,255,255,.06);padding:2px 6px;border-radius:4px;">'+exch+'</span>'
-          +'</div>';
-      }).join('');
-      sugBox.style.display='block';
+      var yahooResults = (json.quotes||[]).filter(function(q){ return q.symbol; }).map(function(q){
+        return {symbol:q.symbol, name:q.shortname||q.longname||q.symbol, exch:q.exchDisp||q.exchange||''};
+      });
+      // Merge: local KR matches first, then Yahoo results (deduplicate)
+      var seen = {};
+      var merged = [];
+      localMatches.concat(yahooResults).forEach(function(q){
+        if(!seen[q.symbol]){ seen[q.symbol]=1; merged.push(q); }
+      });
+      renderSuggest(sugBox, merged.slice(0,6));
     }).catch(function(e){
-      console.error('Ticker search error:', e);
-      sugBox.style.display='none';
+      // Fallback to local matches only
+      if(localMatches.length) renderSuggest(sugBox, localMatches);
+      else sugBox.style.display='none';
     });
-  }, 400);
+  }, 300);
 }
 
 function selectTicker(el){
