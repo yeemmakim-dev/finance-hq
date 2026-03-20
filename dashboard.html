@@ -1367,13 +1367,59 @@ function addStockField(currency, data){
   d.className='stock-entry';
   d.dataset.currency = currency;
   d.innerHTML=`
-    <div class="field"><input placeholder="종목명" value="${data?.name||''}"/></div>
+    <div class="field" style="position:relative;">
+      <input placeholder="종목명 검색" value="${data?.name||''}" oninput="searchTicker(this,'${currency}')"/>
+      <div class="ticker-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:999;background:var(--card);border:1px solid var(--border);border-radius:8px;max-height:180px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.4);"></div>
+    </div>
     <div class="field"><select>${CATS.map(c=>`<option ${data?.cat===c?'selected':''}>${c}</option>`).join('')}</select></div>
-    <div class="field"><input placeholder="${currency==='USD'?'VOO':'005930.KS'}" value="${data?.ticker||''}"/></div>
+    <div class="field"><input placeholder="${currency==='USD'?'VOO':'005930.KS'}" value="${data?.ticker||''}" readonly style="opacity:.7;cursor:default;"/></div>
     <div class="field"><input type="number" placeholder="수량" step="0.001" value="${data?.qty||''}"/></div>
     <div class="field"><input type="number" placeholder="평단가" step="0.01" value="${data?.avgCost||''}"/></div>
     <button class="del-btn" onclick="this.parentElement.remove()">✕</button>`;
   c.appendChild(d);
+}
+
+let _searchTimer = null;
+function searchTicker(input, currency){
+  const query = input.value.trim();
+  const sugBox = input.parentElement.querySelector('.ticker-suggest');
+  if(query.length < 1){ sugBox.style.display='none'; return; }
+
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(async ()=>{
+    try{
+      const url = `https://corsproxy.io/?${encodeURIComponent(`https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=6&newsCount=0`)}`;
+      const res = await fetch(url);
+      const json = await res.json();
+      const quotes = (json.quotes||[]).filter(q=>q.symbol && q.shortname);
+
+      if(!quotes.length){ sugBox.style.display='none'; return; }
+
+      sugBox.innerHTML = quotes.map(q => {
+        const exch = q.exchange||'';
+        return `<div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px;display:flex;justify-content:space-between;align-items:center;"
+          onmousedown="selectTicker(this,'${q.symbol}','${(q.shortname||'').replace(/'/g,"\\'")}')">
+          <div>
+            <div style="font-weight:600;color:var(--t1);">${q.symbol}</div>
+            <div style="color:var(--t3);font-size:10px;margin-top:1px;">${q.shortname}</div>
+          </div>
+          <span style="font-size:9px;color:var(--t3);background:rgba(255,255,255,.06);padding:2px 6px;border-radius:4px;">${exch}</span>
+        </div>`;
+      }).join('');
+      sugBox.style.display='block';
+    }catch(e){ sugBox.style.display='none'; }
+  }, 300);
+
+  // Close on blur
+  input.onblur = ()=> setTimeout(()=>{ sugBox.style.display='none'; }, 200);
+}
+
+function selectTicker(el, ticker, name){
+  const entry = el.closest('.stock-entry');
+  const inputs = entry.querySelectorAll('input');
+  inputs[0].value = name; // 종목명
+  inputs[1].value = ticker; // 티커
+  el.closest('.ticker-suggest').style.display='none';
 }
 
 function addDebtField(data){
