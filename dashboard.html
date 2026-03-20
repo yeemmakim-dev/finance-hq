@@ -349,6 +349,13 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
       <div class="section-hdr"><div class="section-title">💡 자산 관리 추천</div></div>
       <div id="all-rec-list"></div>
     </div>
+    <!-- AI ASSET ANALYSIS -->
+    <div class="section">
+      <div class="card" style="padding:20px;">
+        <div class="card-title"><span>🤖 AI 자산 분석 & 종목 추천</span></div>
+        <div id="ai-asset-all"></div>
+      </div>
+    </div>
   </div>
 
   <!-- ====== US (미국) ====== -->
@@ -380,6 +387,12 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
         <tbody id="us-stock-tbody"></tbody></table>
       </div>
     </div>
+    <div class="section">
+      <div class="card" style="padding:20px;">
+        <div class="card-title"><span>🤖 AI 미국 자산 분석 & 종목 추천</span></div>
+        <div id="ai-asset-us"></div>
+      </div>
+    </div>
   </div>
 
   <!-- ====== KR (한국) ====== -->
@@ -409,6 +422,12 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
       <div class="card" style="overflow-x:auto;">
         <table class="stk-tbl"><thead><tr><th>종목</th><th>현재가</th><th>수량</th><th>평가금액</th><th>전일비</th><th>수익</th></tr></thead>
         <tbody id="kr-stock-tbody"></tbody></table>
+      </div>
+    </div>
+    <div class="section">
+      <div class="card" style="padding:20px;">
+        <div class="card-title"><span>🤖 AI 한국 자산 분석 & 종목 추천</span></div>
+        <div id="ai-asset-kr"></div>
       </div>
     </div>
   </div>
@@ -924,6 +943,7 @@ function renderAllTab(){
   renderDebts();
   renderHistory();
   renderRecs();
+  renderAIAssetAll();
 }
 
 // ── US TAB ──
@@ -952,6 +972,7 @@ function renderUSTab(){
   const usStocks = [...stocks.filter(s=>s.currency==='USD')].sort((a,b)=>stockValUSD(b)-stockValUSD(a));
   document.getElementById('us-stock-count').textContent = usStocks.length+'종목';
   renderStockTable('us-stock-tbody', usStocks, 'USD');
+  renderAIAssetUS();
 }
 
 // ── KR TAB ──
@@ -980,6 +1001,7 @@ function renderKRTab(){
   const krStocks = [...stocks.filter(s=>s.currency==='KRW')].sort((a,b)=>curPrice(b)*b.qty-curPrice(a)*a.qty);
   document.getElementById('kr-stock-count').textContent = krStocks.length+'종목';
   renderStockTable('kr-stock-tbody', krStocks, 'KRW');
+  renderAIAssetKR();
 }
 
 // ═══════════════════════════════════════
@@ -1303,6 +1325,336 @@ function renderRecs(){
     <div class="rec-card"><div class="rec-icon" style="background:${r.bg}">${r.icon}</div>
       <div class="rec-body"><div class="rec-title">${r.title}</div><div class="rec-desc">${r.desc}</div><span class="rec-tag ${tagMap[r.tag]}">${r.tagText}</span></div>
     </div>`).join('');
+}
+
+// ═══════════════════════════════════════
+// AI ASSET ANALYSIS & RECOMMENDATIONS
+// ═══════════════════════════════════════
+function renderAIAssetAll(){
+  const el = document.getElementById('ai-asset-all');
+  const tot = grandTotalMan();
+  if(tot === 0){ el.innerHTML = '<div style="text-align:center;color:var(--t3);padding:20px;font-size:13px;">자산 정보를 입력하면 AI 분석이 시작됩니다.</div>'; return; }
+
+  const items = [];
+  const usMan = usTotalUSD()*FX/10000;
+  const krMan = krTotalMan();
+  const cashMan = cashSum(usAssets.cash)*FX/10000 + cashSum(krAssets.cash);
+  const stockMan = usStockUSD()*FX/10000 + krStockMan();
+  const realtyMan = usAssets.realty*FX/10000 + krAssets.realty;
+  const cryptoMan = usAssets.crypto*FX/10000 + krAssets.crypto;
+  const retireMan = usAssets.retire*FX/10000 + krAssets.retire;
+  const cashPct = cashMan/tot*100, stockPct = stockMan/tot*100, realtyPct = realtyMan/tot*100;
+  const cryptoPct = cryptoMan/tot*100, retirePct = retireMan/tot*100;
+
+  // ── 1. 포트폴리오 종합 점수 ──
+  let score = 60;
+  if(cashPct >= 10 && cashPct <= 30) score += 10; else if(cashPct < 5 || cashPct > 50) score -= 10;
+  if(stockPct >= 20 && stockPct <= 60) score += 10; else if(stockPct > 80) score -= 10;
+  if(retirePct >= 5) score += 5;
+  if(stocks.length >= 3) score += 5;
+  if(usMan > 0 && krMan > 0) score += 5;
+  const usStks = stocks.filter(s=>s.currency==='USD');
+  const krStks = stocks.filter(s=>s.currency==='KRW');
+  if(usStks.length >= 2 && krStks.length >= 1) score += 5;
+  score = Math.min(100, Math.max(0, score));
+  const scoreColor = score >= 80 ? 'var(--green)' : score >= 60 ? 'var(--amber)' : 'var(--red)';
+  const scoreGrade = score >= 90 ? 'A+' : score >= 80 ? 'A' : score >= 70 ? 'B+' : score >= 60 ? 'B' : score >= 50 ? 'C' : 'D';
+  items.push({icon:'🏆',type:'info',title:`포트폴리오 종합 점수: <span style="color:${scoreColor};font-size:16px;">${score}점 (${scoreGrade})</span>`,
+    desc:`자산 다각화, 유동성, 성장성 종합 평가입니다. 현금 ${cashPct.toFixed(0)}% · 주식/ETF ${stockPct.toFixed(0)}% · 부동산 ${realtyPct.toFixed(0)}% · 암호화폐 ${cryptoPct.toFixed(0)}% · 은퇴자금 ${retirePct.toFixed(0)}%`});
+
+  // ── 2. 자산 유형별 분석 ──
+  const ideal = [{name:'현금/예금',min:10,max:25,cur:cashPct},{name:'주식/ETF',min:30,max:60,cur:stockPct},{name:'부동산',min:0,max:40,cur:realtyPct},{name:'암호화폐',min:0,max:10,cur:cryptoPct},{name:'은퇴자금',min:10,max:30,cur:retirePct}];
+  const tooHigh = ideal.filter(i=>i.cur>i.max && i.cur > 5);
+  const tooLow = ideal.filter(i=>i.cur<i.min && i.min > 0);
+  if(tooHigh.length){
+    items.push({icon:'⚖️',type:'warn',title:'비중이 높은 자산 유형',
+      desc:tooHigh.map(i=>`<strong>${i.name}</strong>: ${i.cur.toFixed(1)}% (권장 ${i.min}~${i.max}%)`).join('<br>')+'<br>리밸런싱을 통해 비중을 조절하면 리스크를 낮출 수 있어요.'});
+  }
+  if(tooLow.length){
+    items.push({icon:'📉',type:'warn',title:'보강이 필요한 자산 유형',
+      desc:tooLow.map(i=>`<strong>${i.name}</strong>: ${i.cur.toFixed(1)}% (권장 최소 ${i.min}%)`).join('<br>')});
+  }
+
+  // ── 3. 주식 포트폴리오 분석 ──
+  if(stocks.length > 0){
+    const allVals = stocks.map(s=>({name:s.name,ticker:s.ticker,val:stockValMan(s),cur:s.currency,cat:s.cat||'기타'}));
+    const stot = allVals.reduce((a,b)=>a+b.val,0);
+    if(stot > 0){
+      // 종목 집중도
+      const sorted = [...allVals].sort((a,b)=>b.val-a.val);
+      const top3 = sorted.slice(0,3);
+      const top3Pct = top3.reduce((a,b)=>a+b.val,0)/stot*100;
+      if(sorted.length > 3 && top3Pct > 70){
+        items.push({icon:'🎯',type:'warn',title:`상위 3종목에 ${top3Pct.toFixed(0)}% 집중`,
+          desc:top3.map(s=>`${s.name} (${(s.val/stot*100).toFixed(1)}%)`).join(', ')+'. ETF를 통한 분산투자를 고려하세요.'});
+      }
+
+      // 카테고리 분석
+      const catMap = {};
+      allVals.forEach(s=>{ catMap[s.cat] = (catMap[s.cat]||0) + s.val; });
+      const catEntries = Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+      if(catEntries.length >= 2){
+        items.push({icon:'📊',type:'info',title:'주식 섹터 분포',
+          desc:catEntries.map(([c,v])=>`<strong>${c}</strong>: ${(v/stot*100).toFixed(1)}%`).join(' · ')});
+      }
+
+      // 수익/손실 분석
+      const withPL = stocks.filter(s=>s.avgCost && s.avgCost > 0 && curPrice(s) > 0);
+      if(withPL.length > 0){
+        const winners = withPL.filter(s=>curPrice(s) > s.avgCost).sort((a,b)=>(curPrice(b)/b.avgCost)-(curPrice(a)/a.avgCost));
+        const losers = withPL.filter(s=>curPrice(s) < s.avgCost).sort((a,b)=>(curPrice(a)/a.avgCost)-(curPrice(b)/b.avgCost));
+        const totalInvested = withPL.reduce((a,s)=>a+s.avgCost*s.qty*(s.currency==='KRW'?1/10000:FX/10000),0);
+        const totalCurrent = withPL.reduce((a,s)=>a+stockValMan(s),0);
+        const totalPLPct = totalInvested>0 ? (totalCurrent-totalInvested)/totalInvested*100 : 0;
+
+        items.push({icon:totalPLPct>=0?'📈':'📉',type:totalPLPct>=0?'good':'warn',
+          title:`전체 주식 수익률: <span class="${totalPLPct>=0?'up':'down'}">${totalPLPct>=0?'+':''}${totalPLPct.toFixed(1)}%</span>`,
+          desc:`투자원금 ${fmtMan(totalInvested)}원 → 현재 ${fmtMan(totalCurrent)}원` +
+            (winners.length ? `<br>🏆 최고 수익: ${winners[0].name} (${((curPrice(winners[0])/winners[0].avgCost-1)*100).toFixed(1)}%)` : '') +
+            (losers.length ? `<br>⚠️ 최대 손실: ${losers[0].name} (${((curPrice(losers[0])/losers[0].avgCost-1)*100).toFixed(1)}%)` : '')
+        });
+      }
+    }
+  }
+
+  // ── 4. 통합 종목 추천 ──
+  const recStocks = [];
+  if(usStks.length === 0){
+    recStocks.push({icon:'🇺🇸',title:'미국 시장 진입 추천',desc:'미국 주식을 아직 보유하지 않고 있어요. S&P 500 ETF(VOO, SPY)로 시작하면 안정적으로 미국 시장에 투자할 수 있습니다.'});
+  } else {
+    const hasBroad = usStks.some(s=>/^(VOO|VTI|SPY|IVV|QQQ)/i.test(s.ticker));
+    const hasBond = usStks.some(s=>/^(BND|AGG|TLT|SCHD|JEPI)/i.test(s.ticker));
+    const hasIntl = usStks.some(s=>/^(VXUS|VEA|VWO|EFA)/i.test(s.ticker));
+    const hasDividend = usStks.some(s=>/^(VYM|SCHD|HDV|DGRO|JEPI|JEPQ)/i.test(s.ticker));
+    if(!hasBroad) recStocks.push({icon:'📊',title:'미국 인덱스 ETF 추천',desc:'<strong>VOO</strong> (S&P 500) 또는 <strong>VTI</strong> (전체 시장)를 핵심 보유로 추천합니다. 장기 연평균 수익률 ~10%의 안정적인 성장형 자산입니다.'});
+    if(!hasBond && stockPct > 50) recStocks.push({icon:'🛡️',title:'채권 ETF로 안정성 강화',desc:'<strong>BND</strong> (미국 채권) 또는 <strong>AGG</strong> (종합 채권)를 10~20% 편입하면 포트폴리오 변동성을 줄일 수 있어요.'});
+    if(!hasIntl) recStocks.push({icon:'🌏',title:'글로벌 분산 추천',desc:'<strong>VXUS</strong> (미국 외 전세계) 또는 <strong>VEA</strong> (선진국)를 통해 지역 분산을 강화하세요.'});
+    if(!hasDividend && cashPct < 15) recStocks.push({icon:'💰',title:'배당 ETF 추천',desc:'<strong>SCHD</strong> (배당 성장) 또는 <strong>JEPI</strong> (월배당)는 안정적인 현금흐름을 만들어줍니다.'});
+  }
+  if(krStks.length === 0 && krMan > 0){
+    recStocks.push({icon:'🇰🇷',title:'한국 주식/ETF 추천',desc:'한국 자산이 있지만 주식/ETF가 없어요. <strong>KODEX 200</strong> 또는 <strong>TIGER 미국S&P500</strong>으로 시작해보세요.'});
+  } else if(krStks.length > 0){
+    const hasKrIndex = krStks.some(s=>/KODEX.*(200|코스피)|TIGER.*(200|코스피)/i.test(s.name));
+    const hasKrUS = krStks.some(s=>/미국|S&P|나스닥|NASDAQ/i.test(s.name));
+    if(!hasKrIndex) recStocks.push({icon:'🇰🇷',title:'한국 인덱스 ETF 추천',desc:'<strong>KODEX 200</strong> 또는 <strong>TIGER 코스피</strong>로 한국 시장 전반에 분산 투자하세요.'});
+    if(!hasKrUS) recStocks.push({icon:'🌐',title:'한국 상장 해외 ETF 추천',desc:'<strong>TIGER 미국S&P500</strong> 또는 <strong>KODEX 미국나스닥100</strong>으로 환전 없이 미국 시장에 투자 가능합니다.'});
+  }
+  if(recStocks.length){
+    items.push({icon:'💡',type:'info',title:`종목 추천 (${recStocks.length}건)`,
+      desc:recStocks.map(r=>`<div style="margin-bottom:8px;"><strong>${r.icon} ${r.title}</strong><br><span style="color:var(--t2)">${r.desc}</span></div>`).join('')});
+  }
+
+  // ── 5. 리밸런싱 제안 ──
+  const suggestions = [];
+  if(cashPct > 30){
+    const excessMan = cashMan - tot*0.2;
+    suggestions.push(`현금 ${fmtMan(excessMan)}원을 투자자산으로 전환 고려 (목표 현금 비중 20%)`);
+  }
+  if(stockPct < 20 && tot > 0) suggestions.push('주식/ETF 비중을 최소 20%까지 확대하면 장기 성장 잠재력이 높아집니다');
+  if(retirePct < 5 && tot > 0) suggestions.push('은퇴자금(401k, IRA, 연금)을 전체 자산의 10% 이상 확보하는 것을 권장합니다');
+  if(suggestions.length){
+    items.push({icon:'🔄',type:'info',title:'리밸런싱 제안',
+      desc:suggestions.map(s=>`• ${s}`).join('<br>')});
+  }
+
+  renderAICards(el, items);
+}
+
+function renderAIAssetUS(){
+  const el = document.getElementById('ai-asset-us');
+  const usUSD = usTotalUSD();
+  if(usUSD === 0){ el.innerHTML = '<div style="text-align:center;color:var(--t3);padding:20px;font-size:13px;">미국 자산 정보를 입력하면 분석이 시작됩니다.</div>'; return; }
+
+  const items = [];
+  const usStk = usStockUSD();
+  const usCash = cashSum(usAssets.cash);
+  const cashPct = usCash/usUSD*100;
+  const stkPct = usStk/usUSD*100;
+  const retirePct = usAssets.retire/usUSD*100;
+  const cryptoPct = usAssets.crypto/usUSD*100;
+  const usStks = stocks.filter(s=>s.currency==='USD');
+
+  // ── 자산 배분 평가 ──
+  let assessment = '';
+  if(cashPct > 40) assessment = `현금 비중이 ${cashPct.toFixed(0)}%로 높습니다. MMF나 단기 채권 ETF(SHV, BIL)로 유휴자금 수익률을 높이세요.`;
+  else if(cashPct < 5) assessment = `현금 비중이 ${cashPct.toFixed(0)}%로 매우 낮습니다. 최소 3~6개월 생활비를 비상금으로 확보하세요.`;
+  else assessment = `현금 ${cashPct.toFixed(0)}%, 주식 ${stkPct.toFixed(0)}%, 은퇴자금 ${retirePct.toFixed(0)}%로 배분되어 있습니다.`;
+  items.push({icon:'🇺🇸',type:'info',title:'미국 자산 배분 현황',desc:assessment});
+
+  // ── 주식 분석 ──
+  if(usStks.length > 0){
+    const vals = usStks.map(s=>({name:s.name,ticker:s.ticker,val:curPrice(s)*s.qty,cat:s.cat||'기타'}));
+    const stot = vals.reduce((a,b)=>a+b.val,0);
+    if(stot > 0){
+      const sorted = [...vals].sort((a,b)=>b.val-a.val);
+      const top = sorted[0];
+      const topPct = top.val/stot*100;
+      if(topPct > 50 && usStks.length > 1){
+        items.push({icon:'⚠️',type:'warn',title:`${top.name}에 ${topPct.toFixed(0)}% 집중`,
+          desc:`단일 종목 비중이 높아 개별 리스크가 큽니다. 인덱스 ETF로 분산을 권장합니다.`});
+      }
+
+      // 섹터 분석
+      const catMap = {};
+      vals.forEach(s=>{ catMap[s.cat] = (catMap[s.cat]||0) + s.val; });
+      const cats = Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+      if(cats.length === 1 && usStks.length > 1){
+        items.push({icon:'🏷️',type:'warn',title:`섹터 편중: ${cats[0][0]}`,desc:'한 섹터에 집중되어 있어요. 헬스케어(XLV), 유틸리티(XLU) 등 다른 섹터도 고려하세요.'});
+      }
+
+      // 수익/손실
+      const withPL = usStks.filter(s=>s.avgCost && s.avgCost > 0 && curPrice(s) > 0);
+      if(withPL.length > 0){
+        const plList = withPL.map(s=>{
+          const plPct = (curPrice(s)/s.avgCost-1)*100;
+          const plAmt = (curPrice(s)-s.avgCost)*s.qty;
+          return {name:s.name,pct:plPct,amt:plAmt};
+        }).sort((a,b)=>b.pct-a.pct);
+        const winners = plList.filter(s=>s.pct>0);
+        const losers = plList.filter(s=>s.pct<0);
+        let plDesc = '';
+        if(winners.length) plDesc += '📗 수익 종목: ' + winners.slice(0,3).map(s=>`${s.name} <span class="up">+${s.pct.toFixed(1)}%</span>`).join(', ');
+        if(losers.length) plDesc += (plDesc?'<br>':'') + '📕 손실 종목: ' + losers.slice(0,3).map(s=>`${s.name} <span class="down">${s.pct.toFixed(1)}%</span>`).join(', ');
+        if(plDesc) items.push({icon:'💹',type:winners.length>=losers.length?'good':'warn',title:'종목별 수익률',desc:plDesc});
+      }
+    }
+  }
+
+  // ── 미국 종목 추천 ──
+  const recs = [];
+  const tickers = new Set(usStks.map(s=>s.ticker.toUpperCase()));
+  const hasBroad = tickers.has('VOO')||tickers.has('VTI')||tickers.has('SPY')||tickers.has('IVV');
+  const hasQQQ = tickers.has('QQQ')||tickers.has('QQQM');
+  const hasBond = [...tickers].some(t=>/^(BND|AGG|TLT|SCHZ|SHY)$/.test(t));
+  const hasIntl = [...tickers].some(t=>/^(VXUS|VEA|VWO|EFA|IXUS)$/.test(t));
+  const hasDividend = [...tickers].some(t=>/^(SCHD|VYM|HDV|DGRO|JEPI|JEPQ)$/.test(t));
+  const hasGrowth = [...tickers].some(t=>/^(VUG|SCHG|IWF|MGK|ARKK)$/.test(t));
+  const hasREIT = [...tickers].some(t=>/^(VNQ|SCHH|IYR|XLRE)$/.test(t));
+
+  if(!hasBroad) recs.push(`<strong>VOO</strong> (S&P 500) — 미국 대형주 500개 분산, 연평균 ~10% 수익률. 장기투자 핵심 ETF`);
+  if(!hasQQQ && !hasBroad) recs.push(`<strong>QQQ</strong> (나스닥 100) — 기술주 중심 성장형 ETF. 변동성은 크지만 높은 성장 잠재력`);
+  if(!hasBond && stkPct > 50) recs.push(`<strong>BND</strong> (미국 채권) — 포트폴리오 안정성 확보. 주식 하락 시 방어 역할`);
+  if(!hasIntl) recs.push(`<strong>VXUS</strong> (국제 주식) — 미국 외 선진국+신흥국 분산으로 지역 리스크 완화`);
+  if(!hasDividend) recs.push(`<strong>SCHD</strong> (배당 성장) — 안정적 배당+주가 성장. 장기 복리 효과 탁월`);
+  if(!hasGrowth && hasBroad) recs.push(`<strong>VUG</strong> (성장주) — 대형 성장주 중심. VOO 보완용으로 추천`);
+  if(!hasREIT && cashPct < 30) recs.push(`<strong>VNQ</strong> (리츠) — 부동산 간접투자. 배당수익+인플레이션 헷지`);
+
+  if(recs.length){
+    items.push({icon:'💡',type:'info',title:`미국 ETF/종목 추천 (${recs.length}건)`,
+      desc:recs.slice(0,5).map((r,i)=>`${i+1}. ${r}`).join('<br>')});
+  }
+
+  // ── 은퇴 계좌 ──
+  if(retirePct < 10 && usUSD > 5000){
+    items.push({icon:'🏦',type:'warn',title:'은퇴 계좌(401k/IRA) 확대 권장',
+      desc:`현재 은퇴자금 비중이 ${retirePct.toFixed(1)}%입니다. 세금 혜택을 활용해 401k 매칭 최대한 활용하고, IRA 연간 한도($7,000)를 채우는 것을 추천합니다.`});
+  }
+
+  renderAICards(el, items);
+}
+
+function renderAIAssetKR(){
+  const el = document.getElementById('ai-asset-kr');
+  const krMan = krTotalMan();
+  if(krMan === 0){ el.innerHTML = '<div style="text-align:center;color:var(--t3);padding:20px;font-size:13px;">한국 자산 정보를 입력하면 분석이 시작됩니다.</div>'; return; }
+
+  const items = [];
+  const krStk = krStockMan();
+  const krCash = cashSum(krAssets.cash);
+  const cashPct = krCash/krMan*100;
+  const stkPct = krStk/krMan*100;
+  const realtyPct = krAssets.realty/krMan*100;
+  const retirePct = krAssets.retire/krMan*100;
+  const krStks = stocks.filter(s=>s.currency==='KRW');
+
+  // ── 자산 배분 평가 ──
+  let assessment = `현금 ${cashPct.toFixed(0)}%, 주식 ${stkPct.toFixed(0)}%, 부동산 ${realtyPct.toFixed(0)}%, 연금 ${retirePct.toFixed(0)}%`;
+  if(realtyPct > 60) assessment += '. 부동산 비중이 높아 유동성 관리에 주의하세요.';
+  else if(cashPct > 50) assessment += '. 현금이 많아요. CMA나 파킹통장으로 수익률을 높이세요.';
+  items.push({icon:'🇰🇷',type:'info',title:'한국 자산 배분 현황',desc:assessment});
+
+  // ── 주식 분석 ──
+  if(krStks.length > 0){
+    const vals = krStks.map(s=>({name:s.name,ticker:s.ticker,val:curPrice(s)*s.qty/10000,cat:s.cat||'기타'}));
+    const stot = vals.reduce((a,b)=>a+b.val,0);
+    if(stot > 0){
+      const sorted = [...vals].sort((a,b)=>b.val-a.val);
+      const top = sorted[0];
+      const topPct = top.val/stot*100;
+      if(topPct > 50 && krStks.length > 1){
+        items.push({icon:'⚠️',type:'warn',title:`${top.name}에 ${topPct.toFixed(0)}% 집중`,
+          desc:'개별 종목 리스크가 높아요. KODEX/TIGER ETF를 활용한 분산을 고려하세요.'});
+      }
+
+      // 수익/손실
+      const withPL = krStks.filter(s=>s.avgCost && s.avgCost > 0 && curPrice(s) > 0);
+      if(withPL.length > 0){
+        const plList = withPL.map(s=>{
+          const plPct = (curPrice(s)/s.avgCost-1)*100;
+          return {name:s.name,pct:plPct};
+        }).sort((a,b)=>b.pct-a.pct);
+        const winners = plList.filter(s=>s.pct>0);
+        const losers = plList.filter(s=>s.pct<0);
+        let plDesc = '';
+        if(winners.length) plDesc += '📗 수익: ' + winners.slice(0,3).map(s=>`${s.name} <span class="up">+${s.pct.toFixed(1)}%</span>`).join(', ');
+        if(losers.length) plDesc += (plDesc?'<br>':'') + '📕 손실: ' + losers.slice(0,3).map(s=>`${s.name} <span class="down">${s.pct.toFixed(1)}%</span>`).join(', ');
+        if(plDesc) items.push({icon:'💹',type:winners.length>=losers.length?'good':'warn',title:'종목별 수익률',desc:plDesc});
+      }
+    }
+  }
+
+  // ── 한국 종목 추천 ──
+  const recs = [];
+  const names = krStks.map(s=>s.name);
+  const hasKospi = names.some(n=>/KODEX.*200|TIGER.*200|KODEX.*코스피/i.test(n));
+  const hasUS = names.some(n=>/미국|S&P|나스닥|NASDAQ/i.test(n));
+  const hasDividend = names.some(n=>/배당|ARIRANG.*고배당/i.test(n));
+  const hasBond = names.some(n=>/채권|국고채|단기/i.test(n));
+  const hasSemiconductor = names.some(n=>/반도체|삼성전자|SK하이닉스/i.test(n));
+  const has2ndBattery = names.some(n=>/2차전지|배터리|LG에너지/i.test(n));
+
+  if(!hasKospi) recs.push(`<strong>KODEX 200</strong> — 코스피 대표 200종목. 한국 시장 전체에 분산투자하는 기본 ETF`);
+  if(!hasUS) recs.push(`<strong>TIGER 미국S&P500</strong> — 원화로 미국 S&P 500에 투자. 환전 불필요`);
+  if(!hasDividend) recs.push(`<strong>TIGER 배당성장</strong> — 배당 성장주 중심. 안정적 인컴+성장 가능`);
+  if(!hasBond && stkPct > 50) recs.push(`<strong>KODEX 국고채10년</strong> — 포트폴리오 안정성 확보. 금리 하락 시 추가 수익`);
+  if(!hasSemiconductor) recs.push(`<strong>TIGER 반도체</strong> — AI/반도체 성장 수혜. 삼성전자·SK하이닉스 등 핵심 종목 포함`);
+  if(!has2ndBattery) recs.push(`<strong>KODEX 2차전지산업</strong> — 전기차·배터리 산업 성장에 투자`);
+
+  if(recs.length){
+    items.push({icon:'💡',type:'info',title:`한국 ETF/종목 추천 (${recs.length}건)`,
+      desc:recs.slice(0,5).map((r,i)=>`${i+1}. ${r}`).join('<br>')});
+  }
+
+  // ── 연금/퇴직금 ──
+  if(retirePct < 5 && krMan > 1000){
+    items.push({icon:'🏦',type:'warn',title:'연금/퇴직금 확대 권장',
+      desc:`현재 연금 비중이 ${retirePct.toFixed(1)}%입니다. IRP(개인형 퇴직연금)로 세액공제 혜택을 받으면서 노후 준비를 하세요. 연간 최대 900만원까지 세액공제 가능합니다.`});
+  }
+
+  // ── 현금 관리 ──
+  if(cashPct > 30){
+    items.push({icon:'💵',type:'info',title:'유휴 현금 관리 팁',
+      desc:'CMA 계좌(연 3%+)나 파킹통장으로 옮기면 보통예금보다 높은 이자를 받을 수 있어요. 토스뱅크, 카카오뱅크 세이프박스도 좋은 선택입니다.'});
+  }
+
+  renderAICards(el, items);
+}
+
+function renderAICards(el, items){
+  const typeStyles = {
+    warn:'background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.15);',
+    good:'background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.15);',
+    info:'background:rgba(91,156,255,.06);border:1px solid rgba(91,156,255,.15);',
+    risk:'background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.15);'
+  };
+  el.innerHTML = items.length
+    ? items.map(ins => `
+      <div style="${typeStyles[ins.type]||typeStyles.info}border-radius:10px;padding:14px 16px;margin-bottom:8px;">
+        <div style="font-weight:600;font-size:13px;margin-bottom:6px;">${ins.icon} ${ins.title}</div>
+        <div style="font-size:12px;color:var(--t2);line-height:1.7;">${ins.desc}</div>
+      </div>
+    `).join('')
+    : '<div style="text-align:center;color:var(--t3);padding:20px;">자산 정보를 입력하면 AI 분석이 시작됩니다.</div>';
 }
 
 // ═══════════════════════════════════════
