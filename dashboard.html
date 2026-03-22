@@ -847,6 +847,50 @@ function renderActionPlanList(actions){
 // QUOTES (서버 없이 브라우저에서 직접 호출)
 // ═══════════════════════════════════════
 // 개별 종목 조회 (Yahoo Finance v8 chart API - 가장 안정적)
+// ── 네이버 업종코드 → 섹터 매핑 ──
+const NAVER_INDUSTRY = {
+  '261':'제약','262':'바이오','263':'게임','264':'유통','265':'유통',
+  '266':'소비재','267':'IT서비스','268':'소비재','269':'전자/부품',
+  '270':'자동차부품','271':'소비재','272':'화학','273':'자동차',
+  '274':'소비재','275':'소비재','276':'지주회사','277':'금융',
+  '278':'반도체','279':'건설','280':'리츠/부동산','281':'헬스케어',
+  '282':'전자/부품','283':'2차전지/전기','284':'방산','285':'엔터테인먼트',
+  '286':'바이오','287':'소프트웨어','288':'헬스케어','289':'건설/소재',
+  '290':'서비스','291':'조선','292':'전자/부품','293':'IT/하드웨어',
+  '294':'통신장비','295':'에너지','296':'운송','297':'소비재',
+  '298':'소비재','299':'산업재','300':'플랫폼/기술','301':'금융',
+  '303':'소비재','304':'철강/소재','305':'항공','306':'전자/부품',
+  '307':'전자/부품','309':'소비재','310':'서비스','312':'유틸리티',
+  '313':'에너지','314':'미디어','315':'금융','316':'헬스케어',
+  '317':'여행/레저','321':'금융','322':'소재','324':'서비스',
+  '325':'유틸리티','326':'물류','327':'전자/부품','328':'유통',
+  '330':'금융','331':'유틸리티','332':'소비재','333':'통신',
+  '334':'유통','336':'통신','337':'금융','338':'전자/부품',
+  '339':'서비스',
+};
+
+// 네이버 주식 API로 한국 종목 섹터 조회
+async function fetchNaverSector(ticker){
+  const code = ticker.replace(/\.(KS|KQ)$/i,'');
+  if(!/^\d{6}$/.test(code)) return null;
+  const naverUrl = `https://m.stock.naver.com/api/stock/${code}/integration`;
+  const urls = [
+    `https://corsproxy.io/?${encodeURIComponent(naverUrl)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(naverUrl)}`,
+  ];
+  for(const url of urls){
+    try{
+      const res = await fetch(url, {signal: AbortSignal.timeout(5000)});
+      if(!res.ok) continue;
+      const data = await res.json();
+      const indCode = String(data?.industryCode||'');
+      if(indCode && NAVER_INDUSTRY[indCode]) return NAVER_INDUSTRY[indCode];
+      if(indCode) return indCode; // 코드라도 반환
+    }catch(e){ continue; }
+  }
+  return null;
+}
+
 // 야후 파이낸스에서 섹터/산업 정보 조회
 async function fetchStockProfile(ticker){
   const profileUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${ticker}?modules=assetProfile,quoteType`;
@@ -995,22 +1039,42 @@ async function fetchAllQuotes(){
     });
     save(); renderAll();
 
-    // 2) 아직 미분류인 종목 → 야후에서 섹터 정보 가져오기 (백그라운드)
+    // 2) 아직 미분류인 종목 → API로 섹터 정보 가져오기 (백그라운드)
     const needSector = stocks.filter(s=>(!s.sector || s.sector==='미분류') && s.ticker);
     if(needSector.length){
-      Promise.allSettled(needSector.map(s=>fetchStockProfile(s.ticker))).then(results=>{
-        let updated = 0;
-        results.forEach((r,i)=>{
-          if(r.status==='fulfilled' && r.value){
-            const sec = profileToSector(r.value, needSector[i].ticker);
-            if(sec && sec!=='미분류'){
-              needSector[i].sector = sec;
+      // 한국 종목 → 네이버 API, 미국 종목 → 야후 API
+      const krStocks = needSector.filter(s=>/\.(KS|KQ)$/i.test(s.ticker) || /^\d{6}$/.test(s.ticker));
+      const usStocks = needSector.filter(s=>!/\.(KS|KQ)$/i.test(s.ticker) && !/^\d{6}$/.test(s.ticker));
+
+      // 한국: 네이버
+      if(krStocks.length){
+        Promise.allSettled(krStocks.map(s=>fetchNaverSector(s.ticker))).then(results=>{
+          let updated = 0;
+          results.forEach((r,i)=>{
+            if(r.status==='fulfilled' && r.value && r.value!=='미분류'){
+              krStocks[i].sector = r.value;
               updated++;
             }
-          }
+          });
+          if(updated){ save(); renderAll(); }
         });
-        if(updated){ save(); renderAll(); }
-      });
+      }
+      // 미국: 야후
+      if(usStocks.length){
+        Promise.allSettled(usStocks.map(s=>fetchStockProfile(s.ticker))).then(results=>{
+          let updated = 0;
+          results.forEach((r,i)=>{
+            if(r.status==='fulfilled' && r.value){
+              const sec = profileToSector(r.value, usStocks[i].ticker);
+              if(sec && sec!=='미분류'){
+                usStocks[i].sector = sec;
+                updated++;
+              }
+            }
+          });
+          if(updated){ save(); renderAll(); }
+        });
+      }
     }
   }catch(e){
     console.error('Quote error:', e);
@@ -3310,7 +3374,8 @@ const SECTOR_GROUPS = {
     '금융/산업':['금융','산업재','방산','방산/항공','건설','운송/물류','지주회사'],
     '인프라':['에너지','유틸리티','유틸리티/에너지','통신','리츠/부동산','원자재'],
     '소재':['철강/소재','화학','화학/소재','소재'],
-    '기타':['미디어','엔터테인먼트','자동차','2차전지','암호화폐/핀테크','미분류']
+    '제조/기타':['자동차','자동차부품','2차전지','2차전지/전기','조선','산업재','건설/소재'],
+    '기타':['미디어','엔터테인먼트','여행/레저','IT서비스','서비스','암호화폐/핀테크','제약','미분류']
   },
   'ETF/펀드':{
     '지수추종':['대형성장(S&P500)','전체시장','기술성장(나스닥)','코스피인덱스','해외지수'],
@@ -3792,19 +3857,32 @@ load();
     }
   });
   if(updated){ save(); }
-  // 아직 미분류인 종목 → Yahoo API로 백그라운드 분류
+  // 아직 미분류인 종목 → 네이버(한국)/야후(미국) API로 백그라운드 분류
   const needSec = stocks.filter(s=>(!s.sector || s.sector==='미분류') && s.ticker);
   if(needSec.length){
-    Promise.allSettled(needSec.map(s=>fetchStockProfile(s.ticker))).then(results=>{
-      let u2 = 0;
-      results.forEach((r,i)=>{
-        if(r.status==='fulfilled' && r.value){
-          const sec = profileToSector(r.value, needSec[i].ticker);
-          if(sec && sec!=='미분류'){ needSec[i].sector = sec; u2++; }
-        }
+    const krNeed = needSec.filter(s=>/\.(KS|KQ)$/i.test(s.ticker) || /^\d{6}$/.test(s.ticker));
+    const usNeed = needSec.filter(s=>!/\.(KS|KQ)$/i.test(s.ticker) && !/^\d{6}$/.test(s.ticker));
+    if(krNeed.length){
+      Promise.allSettled(krNeed.map(s=>fetchNaverSector(s.ticker))).then(results=>{
+        let u2 = 0;
+        results.forEach((r,i)=>{
+          if(r.status==='fulfilled' && r.value && r.value!=='미분류'){ krNeed[i].sector = r.value; u2++; }
+        });
+        if(u2){ save(); renderAll(); }
       });
-      if(u2){ save(); renderAll(); }
-    });
+    }
+    if(usNeed.length){
+      Promise.allSettled(usNeed.map(s=>fetchStockProfile(s.ticker))).then(results=>{
+        let u2 = 0;
+        results.forEach((r,i)=>{
+          if(r.status==='fulfilled' && r.value){
+            const sec = profileToSector(r.value, usNeed[i].ticker);
+            if(sec && sec!=='미분류'){ usNeed[i].sector = sec; u2++; }
+          }
+        });
+        if(u2){ save(); renderAll(); }
+      });
+    }
   }
 })();
 if(Object.keys(liveQuotes).length) setStatus('cached');
