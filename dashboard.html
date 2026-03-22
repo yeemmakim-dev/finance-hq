@@ -939,7 +939,9 @@ function profileToSector(profile, ticker){
   if(profile.type==='ETF' || profile.type==='MUTUALFUND'){
     if(ETF_STYLE[t]) return ETF_STYLE[t];
     const cat = profile.category||'';
-    if(/Large|S&P 500|Total|Mid.*Cap|Small.*Cap|Growth|Value/i.test(cat)) return '미국 인덱스';
+    if(/Large Blend|S&P 500|Total|Large Value/i.test(cat)) return '대형전체';
+    if(/Large Growth/i.test(cat)) return '대형성장';
+    if(/Mid.*Cap|Small.*Cap/i.test(cat)) return '미국소형';
     if(/Foreign|International|World|Emerging|Develop/i.test(cat)) return '국제주식';
     if(/Bond|Fixed/i.test(cat)) return '채권';
     if(/Real Estate/i.test(cat)) return '리츠';
@@ -1700,16 +1702,18 @@ const SECTOR_DB = {
   // 항공/운송
   '003490':'항공/운송','020560':'항공/운송','180640':'물류',
 };
-// ETF → 자산 클래스 매핑 (적정 분류)
+// ETF → 자산 클래스 매핑
 const ETF_STYLE = {
-  // 미국 인덱스 (S&P500, 전체시장, 나스닥, 성장, 가치, 중소형 통합)
-  VOO:'미국 인덱스',VTI:'미국 인덱스',SPY:'미국 인덱스',IVV:'미국 인덱스',
-  VFIAX:'미국 인덱스',VTSAX:'미국 인덱스',FXAIX:'미국 인덱스',SWPPX:'미국 인덱스',
-  VINIX:'미국 인덱스',VIIIX:'미국 인덱스',VFINX:'미국 인덱스',
-  QQQ:'미국 인덱스',QQQM:'미국 인덱스',
-  VUG:'미국 인덱스',SCHG:'미국 인덱스',IWF:'미국 인덱스',MGK:'미국 인덱스',VIGAX:'미국 인덱스',
-  VTV:'미국 인덱스',SCHV:'미국 인덱스',IWD:'미국 인덱스',VVIAX:'미국 인덱스',
-  VB:'미국 인덱스',IJR:'미국 인덱스',IWM:'미국 인덱스',SCHA:'미국 인덱스',VO:'미국 인덱스',IJH:'미국 인덱스',
+  // 대형전체 (S&P500, 전체시장, 대형가치)
+  VOO:'대형전체',VTI:'대형전체',SPY:'대형전체',IVV:'대형전체',
+  VFIAX:'대형전체',VTSAX:'대형전체',FXAIX:'대형전체',SWPPX:'대형전체',
+  VINIX:'대형전체',VIIIX:'대형전체',VFINX:'대형전체',
+  VTV:'대형전체',SCHV:'대형전체',IWD:'대형전체',VVIAX:'대형전체',
+  // 대형성장 (나스닥, 성장)
+  QQQ:'대형성장',QQQM:'대형성장',
+  VUG:'대형성장',SCHG:'대형성장',IWF:'대형성장',MGK:'대형성장',VIGAX:'대형성장',
+  // 미국소형
+  VB:'미국소형',IJR:'미국소형',IWM:'미국소형',SCHA:'미국소형',VO:'미국소형',IJH:'미국소형',
   // 배당
   VYM:'배당',SCHD:'배당',HDV:'배당',DGRO:'배당',JEPI:'배당',JEPQ:'배당',
   VHYAX:'배당',VDIGX:'배당',
@@ -1726,10 +1730,10 @@ const ETF_STYLE = {
   // 섹터ETF
   XLK:'섹터ETF',XLF:'섹터ETF',XLE:'섹터ETF',XLV:'섹터ETF',XLI:'섹터ETF',XLU:'섹터ETF',XLP:'섹터ETF',XLY:'섹터ETF',
   SMH:'섹터ETF',SOXX:'섹터ETF',
-  // 테마
+  // 테마ETF
   ARKK:'테마ETF',ARKF:'테마ETF',ARKG:'테마ETF',
-  // 암호화폐
-  IBIT:'암호화폐',BITO:'암호화폐',GBTC:'암호화폐',ETHE:'암호화폐',FBTC:'암호화폐',
+  // 암호화폐ETF
+  IBIT:'암호화폐ETF',BITO:'암호화폐ETF',GBTC:'암호화폐ETF',ETHE:'암호화폐ETF',FBTC:'암호화폐ETF',
   // 혼합
   VBIAX:'혼합',VBINX:'혼합',
 };
@@ -1744,7 +1748,8 @@ function getStockSector(s){
   // 한국 ETF 먼저
   if(/KODEX|TIGER|ARIRANG|KBSTAR|HANARO|SOL|KOSEF|SMART|TIMEFOLIO|ACE|RISE|PLUS/.test(n)){
     if(/200|코스피|KOSPI/.test(n)) return {type:'ETF',style:'한국주식'};
-    if(/나스닥|NASDAQ|S&P|미국|미국S&P|US/.test(n)) return {type:'ETF',style:'미국 인덱스'};
+    if(/나스닥|NASDAQ/.test(n)) return {type:'ETF',style:'대형성장'};
+    if(/S&P|미국|US/.test(n)) return {type:'ETF',style:'대형전체'};
     if(/배당/.test(n)) return {type:'ETF',style:'배당'};
     if(/채권|국고채|국채|회사채/.test(n)) return {type:'ETF',style:'채권'};
     if(/리츠|부동산/.test(n)) return {type:'ETF',style:'리츠'};
@@ -1773,7 +1778,9 @@ function getStockSector(s){
   if(/두산|한화|SK|LS|GS|CJ|롯데/.test(n) && n.length<=6) return {type:'개별주',style:'지주회사'};
   // 영문 이름 기반 추론 (큰 분류)
   const nl = n.toLowerCase();
-  if(/s&p\s*500|500\s*index|large.cap|total.stock|total.market|nasdaq|growth|value|small.cap|mid.cap/i.test(n)) return {type:'ETF',style:'미국 인덱스'};
+  if(/s&p\s*500|500\s*index|total.stock|total.market|large.*(blend|value)/i.test(n)) return {type:'ETF',style:'대형전체'};
+  if(/nasdaq|large.*growth/i.test(n)) return {type:'ETF',style:'대형성장'};
+  if(/small.cap|mid.cap/i.test(n)) return {type:'ETF',style:'미국소형'};
   if(/bond|채권|treasury|fixed.income/i.test(n)) return {type:'ETF',style:'채권'};
   if(/dividend|배당/i.test(n)) return {type:'ETF',style:'배당'};
   if(/international|global|world|emerg|foreign|develop/i.test(n)) return {type:'ETF',style:'국제주식'};
@@ -3363,9 +3370,10 @@ const SECTOR_GROUPS = {
     '기타':['미디어','엔터테인먼트','여행/레저','IT서비스','서비스','암호화폐/핀테크','제약','미분류']
   },
   'ETF/펀드':{
-    '주식':['미국 인덱스','한국주식','국제주식','섹터ETF','테마ETF'],
+    '주식':['대형전체','대형성장','미국소형','한국주식','국제주식'],
+    '섹터/테마':['섹터ETF','테마ETF','암호화폐ETF'],
     '인컴/안전':['배당','채권','리츠','원자재'],
-    '기타':['암호화폐','레버리지/인버스','혼합','기타ETF']
+    '기타':['레버리지/인버스','혼합','기타ETF']
   }
 };
 function sectorOptions(current){
@@ -3831,9 +3839,10 @@ load();
 // 기존 세부 섹터 → 큰 분류로 마이그레이션
 (function migrateSectors(){
   const OLD_TO_NEW = {
-    '대형성장(S&P500)':'미국 인덱스','전체시장':'미국 인덱스','기술성장(나스닥)':'미국 인덱스',
-    '대형성장':'미국 인덱스','대형가치':'미국 인덱스','메가캡성장':'미국 인덱스',
-    '소형주':'미국 인덱스','중형주':'미국 인덱스',
+    '대형성장(S&P500)':'대형전체','전체시장':'대형전체','미국 인덱스':'대형전체',
+    '메가캡성장':'대형성장','기술성장(나스닥)':'대형성장',
+    '대형가치':'대형전체',
+    '소형주':'미국소형','중형주':'미국소형',
     '배당성장':'배당','고배당':'배당','월배당(커버드콜)':'배당',
     '미국채권':'채권','장기국채':'채권','단기국채':'채권','물가연동채':'채권',
     '선진국':'국제주식','신흥국':'국제주식',
@@ -3841,9 +3850,9 @@ load();
     '기술섹터':'섹터ETF','금융섹터':'섹터ETF','에너지섹터':'섹터ETF','헬스케어섹터':'섹터ETF',
     '산업재섹터':'섹터ETF','유틸리티섹터':'섹터ETF','필수소비재섹터':'섹터ETF','경기소비재섹터':'섹터ETF',
     '혁신성장':'테마ETF','핀테크':'테마ETF','유전체학':'테마ETF',
-    '암호화폐/비트코인':'암호화폐','암호화폐/이더리움':'암호화폐',
+    '암호화폐/비트코인':'암호화폐ETF','암호화폐/이더리움':'암호화폐ETF','암호화폐':'암호화폐ETF',
     '타겟데이트':'혼합','밸런스드(60/40)':'혼합','밸런스드':'혼합',
-    '코스피인덱스':'한국주식','해외지수':'미국 인덱스',
+    '코스피인덱스':'한국주식','해외지수':'대형전체',
     '레버리지/인버스':'레버리지/인버스',
   };
   let m = 0;
