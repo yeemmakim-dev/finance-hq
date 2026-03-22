@@ -2013,6 +2013,7 @@ function renderAIAssetAll(){
 
   // ── 액션 플랜 (별도 투두 리스트) ──
   const actions = [];
+  // 통합 액션
   if(cashPct > 30) actions.push(`💰 현금 ${cashPct.toFixed(0)}% → 20% 목표: 약 ${fmtMan(cashMan - tot*0.2)}원을 투자자산으로 이동`);
   if(cashPct < 5) actions.push(`🚨 비상금 확보: 최소 ${fmtMan(tot*0.1)}원(10%)을 현금성 자산으로 유지`);
   if(retirePct < 5 && tot > 0) actions.push(`🏦 은퇴자금 비중 ${retirePct.toFixed(1)}% → 10% 이상 목표. 401k/IRA/IRP 적극 활용`);
@@ -2020,6 +2021,29 @@ function renderAIAssetAll(){
   if(stockPct < 20 && tot > 0) actions.push('📈 주식/ETF 비중을 최소 20%까지 확대');
   if(usMan > 0 && krMan === 0) actions.push('🇰🇷 한국 자산으로 지역 분산 시작하기');
   if(krMan > 0 && usMan === 0) actions.push('🇺🇸 미국 자산으로 글로벌 분산 시작하기');
+
+  // 🇺🇸 미국 탭 실천 전략 가져오기
+  const usStks = stocks.filter(s=>s.currency==='USD');
+  const usUSD = usTotalUSD();
+  const usCashUS = cashSum(usAssets.cash);
+  const usCashPct = usUSD>0 ? usCashUS/usUSD*100 : 0;
+  const usRetirePct = usUSD>0 ? usAssets.retire/usUSD*100 : 0;
+  if(usCashPct > 25 && usUSD > 0) actions.push(`🇺🇸 미국 현금 $${(usCashUS - usUSD*0.15).toLocaleString(undefined,{maximumFractionDigits:0})} 분할 투입 (DCA)`);
+  if(usStks.length > 0 && usStks.length < 5) actions.push(`🇺🇸 미국 보유 ${usStks.length}종목 → 인덱스ETF+채권ETF 추가로 분산`);
+  if(usRetirePct < 10 && usUSD > 5000) actions.push('🇺🇸 401k 기여율 1% 올리기 (매년 1%씩)');
+
+  // 🇰🇷 한국 탭 실천 전략 가져오기
+  const krStksAll = stocks.filter(s=>s.currency==='KRW');
+  const krManT = krTotalMan();
+  const krCashKR = cashSum(krAssets.cash);
+  const krCashPct = krManT>0 ? krCashKR/krManT*100 : 0;
+  const krRetirePct = krManT>0 ? krAssets.retire/krManT*100 : 0;
+  const krRealtyPct = krManT>0 ? krAssets.realty/krManT*100 : 0;
+  if(krCashPct > 25 && krManT > 0) actions.push(`🇰🇷 한국 현금 ${fmtMan(krCashKR - krManT*0.15)}원 분할 투입`);
+  if(krStksAll.length > 0 && krStksAll.length < 4) actions.push(`🇰🇷 한국 보유 ${krStksAll.length}종목 → KODEX200+채권ETF 추가`);
+  if(krRetirePct < 5 && krManT > 1000) actions.push('🇰🇷 IRP 계좌 납입 (연 900만원 → 최대 148.5만원 환급)');
+  if(krRealtyPct > 70) actions.push('🇰🇷 부동산 편중 → 금융자산 비중 30% 이상으로 확대');
+
   renderActionPlanList(actions);
 }
 
@@ -2049,6 +2073,10 @@ function renderAIAssetUS(){
     desc:allocItems.map(a=>`<div style="margin-bottom:6px;font-size:12px;">• ${a}</div>`).join('')});
 
   // ── 2. 보유 종목 분석 ──
+  if(usStks.length === 0){
+    items.push({icon:'📈',type:'info',title:'보유 종목 없음',desc:'<div style="font-size:12px;">미국 주식/ETF를 등록하면 종목별 성과 분석, 부족 영역 진단, 맞춤 추천이 제공됩니다.</div>'});
+    items.push({icon:'🔍',type:'info',title:'입문자 추천 포트폴리오',desc:'<div style="font-size:12px;">• VOO (S&P500) 60% + BND (채권) 20% + VXUS (국제) 10% + 현금 10%<br>• 또는 VTI (전체시장) 하나로 시작해도 좋아요</div>'});
+  }
   if(usStks.length > 0){
     const analyzed = usStks.map(s=>{
       const info = getStockSector(s);
@@ -2120,7 +2148,8 @@ function renderAIAssetUS(){
   if(retirePct < 10 && usUSD > 5000) strategy.push(`이번 달부터 401k 기여율 1% 올리기 — 매년 1%씩 올리면 체감 없이 은퇴자금 급성장`);
   const plAll = usStks.filter(s=>{const p=curPrice(s); return s.avgCost>0 && p>0;}).map(s=>((curPrice(s)/s.avgCost-1)*100));
   if(plAll.some(p=>p>100)) strategy.push('100%+ 수익 종목이 있어요 — 원금만큼 매도하면 "무료 주식"이 됩니다 (하우스머니 전략)');
-  if(strategy.length) items.push({icon:'🎯',type:'info',title:'실천 전략',
+  if(!strategy.length) strategy.push('매월 일정 금액 자동 투자(DCA) 설정 — 타이밍을 고민하지 않는 것이 장기적으로 가장 좋은 전략입니다');
+  items.push({icon:'🎯',type:'info',title:'실천 전략',
     desc:strategy.map(s=>`<div style="margin-bottom:6px;font-size:12px;">• ${s}</div>`).join('')});
 
   renderAICards(el, items);
@@ -2153,6 +2182,10 @@ function renderAIAssetKR(){
     desc:allocItems.map(a=>`<div style="margin-bottom:6px;font-size:12px;">• ${a}</div>`).join('')});
 
   // ── 2. 보유 종목 분석 ──
+  if(krStks.length === 0){
+    items.push({icon:'📈',type:'info',title:'보유 종목 없음',desc:'<div style="font-size:12px;">한국 주식/ETF를 등록하면 종목별 성과 분석, 부족 영역 진단, 맞춤 추천이 제공됩니다.</div>'});
+    items.push({icon:'🔍',type:'info',title:'입문자 추천 포트폴리오',desc:'<div style="font-size:12px;">• KODEX 200 (코스피) 40% + TIGER 미국S&P500 30% + 채권 ETF 20% + 현금 10%<br>• ISA 계좌에서 투자하면 비과세 혜택까지</div>'});
+  }
   if(krStks.length > 0){
     const analyzed = krStks.map(s=>{
       const info = getStockSector(s);
@@ -2222,7 +2255,8 @@ function renderAIAssetKR(){
   if(realtyPct > 70) strategy.push('부동산 편중 심각 — 금융자산(주식+채권+현금) 비중을 30% 이상으로 높여 유동성 확보');
   const plAll = krStks.filter(s=>{const p=curPrice(s); return s.avgCost>0 && p>0;}).map(s=>((curPrice(s)/s.avgCost-1)*100));
   if(plAll.some(p=>p>100)) strategy.push('100%+ 수익 종목 보유 중 — 원금만큼 매도하는 "본전 빼기" 전략으로 무위험 포지션 만들기');
-  if(strategy.length) items.push({icon:'🎯',type:'info',title:'실천 전략',
+  if(!strategy.length) strategy.push('매월 일정 금액 자동 투자(적립식) 설정 — ISA 계좌 활용 시 비과세 혜택까지 챙기세요');
+  items.push({icon:'🎯',type:'info',title:'실천 전략',
     desc:strategy.map(s=>`<div style="margin-bottom:6px;font-size:12px;">• ${s}</div>`).join('')});
 
   // ── 현금 관리 ──
