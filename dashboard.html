@@ -374,17 +374,6 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
   <!-- ====== US (미국) ====== -->
   <div class="tab-page" id="page-us">
     <div class="top-strip" id="us-strip"></div>
-    <div class="section">
-      <div class="card" style="padding:0;overflow:hidden;">
-        <div onclick="toggleAIPanel('us')" style="padding:16px 20px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;">
-          <div class="card-title" style="margin:0;"><span>🤖 AI 미국 자산 분석 & 종목 추천</span></div>
-          <span id="ai-toggle-us" style="font-size:12px;color:var(--t3);transition:transform .2s;">▼</span>
-        </div>
-        <div id="ai-panel-us" style="display:none;padding:0 20px 20px;">
-          <div id="ai-asset-us"></div>
-        </div>
-      </div>
-    </div>
     <div class="grid-2-1 section">
       <div class="card">
         <div class="card-title"><span>🇺🇸 미국 자산 유형별</span></div>
@@ -412,22 +401,22 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
         <tbody id="us-stock-tbody"></tbody></table>
       </div>
     </div>
+    <div class="section">
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div onclick="toggleAIPanel('us')" style="padding:16px 20px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;">
+          <div class="card-title" style="margin:0;"><span>🤖 AI 미국 자산 분석 & 종목 추천</span></div>
+          <span id="ai-toggle-us" style="font-size:12px;color:var(--t3);transition:transform .2s;">▼</span>
+        </div>
+        <div id="ai-panel-us" style="display:none;padding:0 20px 20px;">
+          <div id="ai-asset-us"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ====== KR (한국) ====== -->
   <div class="tab-page" id="page-kr">
     <div class="top-strip" id="kr-strip"></div>
-    <div class="section">
-      <div class="card" style="padding:0;overflow:hidden;">
-        <div onclick="toggleAIPanel('kr')" style="padding:16px 20px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;">
-          <div class="card-title" style="margin:0;"><span>🤖 AI 한국 자산 분석 & 종목 추천</span></div>
-          <span id="ai-toggle-kr" style="font-size:12px;color:var(--t3);transition:transform .2s;">▼</span>
-        </div>
-        <div id="ai-panel-kr" style="display:none;padding:0 20px 20px;">
-          <div id="ai-asset-kr"></div>
-        </div>
-      </div>
-    </div>
     <div class="grid-2-1 section">
       <div class="card">
         <div class="card-title"><span>🇰🇷 한국 자산 유형별</span></div>
@@ -453,6 +442,17 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
       <div class="card" style="overflow-x:auto;">
         <table class="stk-tbl"><thead><tr><th>종목</th><th>현재가</th><th>수량</th><th>평가금액</th><th>전일비</th><th>수익</th></tr></thead>
         <tbody id="kr-stock-tbody"></tbody></table>
+      </div>
+    </div>
+    <div class="section">
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div onclick="toggleAIPanel('kr')" style="padding:16px 20px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;">
+          <div class="card-title" style="margin:0;"><span>🤖 AI 한국 자산 분석 & 종목 추천</span></div>
+          <span id="ai-toggle-kr" style="font-size:12px;color:var(--t3);transition:transform .2s;">▼</span>
+        </div>
+        <div id="ai-panel-kr" style="display:none;padding:0 20px 20px;">
+          <div id="ai-asset-kr"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -2013,7 +2013,6 @@ function renderAIAssetAll(){
 
   // ── 액션 플랜 (별도 투두 리스트) ──
   const actions = [];
-  // 통합 액션
   if(cashPct > 30) actions.push(`💰 현금 ${cashPct.toFixed(0)}% → 20% 목표: 약 ${fmtMan(cashMan - tot*0.2)}원을 투자자산으로 이동`);
   if(cashPct < 5) actions.push(`🚨 비상금 확보: 최소 ${fmtMan(tot*0.1)}원(10%)을 현금성 자산으로 유지`);
   if(retirePct < 5 && tot > 0) actions.push(`🏦 은퇴자금 비중 ${retirePct.toFixed(1)}% → 10% 이상 목표. 401k/IRA/IRP 적극 활용`);
@@ -2021,27 +2020,6 @@ function renderAIAssetAll(){
   if(stockPct < 20 && tot > 0) actions.push('📈 주식/ETF 비중을 최소 20%까지 확대');
   if(usMan > 0 && krMan === 0) actions.push('🇰🇷 한국 자산으로 지역 분산 시작하기');
   if(krMan > 0 && usMan === 0) actions.push('🇺🇸 미국 자산으로 글로벌 분산 시작하기');
-
-  // 🇺🇸 미국 탭 실천 전략 가져오기 (usStks, krStks는 위에서 이미 선언됨)
-  const usUSD_ = usTotalUSD();
-  const usCashUS = cashSum(usAssets.cash);
-  const usCashPct_ = usUSD_>0 ? usCashUS/usUSD_*100 : 0;
-  const usRetirePct_ = usUSD_>0 ? usAssets.retire/usUSD_*100 : 0;
-  if(usCashPct_ > 25 && usUSD_ > 0) actions.push(`🇺🇸 미국 현금 $${(usCashUS - usUSD_*0.15).toLocaleString(undefined,{maximumFractionDigits:0})} 분할 투입 (DCA)`);
-  if(usStks.length > 0 && usStks.length < 5) actions.push(`🇺🇸 미국 보유 ${usStks.length}종목 → 인덱스ETF+채권ETF 추가로 분산`);
-  if(usRetirePct_ < 10 && usUSD_ > 5000) actions.push('🇺🇸 401k 기여율 1% 올리기 (매년 1%씩)');
-
-  // 🇰🇷 한국 탭 실천 전략 가져오기
-  const krManT_ = krTotalMan();
-  const krCashKR_ = cashSum(krAssets.cash);
-  const krCashPct_ = krManT_>0 ? krCashKR_/krManT_*100 : 0;
-  const krRetirePct_ = krManT_>0 ? krAssets.retire/krManT_*100 : 0;
-  const krRealtyPct_ = krManT_>0 ? krAssets.realty/krManT_*100 : 0;
-  if(krCashPct_ > 25 && krManT_ > 0) actions.push(`🇰🇷 한국 현금 ${fmtMan(krCashKR_ - krManT_*0.15)}원 분할 투입`);
-  if(krStks.length > 0 && krStks.length < 4) actions.push(`🇰🇷 한국 보유 ${krStks.length}종목 → KODEX200+채권ETF 추가`);
-  if(krRetirePct_ < 5 && krManT_ > 1000) actions.push('🇰🇷 IRP 계좌 납입 (연 900만원 → 최대 148.5만원 환급)');
-  if(krRealtyPct_ > 70) actions.push('🇰🇷 부동산 편중 → 금융자산 비중 30% 이상으로 확대');
-
   renderActionPlanList(actions);
 }
 
@@ -2058,23 +2036,7 @@ function renderAIAssetUS(){
   const retirePct = usAssets.retire/usUSD*100;
   const usStks = stocks.filter(s=>s.currency==='USD');
 
-  // ── 1. 자산 배분 진단 ──
-  const allocItems = [];
-  if(cashPct > 30) allocItems.push(`현금 비중 ${cashPct.toFixed(0)}%로 과다 — 인플레이션에 가치가 녹고 있어요. 20% 이하로 줄이고 인덱스 ETF로 이동 권장`);
-  else if(cashPct < 5) allocItems.push(`비상금 비중 ${cashPct.toFixed(0)}%로 위험 — 최소 3~6개월 생활비($${(usUSD*0.1).toLocaleString()}) 확보 필요`);
-  else allocItems.push(`현금 ${cashPct.toFixed(0)}% — 적정 수준 유지 중`);
-  if(stkPct > 80) allocItems.push(`투자자산 ${stkPct.toFixed(0)}%로 공격적 — 하락장에서 30% 이상 손실 가능. 채권/현금 비중 확대 고려`);
-  else if(stkPct < 20 && usUSD > 5000) allocItems.push(`투자자산 ${stkPct.toFixed(0)}%로 보수적 — 장기적으로 인플레이션을 이기기 어려워요. 인덱스 ETF부터 시작`);
-  if(retirePct < 10 && usUSD > 5000) allocItems.push(`은퇴계좌 ${retirePct.toFixed(1)}% — 401k 회사 매칭은 무조건 최대로 (무료 수익!). Roth IRA $7,000 한도도 채우세요`);
-  else if(retirePct >= 10) allocItems.push(`은퇴계좌 ${retirePct.toFixed(1)}% — 세금 혜택을 잘 활용하고 있어요`);
-  items.push({icon:'📊',type:cashPct>30||stkPct>80?'warn':'good',title:'자산 배분 진단',
-    desc:allocItems.map(a=>`<div style="margin-bottom:6px;font-size:12px;">• ${a}</div>`).join('')});
-
-  // ── 2. 보유 종목 분석 ──
-  if(usStks.length === 0){
-    items.push({icon:'📈',type:'info',title:'보유 종목 없음',desc:'<div style="font-size:12px;">미국 주식/ETF를 등록하면 종목별 성과 분석, 부족 영역 진단, 맞춤 추천이 제공됩니다.</div>'});
-    items.push({icon:'🔍',type:'info',title:'입문자 추천 포트폴리오',desc:'<div style="font-size:12px;">• VOO (S&P500) 60% + BND (채권) 20% + VXUS (국제) 10% + 현금 10%<br>• 또는 VTI (전체시장) 하나로 시작해도 좋아요</div>'});
-  }
+  // ── 보유 종목 상세 분석 ──
   if(usStks.length > 0){
     const analyzed = usStks.map(s=>{
       const info = getStockSector(s);
@@ -2083,72 +2045,67 @@ function renderAIAssetUS(){
       return {name:s.name, ticker:s.ticker, val, info, plPct, avgCost:s.avgCost, qty:s.qty, prc:curPrice(s)};
     });
     const stot = analyzed.reduce((a,s)=>a+s.val,0);
+
     if(stot > 0){
+      // 섹터 분포
       const sectorMap = {};
       analyzed.forEach(s=>{ sectorMap[s.info.style] = (sectorMap[s.info.style]||0) + s.val; });
       const sectors = Object.entries(sectorMap).sort((a,b)=>b[1]-a[1]);
+
+      // GAP 분석 — 내 보유 기반
       const myStyles = new Set(sectors.map(s=>s[0]));
-
-      // 종목 성과 분석
-      const plStocks = analyzed.filter(s=>s.plPct!==null).sort((a,b)=>b.plPct-a.plPct);
-      if(plStocks.length > 0){
-        const winners = plStocks.filter(s=>s.plPct>0);
-        const losers = plStocks.filter(s=>s.plPct<0);
-        const avgPL = plStocks.reduce((a,s)=>a+s.plPct,0)/plStocks.length;
-        let perfDesc = `<div style="margin-bottom:6px;font-size:12px;">평균 수익률 <strong style="color:${avgPL>=0?'var(--green)':'var(--red)'};">${avgPL>=0?'+':''}${avgPL.toFixed(1)}%</strong> (${winners.length}종목 수익 / ${losers.length}종목 손실)</div>`;
-        if(plStocks[0].plPct > 20) perfDesc += `<div style="margin-bottom:4px;font-size:11px;color:var(--t2);">🏆 최고: <strong>${plStocks[0].name}</strong> +${plStocks[0].plPct.toFixed(1)}% — 비중 ${(plStocks[0].val/stot*100).toFixed(1)}%${plStocks[0].plPct>80?' → 일부 차익실현 고려':''}</div>`;
-        const worst = plStocks[plStocks.length-1];
-        if(worst.plPct < -15) perfDesc += `<div style="margin-bottom:4px;font-size:11px;color:var(--t2);">📉 최저: <strong>${worst.name}</strong> ${worst.plPct.toFixed(1)}% — ${worst.plPct<-40?'펀더멘탈 변화 확인 필요, 손절 검토':'추가 매수(물타기) 또는 홀드 판단 필요'}</div>`;
-        // 비중 과다 종목
-        const bigPos = analyzed.filter(s=>s.val/stot>0.3).sort((a,b)=>b.val-a.val);
-        if(bigPos.length) perfDesc += bigPos.map(s=>`<div style="margin-bottom:4px;font-size:11px;color:var(--t2);">⚠️ <strong>${s.name}</strong> 비중 ${(s.val/stot*100).toFixed(0)}% — 단일 종목 리스크 높음, 30% 이하로 분산 권장</div>`).join('');
-        items.push({icon:'📈',type:'info',title:`보유 ${usStks.length}종목 성과 분석`,desc:perfDesc});
-      }
-
-      // ── 3. GAP 분석 (부족 영역 + 추천) ──
-      const hasIndex = myStyles.has('대형전체') || myStyles.has('대형성장');
-      const hasTech = myStyles.has('기술') || myStyles.has('반도체') || myStyles.has('대형성장');
-      const hasBond = myStyles.has('채권');
-      const hasDividend = myStyles.has('배당');
-      const hasIntl = myStyles.has('국제주식');
-      const hasDefense = myStyles.has('헬스케어') || myStyles.has('필수소비재') || myStyles.has('유틸리티');
-      const hasSmall = myStyles.has('미국소형');
-      const hasREIT = myStyles.has('리츠');
       const gaps = [];
-      if(!hasIndex) gaps.push({name:'시장 인덱스',rec:'VOO (S&P 500) — 장기 연평균 10%+ 수익률의 핵심. 개별주만으로는 시장을 이기기 매우 어려워요',sev:'high'});
-      if(!hasBond && stkPct > 40) gaps.push({name:'채권/안전자산',rec:`BND (종합채권) 또는 TLT (장기국채) — 주식 ${stkPct.toFixed(0)}% 집중, 2022년처럼 -20% 하락 시 방어 수단이 없어요`,sev:'high'});
-      if(hasTech && !hasDefense) gaps.push({name:'방어 섹터',rec:'XLV (헬스케어 ETF) + JNJ/PG — 기술주 급락 시 포트폴리오를 지탱할 방어주가 필요해요',sev:'mid'});
-      if(!hasDividend) gaps.push({name:'배당/인컴',rec:'SCHD (배당성장) — 연 3.5% 배당 + 배당성장률 10%+. 복리 재투자 시 장기 수익 극대화',sev:'mid'});
-      if(!hasIntl) gaps.push({name:'국제 분산',rec:'VXUS (국제주식) — 미국 달러 약세 시 환차익 + 미국 외 성장 기회 포착',sev:'low'});
-      if(!hasSmall && stot > 10000) gaps.push({name:'미국 소형주',rec:'VB (소형주 ETF) — 대형주와 상관관계 낮아 분산 효과. 장기적으로 대형주 대비 초과수익 가능',sev:'low'});
-      if(!hasREIT && stot > 20000) gaps.push({name:'리츠/부동산',rec:'VNQ (미국 리츠) — 인플레이션 헷지 + 연 3~4% 배당. 실물 부동산 없이 간접 투자',sev:'low'});
-      // 비중 편향
-      if(sectors[0] && sectors[0][1]/stot > 0.5 && sectors.length > 1){
-        gaps.push({name:`${sectors[0][0]} 과집중 (${(sectors[0][1]/stot*100).toFixed(0)}%)`,rec:'해당 섹터 침체 시 포트폴리오 전체 타격. 다른 섹터 ETF를 추가해서 50% 이하로 분산',sev:'high'});
+      const hasIndex = myStyles.has('대형성장(S&P500)') || myStyles.has('전체시장');
+      const hasTech = myStyles.has('기술') || myStyles.has('기술성장(나스닥)') || myStyles.has('반도체');
+      const hasBond = myStyles.has('미국채권') || myStyles.has('장기국채') || myStyles.has('단기국채');
+      const hasDividend = myStyles.has('배당') || myStyles.has('배당성장') || myStyles.has('고배당') || myStyles.has('월배당(커버드콜)');
+      const hasIntl = myStyles.has('국제주식') || myStyles.has('선진국') || myStyles.has('신흥국');
+      const hasDefense = myStyles.has('헬스케어') || myStyles.has('필수소비재') || myStyles.has('유틸리티');
+
+      if(!hasIndex) gaps.push({name:'시장 인덱스',rec:'VOO (S&P 500) 또는 VTI (전체 시장) — 개별주만으로는 시장 수익률을 따라가기 어려워요',sev:'high'});
+      if(!hasBond && stkPct > 40) gaps.push({name:'채권',rec:'BND (종합채권) — 주식 ${stkPct.toFixed(0)}% 집중, 하락장 방어 수단이 없어요',sev:'high'});
+      if(hasTech && !hasDefense) gaps.push({name:'방어 섹터',rec:'XLV (헬스케어), XLP (필수소비재) — 기술주 중심 포트폴리오에 방어력을 추가하세요',sev:'mid'});
+      if(!hasDividend) gaps.push({name:'배당/인컴',rec:'SCHD (배당성장) 또는 JEPI (월배당) — 하락장에서도 현금흐름을 제공합니다',sev:'mid'});
+      if(!hasIntl) gaps.push({name:'국제 분산',rec:'VXUS (국제주식) — 미국 외 시장으로 지역 리스크를 분산하세요',sev:'low'});
+
+      // 비중 편향 경고
+      if(sectors.length > 0){
+        const topSec = sectors[0];
+        if(topSec[1]/stot > 0.6 && sectors.length > 1){
+          gaps.push({name:`${topSec[0]} 과집중 (${(topSec[1]/stot*100).toFixed(0)}%)`,rec:'다른 섹터/스타일의 ETF를 추가해서 특정 섹터 의존도를 낮추세요',sev:'high'});
+        }
       }
+
       if(gaps.length){
-        items.push({icon:'🔍',type:'warn',title:`부족 영역 & 추천 종목 (${gaps.length}건)`,
+        items.push({icon:'🔍',type:'warn',title:`내 포트폴리오에 부족한 영역 (${gaps.length}건)`,
           desc:gaps.map(g=>{
             const ic = g.sev==='high'?'🔴':g.sev==='mid'?'🟡':'🟢';
-            return `<div style="margin-bottom:8px;padding:6px 8px;background:rgba(255,255,255,.02);border-radius:6px;">${ic} <strong>${g.name}</strong><br><span style="font-size:11px;color:var(--t2);">→ ${g.rec}</span></div>`;
+            return `<div style="margin-bottom:6px;">${ic} <strong>${g.name}</strong><br><span style="font-size:11px;color:var(--t2);">→ ${g.rec}</span></div>`;
           }).join('')
         });
       } else {
-        items.push({icon:'✅',type:'good',title:'미국 포트폴리오 잘 구성되어 있어요!',desc:'인덱스, 채권, 배당, 국제분산 등 주요 영역을 커버 중입니다.'});
+        items.push({icon:'✅',type:'good',title:'미국 포트폴리오 구성이 균형잡혀 있어요!',
+          desc:'인덱스, 채권, 배당, 국제분산 등 주요 영역을 잘 커버하고 있습니다.'});
+      }
+
+      // 종목 주의 알림
+      const plStocks = analyzed.filter(s=>s.plPct!==null);
+      if(plStocks.length > 0){
+        const alerts = [];
+        const best = [...plStocks].sort((a,b)=>b.plPct-a.plPct)[0];
+        const worst = [...plStocks].sort((a,b)=>a.plPct-b.plPct)[0];
+        if(worst && worst.plPct < -30) alerts.push(`📉 <strong>${worst.name}</strong> ${worst.plPct.toFixed(1)}% — 펀더멘탈 재점검 또는 손절을 고려하세요.`);
+        if(best && best.plPct > 50) alerts.push(`🏆 <strong>${best.name}</strong> +${best.plPct.toFixed(1)}% — 일부 차익실현으로 리스크를 관리하세요.`);
+        if(alerts.length) items.push({icon:'💡',type:'warn',title:'종목 알림',desc:alerts.join('<br>')});
       }
     }
   }
 
-  // ── 4. 실천 전략 ──
-  const strategy = [];
-  if(cashPct > 25) strategy.push(`현금 $${(usCash - usUSD*0.15).toLocaleString(undefined,{maximumFractionDigits:0})}을 3개월에 걸쳐 분할 투입 (DCA) — 한번에 넣지 말고 매주/매월 나눠서`);
-  if(usStks.length > 0 && usStks.length < 5) strategy.push(`보유 ${usStks.length}종목으로는 분산이 부족해요 — 최소 인덱스 ETF 1개 + 채권 ETF 1개 추가로 안정성 확보`);
-  if(retirePct < 10 && usUSD > 5000) strategy.push(`이번 달부터 401k 기여율 1% 올리기 — 매년 1%씩 올리면 체감 없이 은퇴자금 급성장`);
-  const plAll = usStks.filter(s=>{const p=curPrice(s); return s.avgCost>0 && p>0;}).map(s=>((curPrice(s)/s.avgCost-1)*100));
-  if(plAll.some(p=>p>100)) strategy.push('100%+ 수익 종목이 있어요 — 원금만큼 매도하면 "무료 주식"이 됩니다 (하우스머니 전략)');
-  if(!strategy.length) strategy.push('매월 일정 금액 자동 투자(DCA) 설정 — 타이밍을 고민하지 않는 것이 장기적으로 가장 좋은 전략입니다');
-  items.push({icon:'🎯',type:'info',title:'실천 전략',
-    desc:strategy.map(s=>`<div style="margin-bottom:6px;font-size:12px;">• ${s}</div>`).join('')});
+  // ── 은퇴 계좌 ──
+  if(retirePct < 10 && usUSD > 5000){
+    items.push({icon:'🏦',type:'warn',title:`은퇴 계좌 비중 ${retirePct.toFixed(1)}% — 확대 권장`,
+      desc:'401k 회사 매칭은 무조건 최대로 활용하세요 (무료 수익!). Roth IRA 연간 $7,000 한도도 채우면 세금 혜택이 큽니다.'});
+  }
 
   renderAICards(el, items);
 }
@@ -2167,23 +2124,7 @@ function renderAIAssetKR(){
   const retirePct = krAssets.retire/krMan*100;
   const krStks = stocks.filter(s=>s.currency==='KRW');
 
-  // ── 1. 자산 배분 진단 ──
-  const allocItems = [];
-  if(cashPct > 30) allocItems.push(`현금 비중 ${cashPct.toFixed(0)}%로 과다 — 예금 금리(3~4%)로는 인플레이션(2~3%)을 겨우 따라갈 수준. 적극적 투자 필요`);
-  else if(cashPct < 5) allocItems.push(`비상금 비중 ${cashPct.toFixed(0)}%로 위험 — 최소 ${fmtMan(krMan*0.1)}원(3~6개월 생활비) 확보 권장`);
-  else allocItems.push(`현금 ${cashPct.toFixed(0)}% — 적정 수준`);
-  if(realtyPct > 60) allocItems.push(`부동산 ${realtyPct.toFixed(0)}% — 자산의 대부분이 부동산에 묶여 있어요. 유동성 자산(주식/현금) 비중 확대 고려`);
-  if(retirePct < 5 && krMan > 1000) allocItems.push(`연금 ${retirePct.toFixed(1)}% — IRP 연간 900만원 납입 시 최대 148.5만원 세액공제. 연말정산 필수 항목`);
-  else if(retirePct >= 5) allocItems.push(`연금 ${retirePct.toFixed(1)}% — 세제 혜택을 잘 활용 중`);
-  if(stkPct > 80) allocItems.push(`투자자산 ${stkPct.toFixed(0)}%로 공격적 — 한국 시장은 변동성이 크므로 채권/현금으로 완충`);
-  items.push({icon:'📊',type:cashPct>30||realtyPct>60?'warn':'good',title:'자산 배분 진단',
-    desc:allocItems.map(a=>`<div style="margin-bottom:6px;font-size:12px;">• ${a}</div>`).join('')});
-
-  // ── 2. 보유 종목 분석 ──
-  if(krStks.length === 0){
-    items.push({icon:'📈',type:'info',title:'보유 종목 없음',desc:'<div style="font-size:12px;">한국 주식/ETF를 등록하면 종목별 성과 분석, 부족 영역 진단, 맞춤 추천이 제공됩니다.</div>'});
-    items.push({icon:'🔍',type:'info',title:'입문자 추천 포트폴리오',desc:'<div style="font-size:12px;">• KODEX 200 (코스피) 40% + TIGER 미국S&P500 30% + 채권 ETF 20% + 현금 10%<br>• ISA 계좌에서 투자하면 비과세 혜택까지</div>'});
-  }
+  // ── 보유 종목 상세 분석 ──
   if(krStks.length > 0){
     const analyzed = krStks.map(s=>{
       const info = getStockSector(s);
@@ -2193,69 +2134,62 @@ function renderAIAssetKR(){
       return {name:s.name, ticker:s.ticker, val, valMan, info, plPct, avgCost:s.avgCost, qty:s.qty, prc:curPrice(s)};
     });
     const stot = analyzed.reduce((a,s)=>a+s.val,0);
+
     if(stot > 0){
+      // GAP 분석
       const sectorMap = {};
       analyzed.forEach(s=>{ sectorMap[s.info.style] = (sectorMap[s.info.style]||0) + s.val; });
       const myStyles = new Set(Object.keys(sectorMap));
-      const sectors = Object.entries(sectorMap).sort((a,b)=>b[1]-a[1]);
+      const gaps = [];
 
-      // 종목 성과 분석
-      const plStocks = analyzed.filter(s=>s.plPct!==null).sort((a,b)=>b.plPct-a.plPct);
-      if(plStocks.length > 0){
-        const winners = plStocks.filter(s=>s.plPct>0);
-        const losers = plStocks.filter(s=>s.plPct<0);
-        const avgPL = plStocks.reduce((a,s)=>a+s.plPct,0)/plStocks.length;
-        let perfDesc = `<div style="margin-bottom:6px;font-size:12px;">평균 수익률 <strong style="color:${avgPL>=0?'var(--green)':'var(--red)'};">${avgPL>=0?'+':''}${avgPL.toFixed(1)}%</strong> (${winners.length}종목 수익 / ${losers.length}종목 손실)</div>`;
-        if(plStocks[0].plPct > 20) perfDesc += `<div style="margin-bottom:4px;font-size:11px;color:var(--t2);">🏆 최고: <strong>${plStocks[0].name}</strong> +${plStocks[0].plPct.toFixed(1)}% — 비중 ${(plStocks[0].val/stot*100).toFixed(1)}%${plStocks[0].plPct>80?' → 일부 차익실현 고려':''}</div>`;
-        const worst = plStocks[plStocks.length-1];
-        if(worst.plPct < -15) perfDesc += `<div style="margin-bottom:4px;font-size:11px;color:var(--t2);">📉 최저: <strong>${worst.name}</strong> ${worst.plPct.toFixed(1)}% — ${worst.plPct<-40?'장기 보유 이유 재점검, 손절 검토':'추가 매수 또는 홀드 판단 필요'}</div>`;
-        const bigPos = analyzed.filter(s=>s.val/stot>0.3).sort((a,b)=>b.val-a.val);
-        if(bigPos.length) perfDesc += bigPos.map(s=>`<div style="margin-bottom:4px;font-size:11px;color:var(--t2);">⚠️ <strong>${s.name}</strong> 비중 ${(s.val/stot*100).toFixed(0)}% — 단일 종목 리스크 주의</div>`).join('');
-        items.push({icon:'📈',type:'info',title:`보유 ${krStks.length}종목 성과 분석`,desc:perfDesc});
-      }
-
-      // ── 3. GAP 분석 ──
-      const hasIndex = myStyles.has('한국주식');
-      const hasOverseas = myStyles.has('대형전체') || myStyles.has('대형성장') || myStyles.has('미국 인덱스');
+      const hasIndex = myStyles.has('코스피인덱스');
+      const hasOverseas = myStyles.has('해외지수');
       const hasDividend = myStyles.has('배당');
       const hasBond = myStyles.has('채권');
-      const hasBio = myStyles.has('바이오') || myStyles.has('바이오/헬스케어') || myStyles.has('헬스케어') || myStyles.has('제약');
+      const hasBio = myStyles.has('바이오/헬스케어');
       const hasSemi = myStyles.has('반도체');
-      const has2nd = myStyles.has('2차전지') || myStyles.has('2차전지/전기');
-      const gaps = [];
-      if(!hasIndex) gaps.push({name:'코스피 인덱스',rec:'KODEX 200 (연보수 0.05%) — 한국 시장 전체에 분산. 개별주 리스크를 상쇄하는 핵심 자산',sev:'high'});
-      if(!hasOverseas) gaps.push({name:'해외 지수 ETF',rec:'TIGER 미국S&P500 (환노출) 또는 KODEX 미국나스닥100 — 원화 약세 시 환차익 보너스, 환전 없이 간편 투자',sev:'mid'});
-      if(!hasDividend) gaps.push({name:'배당',rec:'TIGER 배당성장 — 코스피 배당수익률 1.5%+ 안정적 인컴. 배당금 재투자로 복리 효과',sev:'mid'});
-      if(!hasBond && stkPct > 50) gaps.push({name:'채권/안전자산',rec:`KODEX 국고채10년 — 주식 ${stkPct.toFixed(0)}% 집중, 금리 인하기에 채권 가격 상승 기대`,sev:'mid'});
-      if(hasSemi && !hasBio) gaps.push({name:'바이오/헬스케어',rec:'KODEX 바이오 또는 셀트리온/삼성바이오 — 반도체 사이클과 독립적인 성장 섹터',sev:'low'});
-      if(hasSemi && !has2nd) gaps.push({name:'2차전지',rec:'LG에너지솔루션, KODEX 2차전지 — 전기차 성장과 함께하는 한국 핵심 산업',sev:'low'});
-      if(sectors[0] && sectors[0][1]/stot > 0.5 && sectors.length > 1){
-        gaps.push({name:`${sectors[0][0]} 과집중 (${(sectors[0][1]/stot*100).toFixed(0)}%)`,rec:'해당 섹터 침체 시 포트폴리오 전체 영향. 다른 업종 ETF로 50% 이하까지 분산',sev:'high'});
+
+      if(!hasIndex) gaps.push({name:'코스피 인덱스',rec:'KODEX 200 또는 TIGER 200 — 한국 시장 전체에 분산되는 기본 ETF',sev:'high'});
+      if(!hasOverseas) gaps.push({name:'해외 지수',rec:'TIGER 미국S&P500 또는 KODEX 미국나스닥100 — 환전 없이 해외 투자',sev:'mid'});
+      if(!hasDividend) gaps.push({name:'배당',rec:'TIGER 배당성장 또는 ARIRANG 고배당주 — 안정적 인컴 확보',sev:'mid'});
+      if(!hasBond && stkPct > 50) gaps.push({name:'채권',rec:'KODEX 국고채10년 — 주식 비중이 높아 안전자산이 필요해요',sev:'mid'});
+      if(hasSemi && !hasBio) gaps.push({name:'바이오/헬스케어',rec:'KODEX 바이오 — 반도체 외 성장 섹터로 분산',sev:'low'});
+
+      // 비중 편향
+      const sectors = Object.entries(sectorMap).sort((a,b)=>b[1]-a[1]);
+      if(sectors[0] && sectors[0][1]/stot > 0.6 && sectors.length > 1){
+        gaps.push({name:`${sectors[0][0]} 과집중 (${(sectors[0][1]/stot*100).toFixed(0)}%)`,rec:'다른 섹터 ETF를 추가해서 분산하세요',sev:'high'});
       }
+
       if(gaps.length){
-        items.push({icon:'🔍',type:'warn',title:`부족 영역 & 추천 종목 (${gaps.length}건)`,
+        items.push({icon:'🔍',type:'warn',title:`내 포트폴리오에 부족한 영역 (${gaps.length}건)`,
           desc:gaps.map(g=>{
             const ic = g.sev==='high'?'🔴':g.sev==='mid'?'🟡':'🟢';
-            return `<div style="margin-bottom:8px;padding:6px 8px;background:rgba(255,255,255,.02);border-radius:6px;">${ic} <strong>${g.name}</strong><br><span style="font-size:11px;color:var(--t2);">→ ${g.rec}</span></div>`;
+            return `<div style="margin-bottom:6px;">${ic} <strong>${g.name}</strong><br><span style="font-size:11px;color:var(--t2);">→ ${g.rec}</span></div>`;
           }).join('')
         });
       } else {
-        items.push({icon:'✅',type:'good',title:'한국 포트폴리오 잘 구성되어 있어요!',desc:'주요 영역을 잘 커버 중입니다.'});
+        items.push({icon:'✅',type:'good',title:'한국 포트폴리오 구성이 균형잡혀 있어요!',desc:'주요 영역을 잘 커버하고 있습니다.'});
+      }
+
+      // 종목 주의 알림
+      const plStocks = analyzed.filter(s=>s.plPct!==null);
+      if(plStocks.length > 0){
+        const alerts = [];
+        const best = [...plStocks].sort((a,b)=>b.plPct-a.plPct)[0];
+        const worst = [...plStocks].sort((a,b)=>a.plPct-b.plPct)[0];
+        if(worst && worst.plPct < -30) alerts.push(`📉 <strong>${worst.name}</strong> ${worst.plPct.toFixed(1)}% — 펀더멘탈 재점검을 권장합니다.`);
+        if(best && best.plPct > 50) alerts.push(`🏆 <strong>${best.name}</strong> +${best.plPct.toFixed(1)}% — 일부 차익실현을 고려하세요.`);
+        if(alerts.length) items.push({icon:'💡',type:'warn',title:'종목 알림',desc:alerts.join('<br>')});
       }
     }
   }
 
-  // ── 4. 실천 전략 ──
-  const strategy = [];
-  if(cashPct > 25) strategy.push(`현금 ${fmtMan(krCash - krMan*0.15)}원을 3개월에 걸쳐 분할 투입 — CMA에 넣어두고 매주 일정액 자동이체`);
-  if(krStks.length > 0 && krStks.length < 4) strategy.push(`보유 ${krStks.length}종목으로는 분산 부족 — KODEX 200 + 채권 ETF 추가로 최소 방어선 구축`);
-  if(retirePct < 5 && krMan > 1000) strategy.push('이번 달 IRP 계좌 개설/납입 — 연 900만원 납입 시 연말정산 최대 148.5만원 환급');
-  if(realtyPct > 70) strategy.push('부동산 편중 심각 — 금융자산(주식+채권+현금) 비중을 30% 이상으로 높여 유동성 확보');
-  const plAll = krStks.filter(s=>{const p=curPrice(s); return s.avgCost>0 && p>0;}).map(s=>((curPrice(s)/s.avgCost-1)*100));
-  if(plAll.some(p=>p>100)) strategy.push('100%+ 수익 종목 보유 중 — 원금만큼 매도하는 "본전 빼기" 전략으로 무위험 포지션 만들기');
-  if(!strategy.length) strategy.push('매월 일정 금액 자동 투자(적립식) 설정 — ISA 계좌 활용 시 비과세 혜택까지 챙기세요');
-  items.push({icon:'🎯',type:'info',title:'실천 전략',
-    desc:strategy.map(s=>`<div style="margin-bottom:6px;font-size:12px;">• ${s}</div>`).join('')});
+  // ── 연금/퇴직금 ──
+  if(retirePct < 5 && krMan > 1000){
+    items.push({icon:'🏦',type:'warn',title:`연금 비중 ${retirePct.toFixed(1)}% — 확대 권장`,
+      desc:'IRP 연간 최대 900만원 세액공제. 연금저축+IRP 합산으로 최대 148.5만원 환급 가능합니다.'});
+  }
 
   // ── 현금 관리 ──
   if(cashPct > 30){
