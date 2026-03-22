@@ -1857,42 +1857,87 @@ function renderAIAssetAll(){
     const stot = Object.values(sectorMap).reduce((a,b)=>a+b,0);
     if(stot > 0){
       const sorted = Object.entries(sectorMap).sort((a,b)=>b[1]-a[1]);
-      // 보유 섹터 현황
+      // 큰 분류로 그룹핑
+      const BIG_GROUP = {
+        '주식':['기술','반도체','소프트웨어','플랫폼/기술','전자/부품','게임','인터넷/플랫폼',
+          '금융','헬스케어','바이오','바이오/헬스케어','제약','에너지','산업재','소비재','필수소비재','경기소비재','소비재/유통',
+          '통신','유틸리티','유틸리티/에너지','자동차','자동차부품','2차전지','2차전지/전기','건설','건설/소재',
+          '방산','운송/물류','물류','항공/방위','엔터테인먼트','미디어/엔터','여행/레저',
+          '철강/소재','화학','화학/소재','소재','지주회사','조선','IT서비스','서비스',
+          '결제/핀테크','핀테크','암호화폐/핀테크','이커머스/클라우드','자동차/에너지',
+          '리츠/데이터센터','의료기기','커뮤니케이션','소매/유통'],
+        '미국ETF':['대형전체','대형성장','미국소형'],
+        '한국ETF':['한국주식'],
+        '글로벌ETF':['국제주식'],
+        '배당':['배당'],
+        '채권':['채권'],
+        '대체자산':['리츠','원자재','암호화폐ETF'],
+        '기타ETF':['섹터ETF','테마ETF','레버리지/인버스','혼합','기타ETF'],
+      };
+      const bigMap = {};
+      const bigDetail = {};
+      sorted.forEach(([sec,val])=>{
+        let bigName = '기타';
+        for(const [bg, list] of Object.entries(BIG_GROUP)){
+          if(list.includes(sec)){ bigName = bg; break; }
+        }
+        bigMap[bigName] = (bigMap[bigName]||0) + val;
+        if(!bigDetail[bigName]) bigDetail[bigName] = [];
+        bigDetail[bigName].push([sec, val]);
+      });
+      const bigSorted = Object.entries(bigMap).sort((a,b)=>b[1]-a[1]);
+      // 보유 섹터 현황 (큰 분류 + 클릭 시 상세)
+      let sectorId = 0;
       items.push({icon:'🗺️',type:'info',title:`보유 종목 섹터 분석 (${stocks.length}종목)`,
-        desc: sorted.map(([sec,val])=>{
+        desc: bigSorted.map(([bg,val])=>{
           const pct = (val/stot*100).toFixed(1);
           const bar = '█'.repeat(Math.max(1,Math.round(val/stot*20)));
-          return `<div style="display:flex;align-items:center;gap:8px;margin:2px 0;"><span style="min-width:90px;font-weight:500;">${sec}</span><span style="color:var(--blue);font-size:11px;letter-spacing:-1px;">${bar}</span><span style="color:var(--t2);font-size:11px;">${pct}%</span></div>`;
+          const details = bigDetail[bg];
+          const sid = 'sec-detail-'+(sectorId++);
+          const detailHtml = details.length > 1 ? details.map(([s,v])=>{
+            const sp = (v/stot*100).toFixed(1);
+            return `<div style="display:flex;align-items:center;gap:6px;margin:1px 0 1px 12px;font-size:11px;color:var(--t2);"><span style="min-width:80px;">${s}</span><span>${sp}%</span></div>`;
+          }).join('') : '';
+          return `<div style="margin:2px 0;">
+            <div style="display:flex;align-items:center;gap:8px;${detailHtml?'cursor:pointer;':''}font-weight:500;" ${detailHtml?`onclick="var d=document.getElementById('${sid}');d.style.display=d.style.display==='none'?'':'none'"`:''}">
+              <span style="min-width:90px;">${bg}</span>
+              <span style="color:var(--blue);font-size:11px;letter-spacing:-1px;">${bar}</span>
+              <span style="color:var(--t2);font-size:11px;">${pct}%</span>
+              ${detailHtml?'<span style="font-size:9px;color:var(--t3);">▼</span>':''}
+            </div>
+            ${detailHtml?`<div id="${sid}" style="display:none;">${detailHtml}</div>`:''}
+          </div>`;
         }).join('') +
         `<div style="margin-top:8px;font-size:11px;color:var(--t3);">ETF ${(typeMap.ETF/stot*100).toFixed(0)}% · 개별주 ${(typeMap['개별주']/stot*100).toFixed(0)}%</div>`
       });
 
-      // 집중도 경고
-      if(sorted[0][1]/stot > 0.5){
-        items.push({icon:'⚠️',type:'warn',title:`"${sorted[0][0]}" 섹터에 ${(sorted[0][1]/stot*100).toFixed(0)}% 집중`,
-          desc:`한 섹터에 절반 이상이 몰려있어요. 해당 산업 침체 시 포트폴리오 전체가 타격받을 수 있습니다.`});
+      // 집중도 경고 (큰 분류 기준)
+      if(bigSorted[0][1]/stot > 0.5){
+        items.push({icon:'⚠️',type:'warn',title:`"${bigSorted[0][0]}" 영역에 ${(bigSorted[0][1]/stot*100).toFixed(0)}% 집중`,
+          desc:`한 영역에 절반 이상이 몰려있어요. 해당 영역 침체 시 포트폴리오 전체가 타격받을 수 있습니다.`});
       }
 
       // ── 3. 빠진 섹터 (GAP) 분석 ──
+      const hasBig = new Set(bigSorted.map(s=>s[0]));
       const hasSectors = new Set(sorted.map(s=>s[0]));
       const gaps = [];
       // 핵심 체크: 대형 인덱스
-      if(!hasSectors.has('대형성장(S&P500)') && !hasSectors.has('전체시장') && !hasSectors.has('코스피인덱스')){
-        gaps.push({gap:'시장 인덱스',severity:'high',desc:'S&P500(VOO)이나 코스피200(KODEX 200) 같은 시장 전체 인덱스가 없어요. 핵심 자산으로 가장 먼저 추가를 권장합니다.',
+      if(!hasBig.has('미국ETF') && !hasBig.has('한국ETF')){
+        gaps.push({gap:'시장 인덱스',severity:'high',desc:'S&P500(VOO)이나 코스피200(KODEX 200) 같은 시장 전체 인덱스가 없어요.',
           us:'VOO (S&P 500), VTI (전체 시장)',kr:'KODEX 200, TIGER 200'});
       }
       // 채권/안전자산
-      if(!hasSectors.has('미국채권') && !hasSectors.has('채권') && !hasSectors.has('단기국채') && !hasSectors.has('장기국채') && !hasSectors.has('물가연동채')){
+      if(!hasBig.has('채권')){
         gaps.push({gap:'채권/안전자산',severity:stockPct>50?'high':'mid',desc:'채권이 전혀 없어요. 주식 하락 시 방어 역할을 하는 자산이 필요합니다.',
           us:'BND (종합채권), TLT (장기국채)',kr:'KODEX 국고채10년'});
       }
       // 배당/인컴
-      if(!hasSectors.has('배당') && !hasSectors.has('배당성장') && !hasSectors.has('고배당') && !hasSectors.has('월배당(커버드콜)')){
+      if(!hasBig.has('배당')){
         gaps.push({gap:'배당/인컴',severity:'mid',desc:'배당형 자산이 없어요. 안정적인 현금흐름+복리 재투자 효과를 놓치고 있습니다.',
           us:'SCHD (배당성장), JEPI (월배당)',kr:'TIGER 배당성장'});
       }
       // 국제 분산
-      if(!hasSectors.has('국제주식') && !hasSectors.has('선진국') && !hasSectors.has('신흥국') && !hasSectors.has('해외지수')){
+      if(!hasBig.has('글로벌ETF')){
         if(usStks.length > 0 && krStks.length === 0) gaps.push({gap:'한국 시장',severity:'mid',desc:'미국에만 투자하고 있어요. 한국 시장으로 지역 분산을 고려하세요.',kr:'KODEX 200, TIGER 미국S&P500'});
         else if(krStks.length > 0 && usStks.length === 0) gaps.push({gap:'미국/글로벌 시장',severity:'mid',desc:'한국에만 투자하고 있어요. 미국 또는 글로벌 분산을 권장합니다.',us:'VOO, VXUS (국제주식)'});
       }
