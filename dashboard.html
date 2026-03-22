@@ -1877,9 +1877,14 @@ function renderAIAssetAll(){
       const bigMap = {};
       const bigDetail = {};
       sorted.forEach(([sec,val])=>{
-        let bigName = '기타';
+        let bigName = null;
         for(const [bg, list] of Object.entries(BIG_GROUP)){
           if(list.includes(sec)){ bigName = bg; break; }
+        }
+        // ETF 분류에 없는 개별주 섹터는 '주식'으로
+        if(!bigName){
+          const isETFsec = ['미분류'].includes(sec);
+          bigName = isETFsec ? '기타ETF' : '주식';
         }
         bigMap[bigName] = (bigMap[bigName]||0) + val;
         if(!bigDetail[bigName]) bigDetail[bigName] = [];
