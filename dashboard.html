@@ -536,18 +536,6 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
           <div id="month-tab-list" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;"></div>
           <span id="csv-reset" style="font-size:11px;color:var(--blue);cursor:pointer;display:none;" onclick="showUploadArea()">+ 새로 업로드</span>
-          <span style="font-size:11px;color:var(--accent);cursor:pointer;" onclick="toggleManualExpForm()">✏️ 직접 입력</span>
-        </div>
-
-        <!-- 현금/직접 지출 입력 폼 -->
-        <div id="manual-exp-form" style="display:none;" class="manual-exp-form">
-          <input type="date" id="mexp-date" style="width:130px;"/>
-          <input type="text" id="mexp-desc" placeholder="내역 (예: 마트, 현금결제)" style="flex:1;min-width:120px;"/>
-          <input type="number" id="mexp-amount" placeholder="금액" style="width:90px;" step="0.01"/>
-          <select id="mexp-currency"><option value="USD">$</option><option value="KRW">₩</option></select>
-          <select id="mexp-cat"></select>
-          <button onclick="addManualExpense()">추가</button>
-          <span onclick="toggleManualExpForm()" style="cursor:pointer;color:var(--t3);font-size:14px;padding:0 4px;">✕</span>
         </div>
 
         <div id="csv-upload-area" class="card">
@@ -587,7 +575,19 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
           </div>
 
           <div class="card">
-            <div class="card-title"><span>거래 내역</span><span id="sp-txn-count" style="font-size:11px;color:var(--t2);"></span></div>
+            <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+              <span><span>거래 내역</span><span id="sp-txn-count" style="font-size:11px;color:var(--t2);"></span></span>
+              <span style="font-size:11px;color:var(--accent);cursor:pointer;" onclick="toggleManualExpForm()">✏️ 직접 입력</span>
+            </div>
+            <div id="manual-exp-form" style="display:none;" class="manual-exp-form">
+              <input type="date" id="mexp-date" style="width:130px;"/>
+              <input type="text" id="mexp-desc" placeholder="내역 (예: 마트, 현금결제)" style="flex:1;min-width:120px;"/>
+              <input type="number" id="mexp-amount" placeholder="금액" style="width:90px;" step="0.01"/>
+              <select id="mexp-currency"><option value="USD">$</option><option value="KRW">₩</option></select>
+              <select id="mexp-cat"></select>
+              <button onclick="addManualExpense()">추가</button>
+              <span onclick="toggleManualExpForm()" style="cursor:pointer;color:var(--t3);font-size:14px;padding:0 4px;">✕</span>
+            </div>
             <div id="sp-txn-list" style="max-height:400px;overflow-y:auto;"></div>
           </div>
         </div>
