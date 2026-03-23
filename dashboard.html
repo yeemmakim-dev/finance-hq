@@ -1826,13 +1826,15 @@ function renderAIAssetAll(){
           '철강/소재','화학','화학/소재','소재','지주회사','조선','IT서비스','서비스',
           '결제/핀테크','핀테크','암호화폐/핀테크','이커머스/클라우드','자동차/에너지',
           '리츠/데이터센터','의료기기','커뮤니케이션','소매/유통'],
-        '미국ETF':['대형전체','대형성장','미국소형'],
-        '한국ETF':['한국주식'],
-        '글로벌ETF':['국제주식'],
-        '배당':['배당'],
-        '채권':['채권'],
-        '대체자산':['리츠','원자재','암호화폐ETF'],
-        '기타ETF':['섹터ETF','테마ETF','레버리지/인버스','혼합','기타ETF'],
+        '미국ETF':['대형전체','대형성장','미국소형','대형성장(S&P500)','전체시장','기술성장(나스닥)','대형가치','메가캡성장','대형성장(나스닥)'],
+        '한국ETF':['한국주식','코스피인덱스','해외지수'],
+        '글로벌ETF':['국제주식','선진국','신흥국'],
+        '배당':['배당','배당성장','고배당','월배당(커버드콜)'],
+        '채권':['채권','미국채권','장기국채','단기국채','물가연동채'],
+        '대체자산':['리츠','원자재','금','금/원자재','암호화폐ETF','암호화폐/비트코인','암호화폐/이더리움'],
+        '기타ETF':['섹터ETF','테마ETF','레버리지/인버스','혼합','기타ETF','밸런스드(60/40)','타겟데이트',
+          '기술섹터','금융섹터','에너지섹터','헬스케어섹터','산업재섹터','유틸리티섹터','필수소비재섹터','경기소비재섹터',
+          '혁신성장','핀테크','유전체학'],
       };
       const bigMap = {};
       const bigDetail = {};
@@ -2055,11 +2057,11 @@ function renderAIAssetUS(){
       // GAP 분석 — 내 보유 기반
       const myStyles = new Set(sectors.map(s=>s[0]));
       const gaps = [];
-      const hasIndex = myStyles.has('대형성장(S&P500)') || myStyles.has('전체시장');
-      const hasTech = myStyles.has('기술') || myStyles.has('기술성장(나스닥)') || myStyles.has('반도체');
-      const hasBond = myStyles.has('미국채권') || myStyles.has('장기국채') || myStyles.has('단기국채');
+      const hasIndex = myStyles.has('대형성장(S&P500)') || myStyles.has('전체시장') || myStyles.has('대형전체') || myStyles.has('대형성장');
+      const hasTech = myStyles.has('기술') || myStyles.has('기술성장(나스닥)') || myStyles.has('반도체') || myStyles.has('대형성장');
+      const hasBond = myStyles.has('미국채권') || myStyles.has('장기국채') || myStyles.has('단기국채') || myStyles.has('채권') || myStyles.has('물가연동채');
       const hasDividend = myStyles.has('배당') || myStyles.has('배당성장') || myStyles.has('고배당') || myStyles.has('월배당(커버드콜)');
-      const hasIntl = myStyles.has('국제주식') || myStyles.has('선진국') || myStyles.has('신흥국');
+      const hasIntl = myStyles.has('국제주식') || myStyles.has('선진국') || myStyles.has('신흥국') || myStyles.has('글로벌ETF');
       const hasDefense = myStyles.has('헬스케어') || myStyles.has('필수소비재') || myStyles.has('유틸리티');
 
       if(!hasIndex) gaps.push({name:'시장 인덱스',rec:'VOO (S&P 500) 또는 VTI (전체 시장) — 개별주만으로는 시장 수익률을 따라가기 어려워요',sev:'high'});
