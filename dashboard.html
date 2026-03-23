@@ -695,6 +695,7 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
 // STATE
 // ═══════════════════════════════════════
 let FX = 1370;
+let FX_HKD = 0.128; // HKD → USD (1 HKD ≈ 0.128 USD)
 let liveQuotes = {};
 let currentTab = 'all';
 
@@ -1115,12 +1116,14 @@ function setStatus(s){
 // ═══════════════════════════════════════
 function curPrice(s){ const q=liveQuotes[s.ticker]; return q?.price!=null ? q.price : 0; }
 function isLive(s){ return liveQuotes[s.ticker]?.price!=null; }
-function stockValUSD(s){ const v=curPrice(s)*s.qty; return s.currency==='USD'?v:v/FX*10000; }
-function stockValMan(s){ const v=curPrice(s)*s.qty; return s.currency==='KRW'?v/10000:v*FX/10000; }
+function toUSD(v,cur){ return cur==='USD'?v:cur==='KRW'?v/FX*10000:cur==='HKD'?v*FX_HKD:v; }
+function toMan(v,cur){ return cur==='KRW'?v/10000:cur==='USD'?v*FX/10000:cur==='HKD'?v*FX_HKD*FX/10000:v*FX/10000; }
+function stockValUSD(s){ return toUSD(curPrice(s)*s.qty, s.currency); }
+function stockValMan(s){ return toMan(curPrice(s)*s.qty, s.currency); }
 function stockChangePct(s){ const q=liveQuotes[s.ticker]; return q?.changePercent ?? 0; }
 
-// US totals (USD)
-function usStockUSD(){ return stocks.filter(s=>s.currency==='USD').reduce((a,s)=>a+stockValUSD(s),0); }
+// US totals (USD) — USD + HKD 등 KRW 아닌 해외 종목 포함
+function usStockUSD(){ return stocks.filter(s=>s.currency!=='KRW').reduce((a,s)=>a+stockValUSD(s),0); }
 function usTotalUSD(){ return cashSum(usAssets.cash) + usAssets.realty + usAssets.crypto + usAssets.retire + usStockUSD(); }
 // KR totals (만원)
 function krStockMan(){ return stocks.filter(s=>s.currency==='KRW').reduce((a,s)=>a+curPrice(s)*s.qty/10000,0); }
@@ -1246,7 +1249,7 @@ function renderUSTab(){
   renderBankDetail('us-bank-detail', usAssets.cash, '$');
   renderDonut('us-donut','us-donut-total','us-donut-leg', categories, usUSD, fmtUSD(usUSD));
 
-  const usStocks = [...stocks.filter(s=>s.currency==='USD')].sort((a,b)=>stockValUSD(b)-stockValUSD(a));
+  const usStocks = [...stocks.filter(s=>s.currency!=='KRW')].sort((a,b)=>stockValUSD(b)-stockValUSD(a));
   document.getElementById('us-stock-count').textContent = usStocks.length+'종목';
   renderStockPLSummary('us-stock-pl-summary', usStocks, 'USD');
   renderStockTable('us-stock-tbody', usStocks, 'USD');
@@ -1373,9 +1376,11 @@ function renderStockTable(tbodyId, list, cur){
   const renderRow = (s, isFirst, groupLabel) => {
     const cp = curPrice(s), val = cp*s.qty;
     const live = isLive(s), q = liveQuotes[s.ticker], chg = q?.changePercent ?? 0;
-    const sym = cur==='USD'?'$':'₩';
+    const sCur = s.currency||cur;
+    const sym = sCur==='HKD'?'HK$':sCur==='KRW'?'₩':'$';
     const curF = live ? sym+cp.toLocaleString(undefined,{maximumFractionDigits:2}) : '시세 조회 필요';
-    const valF = live ? (cur==='USD'?fmtUSD(val):fmtMan(val/10000)+'원') : '—';
+    const valUSD = live ? stockValUSD(s) : 0;
+    const valF = live ? (cur==='KRW'?fmtMan(stockValMan(s))+'원':'$'+Math.round(valUSD).toLocaleString()) : '—';
     const chgH = live&&q?.changePercent!=null ? `<span class="${cls(chg)}">${fmtPct(chg)}</span>` : '<span class="neu">—</span>';
 
     // Profit/Loss
@@ -1387,9 +1392,11 @@ function renderStockTable(tbodyId, list, cur){
       const plSym = pl >= 0 ? '+' : '-';
       const plAbs = Math.abs(pl);
       let plStr;
-      if(cur==='KRW'){
+      if(sCur==='KRW'){
         plStr = plAbs >= 100000000 ? (plAbs/100000000).toFixed(1)+'억' : plAbs >= 10000 ? Math.round(plAbs/10000).toLocaleString()+'만' : '₩'+Math.round(plAbs).toLocaleString();
         plStr = plSym + plStr;
+      } else if(sCur==='HKD'){
+        plStr = plSym+'HK$'+Math.round(plAbs).toLocaleString();
       } else {
         plStr = plAbs >= 10000 ? plSym+'$'+(plAbs/1000).toFixed(1)+'K' : plSym+'$'+Math.round(plAbs).toLocaleString();
       }
