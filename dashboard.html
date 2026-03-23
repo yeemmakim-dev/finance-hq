@@ -140,7 +140,7 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
 .up{color:var(--green);}.down{color:var(--red);}.neu{color:var(--t3);}
 
 /* BUDGET */
-.budget-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}
+.budget-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;}
 .bud-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);}
 .bud-row:last-child{border-bottom:none;}
 .bud-icon{font-size:20px;width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
@@ -2742,10 +2742,10 @@ function renderBudgetTab(){
   const income = budgetIncomeUSD || budgetIncomeKRW*10000/FX || 0;
   const savingsRate = income > 0 ? ((income-totalSpent)/income*100) : 0;
 
+  const usePct = totalBudget ? (totalSpent/totalBudget*100).toFixed(0) : 0;
   document.getElementById('bud-strip').innerHTML = `
     <div class="stat"><div class="stat-label">💰 월 수입</div><div class="stat-val">${income?'$'+Math.round(income).toLocaleString():'미설정'}</div><div class="stat-sub neu">${budgetIncomeKRW?fmtMan(budgetIncomeKRW)+'원':''}</div></div>
-    <div class="stat"><div class="stat-label">🎯 총 예산</div><div class="stat-val">$${Math.round(totalBudget).toLocaleString()}</div><div class="stat-sub neu">${budgetCats.filter(c=>c.budget>0).length}개 카테고리</div></div>
-    <div class="stat"><div class="stat-label">💳 총 지출</div><div class="stat-val ${totalSpent>totalBudget?'down':''}">$${Math.round(totalSpent).toLocaleString()}</div><div class="stat-sub ${totalSpent>totalBudget?'down':'up'}">${totalBudget?(totalSpent/totalBudget*100).toFixed(0)+'% 사용':'—'}</div></div>
+    <div class="stat"><div class="stat-label">💳 총 지출</div><div class="stat-val ${totalSpent>totalBudget?'down':''}">$${Math.round(totalSpent).toLocaleString()}</div><div class="stat-sub ${totalSpent>totalBudget?'down':'up'}">${totalBudget?usePct+'% 사용 (총예산: $'+Math.round(totalBudget).toLocaleString()+')':'—'}</div></div>
     <div class="stat"><div class="stat-label">📊 저축률</div><div class="stat-val ${savingsRate>=20?'up':savingsRate>=0?'neu':'down'}">${income?savingsRate.toFixed(1)+'%':'—'}</div><div class="stat-sub ${remaining>=0?'up':'down'}">${totalBudget?'$'+Math.round(Math.abs(remaining)).toLocaleString()+(remaining>=0?' 남음':' 초과'):''}</div></div>
   `;
 
