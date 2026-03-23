@@ -1026,6 +1026,7 @@ async function fetchAllQuotes(){
     // 환율도 함께 조회
     const allTickers = [...tickers];
     if(!allTickers.includes('KRW=X')) allTickers.push('KRW=X');
+    if(!allTickers.includes('HKDUSD=X')) allTickers.push('HKDUSD=X');
 
     // 개별 종목을 병렬로 조회 (v8 chart API 사용)
     const results = await Promise.allSettled(allTickers.map(t => fetchSingleQuote(t)));
@@ -1036,9 +1037,18 @@ async function fetchAllQuotes(){
         const q = r.value;
         if(q.symbol === 'KRW=X'){
           FX = Math.round(q.price);
+        } else if(q.symbol === 'HKDUSD=X'){
+          FX_HKD = q.price; // 1 HKD → USD
         } else {
           liveQuotes[allTickers[i]] = q;
           successCount++;
+          // Yahoo에서 받아온 실제 통화로 종목 currency 업데이트 (HKD, GBP 등)
+          if(q.currency && q.currency !== 'USD' && q.currency !== 'KRW'){
+            const stk = stocks.find(s=>s.ticker === allTickers[i]);
+            if(stk && stk.currency !== q.currency){
+              stk.currency = q.currency;
+            }
+          }
         }
       }
     });
