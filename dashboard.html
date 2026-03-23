@@ -307,6 +307,10 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
         </div>
         <div id="health-tab-action" style="padding:16px 20px;display:none;">
           <div id="action-plan-list"></div>
+          <div style="margin-top:12px;display:flex;gap:8px;">
+            <input id="custom-action-input" type="text" placeholder="할 일 직접 입력..." style="flex:1;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--t1);font-size:12px;outline:none;" onkeydown="if(event.key==='Enter')addCustomAction()"/>
+            <button onclick="addCustomAction()" style="padding:8px 16px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">+ 추가</button>
+          </div>
         </div>
       </div>
     </div>
@@ -820,25 +824,53 @@ function switchHealthTab(tab){
 
 // ── ACTION PLAN TODO ──
 let actionPlanDone = JSON.parse(localStorage.getItem('dash_action_done')||'{}');
+let customActions = JSON.parse(localStorage.getItem('dash_custom_actions')||'[]');
 function toggleActionItem(key){
   actionPlanDone[key] = !actionPlanDone[key];
   localStorage.setItem('dash_action_done', JSON.stringify(actionPlanDone));
-  if(typeof _lastActionItems !== 'undefined') renderActionPlanList(_lastActionItems);
+  if(typeof _lastAIActions !== 'undefined') renderActionPlanList(_lastAIActions);
 }
+function addCustomAction(){
+  const inp = document.getElementById('custom-action-input');
+  if(!inp) return;
+  const txt = inp.value.trim();
+  if(!txt) return;
+  customActions.push(txt);
+  localStorage.setItem('dash_custom_actions', JSON.stringify(customActions));
+  inp.value = '';
+  renderActionPlanList(_lastAIActions);
+}
+function removeCustomAction(idx){
+  event.stopPropagation();
+  const item = customActions[idx];
+  const key = 'cp_'+item.replace(/[^a-zA-Z0-9가-힣]/g,'').slice(0,30);
+  delete actionPlanDone[key];
+  customActions.splice(idx, 1);
+  localStorage.setItem('dash_custom_actions', JSON.stringify(customActions));
+  localStorage.setItem('dash_action_done', JSON.stringify(actionPlanDone));
+  renderActionPlanList(_lastAIActions);
+}
+let _lastAIActions = [];
 let _lastActionItems = [];
-function renderActionPlanList(actions){
-  _lastActionItems = actions;
+function renderActionPlanList(aiActions){
+  _lastAIActions = aiActions;
+  const allActions = [...aiActions.map(a=>({text:a,type:'ai'})), ...customActions.map((a,i)=>({text:a,type:'custom',idx:i}))];
+  _lastActionItems = allActions.map(a=>a.text);
   const el = document.getElementById('action-plan-list');
   if(!el) return;
-  if(!actions.length){ el.innerHTML = '<div style="text-align:center;color:var(--t3);padding:16px;font-size:12px;">현재 필요한 액션이 없어요! 잘 하고 있습니다 👏</div>'; return; }
-  el.innerHTML = actions.map((a,i)=>{
-    const key = 'ap_'+a.replace(/[^a-zA-Z0-9가-힣]/g,'').slice(0,30);
+  if(!allActions.length){ el.innerHTML = '<div style="text-align:center;color:var(--t3);padding:16px;font-size:12px;">현재 필요한 액션이 없어요! 잘 하고 있습니다 👏</div>'; return; }
+  el.innerHTML = allActions.map((a,i)=>{
+    const prefix = a.type==='custom'?'cp_':'ap_';
+    const key = prefix+a.text.replace(/[^a-zA-Z0-9가-힣]/g,'').slice(0,30);
     const done = !!actionPlanDone[key];
+    const delBtn = a.type==='custom' ? `<div onclick="removeCustomAction(${a.idx})" style="flex-shrink:0;width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:14px;border-radius:50%;hover:background:rgba(255,0,0,.1);" title="삭제">✕</div>` : '';
+    const badge = a.type==='custom' ? '<span style="font-size:9px;background:var(--blue);color:#fff;padding:1px 6px;border-radius:4px;margin-right:6px;">내 할일</span>' : '';
     return `<div onclick="toggleActionItem('${key}')" style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;cursor:pointer;transition:opacity .2s;${done?'opacity:.5;':''}">
       <div style="flex-shrink:0;width:20px;height:20px;border-radius:6px;border:2px solid ${done?'var(--green)':'var(--border2)'};display:flex;align-items:center;justify-content:center;margin-top:1px;background:${done?'rgba(52,211,153,.15)':'transparent'};">
         ${done?'<span style="color:var(--green);font-size:13px;font-weight:700;">✓</span>':''}
       </div>
-      <div style="font-size:12px;line-height:1.6;${done?'text-decoration:line-through;color:var(--t3);':''}">${a}</div>
+      <div style="flex:1;font-size:12px;line-height:1.6;${done?'text-decoration:line-through;color:var(--t3);':''}">${badge}${a.text}</div>
+      ${delBtn}
     </div>`;
   }).join('');
 }
