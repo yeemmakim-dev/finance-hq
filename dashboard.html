@@ -2135,9 +2135,14 @@ function renderAIAssetUS(){
     const stkAlloc = stkPct.toFixed(0);
     const cashAlloc = cashPct.toFixed(0);
     const retAlloc = retirePct.toFixed(0);
-    items.push({icon:'📊',type:'info',title:'미국 자산 배분 현황',
-      desc:`주식/ETF <strong>${stkAlloc}%</strong> · 현금 <strong>${cashAlloc}%</strong> · 은퇴 <strong>${retAlloc}%</strong> — `+
-        (stkPct>70?'주식 비중이 높아 변동성 주의':'적절한 배분 중입니다')+'.'});
+    const usAlerts = [];
+    if(cashPct > 50) usAlerts.push('현금 비중이 과다합니다. 투자 비중 확대를 고려하세요');
+    else if(cashPct > 30) usAlerts.push('현금 비중이 높은 편입니다');
+    if(stkPct > 70) usAlerts.push('주식 비중이 높아 변동성 주의');
+    if(retirePct < 5 && usUSD > 0) usAlerts.push('은퇴계좌(401k/IRA) 활용을 적극 고려하세요');
+    if(!usAlerts.length) usAlerts.push('균형잡힌 배분입니다');
+    items.push({icon:'📊',type: usAlerts.length===1 && usAlerts[0]==='균형잡힌 배분입니다' ? 'good' : 'warn', title:'미국 자산 배분 현황',
+      desc:`주식/ETF <strong>${stkAlloc}%</strong> · 현금 <strong>${cashAlloc}%</strong> · 은퇴 <strong>${retAlloc}%</strong><br><span style="font-size:11px;color:var(--t2);">${usAlerts.join(' · ')}</span>`});
   }
   if(items.length < 4){
     items.push({icon:'📆',type:'info',title:'정기 리밸런싱 리마인더',
@@ -2252,8 +2257,15 @@ function renderAIAssetKR(){
     const cashAlloc = cashPct.toFixed(0);
     const retAlloc = retirePct.toFixed(0);
     const relAlloc = realtyPct.toFixed(0);
-    items.push({icon:'📊',type:'info',title:'한국 자산 배분 현황',
-      desc:`주식/ETF <strong>${stkAlloc}%</strong> · 현금 <strong>${cashAlloc}%</strong> · 연금 <strong>${retAlloc}%</strong> · 부동산 <strong>${relAlloc}%</strong>`});
+    const krAlerts = [];
+    if(cashPct > 50) krAlerts.push('현금 비중이 과다합니다');
+    else if(cashPct > 30) krAlerts.push('현금 비중이 높은 편입니다');
+    if(stkPct > 70) krAlerts.push('주식 비중이 높아 변동성 주의');
+    if(retirePct < 5 && krTotal > 0) krAlerts.push('연금(IRP/퇴직연금) 활용을 고려하세요');
+    if(realtyPct > 70) krAlerts.push('부동산 편중 — 유동성 자산 확보 필요');
+    if(!krAlerts.length) krAlerts.push('균형잡힌 배분입니다');
+    items.push({icon:'📊',type: krAlerts.length===1 && krAlerts[0]==='균형잡힌 배분입니다' ? 'good' : 'warn', title:'한국 자산 배분 현황',
+      desc:`주식/ETF <strong>${stkAlloc}%</strong> · 현금 <strong>${cashAlloc}%</strong> · 연금 <strong>${retAlloc}%</strong> · 부동산 <strong>${relAlloc}%</strong><br><span style="font-size:11px;color:var(--t2);">${krAlerts.join(' · ')}</span>`});
   }
   if(items.length < 4){
     items.push({icon:'📆',type:'info',title:'정기 리밸런싱 리마인더',
