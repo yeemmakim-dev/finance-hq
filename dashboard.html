@@ -2629,7 +2629,12 @@ function renderBudgetTab(){
   const months = Object.keys(spendingHistory).sort();
   if(months.length){
     renderMonthTabs();
-    if(!selectedMonth || !spendingHistory[selectedMonth]) selectedMonth = months[0];
+    // 이번달 또는 가장 최근 달을 기본 선택
+    if(!selectedMonth || !spendingHistory[selectedMonth]){
+      const now = new Date();
+      const curMonth = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+      selectedMonth = months.includes(curMonth) ? curMonth : months[months.length-1];
+    }
     const data = spendingHistory[selectedMonth];
     if(data && data.txns){
       parsedTxns = data.txns;
