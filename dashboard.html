@@ -375,6 +375,12 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
   <div class="tab-page" id="page-us">
     <div class="top-strip" id="us-strip"></div>
     <div class="section">
+      <div class="card" style="padding:16px;">
+        <div class="card-title"><span>🇺🇸 미국 자산 추이</span></div>
+        <div style="position:relative;height:160px;"><canvas id="us-hist-chart"></canvas></div>
+      </div>
+    </div>
+    <div class="section">
       <div class="card" style="padding:0;overflow:hidden;">
         <div onclick="toggleAIPanel('us')" style="padding:16px 20px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;">
           <div class="card-title" style="margin:0;"><span>🤖 AI 미국 자산 분석 & 종목 추천</span></div>
@@ -417,6 +423,12 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
   <!-- ====== KR (한국) ====== -->
   <div class="tab-page" id="page-kr">
     <div class="top-strip" id="kr-strip"></div>
+    <div class="section">
+      <div class="card" style="padding:16px;">
+        <div class="card-title"><span>🇰🇷 한국 자산 추이</span></div>
+        <div style="position:relative;height:160px;"><canvas id="kr-hist-chart"></canvas></div>
+      </div>
+    </div>
     <div class="section">
       <div class="card" style="padding:0;overflow:hidden;">
         <div onclick="toggleAIPanel('kr')" style="padding:16px 20px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;">
@@ -1196,7 +1208,7 @@ function renderAllTab(){
   const healthScore = calcHealthScore();
   const hColor = healthScore.score >= 80 ? 'var(--green)' : healthScore.score >= 60 ? 'var(--amber)' : 'var(--red)';
   document.getElementById('all-strip').innerHTML = `
-    <div class="stat"><div class="stat-label">💰 총 자산</div><div class="stat-val">${fmtMan(tot)}원</div><div class="stat-sub neu">≈ ${fmtUSD(tot*10000/FX)}</div></div>
+    <div class="stat"><div class="stat-label">💰 총 자산</div><div class="stat-val">${fmtMan(tot)}원</div><div class="stat-sub neu">${Math.round(tot).toLocaleString()}만원 · ≈ ${fmtUSD(tot*10000/FX)}</div></div>
     <div class="stat"><div class="stat-label">🇺🇸 미국</div><div class="stat-val">${fmtUSD(usUSD)}</div><div class="stat-sub neu">${tot?(usMan/tot*100).toFixed(0):0}%</div></div>
     <div class="stat"><div class="stat-label">🇰🇷 한국</div><div class="stat-val">${fmtMan(krMan)}원</div><div class="stat-sub neu">${tot?(krMan/tot*100).toFixed(0):0}%</div></div>
     <div class="stat"><div class="stat-label">📈 주식/ETF</div><div class="stat-val">${fmtMan(stockTotalMan)}원</div><div class="stat-sub neu">${stocks.length}종목 · ${stockPctAll.toFixed(0)}%</div></div>
@@ -1622,6 +1634,36 @@ function renderHistory(){
       <button class="snap-del" onclick="deleteSnapshot(${idx})">✕</button>
     </div>`;
   }).join('');
+
+  // ── 미국/한국 개별 자산추이 차트 ──
+  renderCountryHistChart('us-hist-chart', all, s=>s.usUSD*FX/10000, '#a78bfa', '미국 자산');
+  renderCountryHistChart('kr-hist-chart', all, s=>s.krMan, '#34d399', '한국 자산');
+}
+
+function renderCountryHistChart(canvasId, all, valueFn, color, label){
+  dc(canvasId);
+  const ctx = document.getElementById(canvasId);
+  if(!ctx || all.length < 2) return;
+  const data = all.map(valueFn);
+  const dMin = Math.min(...data);
+  const dMax = Math.max(...data);
+  const dRange = dMax - dMin;
+  const yPad = dRange > 0 ? Math.max(dRange * 0.3, dMax * 0.005) : dMax * 0.02;
+  const yMin = Math.max(0, Math.floor(dMin - yPad));
+  const yMax = Math.ceil(dMax + yPad);
+  const g = ctx.getContext('2d').createLinearGradient(0,0,0,160);
+  const rgba = color + '30';
+  charts[canvasId] = new Chart(ctx,{type:'line',data:{
+    labels:all.map(s=>s.date==='오늘'?'오늘':s.date.slice(5)),
+    datasets:[{label,data,borderColor:color,backgroundColor:rgba,fill:true,tension:.4,pointRadius:4,pointBackgroundColor:color,pointBorderColor:'#12131a',pointBorderWidth:2,borderWidth:2}]
+  },options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${fmtMan(c.parsed.y)}원`}}},
+    scales:{
+      y:{min:yMin,max:yMax,ticks:{callback:v=>fmtMan(v),color:'#4a4f65',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'},border:{display:false}},
+      x:{ticks:{color:'#4a4f65',font:{size:10}},grid:{display:false},border:{display:false}}
+    }
+  }});
 }
 
 // ═══════════════════════════════════════
