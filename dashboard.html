@@ -503,6 +503,15 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
     </div>
 
     <div class="budget-strip" id="bud-strip"></div>
+    <div id="extra-income-form" style="display:none;margin:-12px 0 16px;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:12px;">
+      <div style="font-size:12px;font-weight:600;margin-bottom:8px;">💰 이번 달 추가 수입</div>
+      <div id="extra-income-list"></div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+        <input type="text" id="ei-desc" placeholder="사유 (예: 택스리펀, 보너스)" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--t1);font-size:12px;"/>
+        <input type="number" id="ei-amount" placeholder="금액 ($)" style="width:100px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--t1);font-size:12px;" step="0.01"/>
+        <button onclick="addExtraIncome()" style="padding:8px 14px;border-radius:8px;border:none;background:var(--blue);color:#fff;font-size:12px;font-weight:600;cursor:pointer;">추가</button>
+      </div>
+    </div>
 
     <!-- MAIN LAYOUT: spending (left) + sidebar budget (right) -->
     <div style="display:grid;grid-template-columns:1fr 240px;gap:12px;align-items:start;">
@@ -2696,6 +2705,54 @@ const SPEND_KEYWORDS = {
   '의료/건강':['pharmacy','cvs','walgreens','doctor','hospital','dental','health','clinic','약국','병원','의원','치과','안과'],
 };
 
+function toggleExtraIncomeForm(){
+  if(!selectedMonth) return alert('먼저 지출 데이터를 업로드하세요.');
+  const form = document.getElementById('extra-income-form');
+  const isOpen = form.style.display !== 'none';
+  form.style.display = isOpen ? 'none' : 'block';
+  if(!isOpen) renderExtraIncomeList();
+}
+function renderExtraIncomeList(){
+  const el = document.getElementById('extra-income-list');
+  if(!el || !selectedMonth) return;
+  const data = spendingHistory[selectedMonth];
+  const items = data?.extraIncomeItems || [];
+  if(!items.length){ el.innerHTML = '<div style="font-size:11px;color:var(--t3);padding:4px 0;">추가 수입이 없습니다.</div>'; return; }
+  el.innerHTML = items.map((item,i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;">
+      <span style="flex:1;">${item.desc}</span>
+      <span style="font-weight:600;color:var(--green);">+$${Math.round(item.amount).toLocaleString()}</span>
+      <span onclick="removeExtraIncome(${i})" style="cursor:pointer;color:var(--t3);font-size:13px;">✕</span>
+    </div>
+  `).join('');
+}
+function addExtraIncome(){
+  if(!selectedMonth) return;
+  const desc = document.getElementById('ei-desc').value.trim();
+  const amount = +document.getElementById('ei-amount').value;
+  if(!desc || !amount) return alert('사유와 금액을 입력하세요.');
+  const data = spendingHistory[selectedMonth];
+  if(!data) return;
+  if(!data.extraIncomeItems) data.extraIncomeItems = [];
+  data.extraIncomeItems.push({desc, amount});
+  data.extraIncome = data.extraIncomeItems.reduce((a,i)=>a+i.amount, 0);
+  save();
+  document.getElementById('ei-desc').value = '';
+  document.getElementById('ei-amount').value = '';
+  renderExtraIncomeList();
+  renderBudgetTab();
+}
+function removeExtraIncome(idx){
+  if(!selectedMonth) return;
+  const data = spendingHistory[selectedMonth];
+  if(!data?.extraIncomeItems) return;
+  data.extraIncomeItems.splice(idx, 1);
+  data.extraIncome = data.extraIncomeItems.reduce((a,i)=>a+i.amount, 0);
+  save();
+  renderExtraIncomeList();
+  renderBudgetTab();
+}
+
 function renderBudgetTab(){
   // Sync sub-tab UI state
   document.getElementById('sub-spending').style.display = budgetSubTab==='spending' ? '' : 'none';
@@ -2739,12 +2796,15 @@ function renderBudgetTab(){
   const totalBudget = budgetCats.reduce((a,c)=>a+c.budget,0);
   const totalSpent = budgetCats.reduce((a,c)=>a+(c.spent||0),0);
   const remaining = totalBudget - totalSpent;
-  const income = budgetIncomeUSD || budgetIncomeKRW*10000/FX || 0;
+  const baseIncome = budgetIncomeUSD || budgetIncomeKRW*10000/FX || 0;
+  const monthExtra = (selectedMonth && spendingHistory[selectedMonth]?.extraIncome) || 0;
+  const income = baseIncome + monthExtra;
   const savingsRate = income > 0 ? ((income-totalSpent)/income*100) : 0;
 
+  const extraLabel = monthExtra > 0 ? `<span style="color:var(--green);font-size:10px;"> +$${Math.round(monthExtra).toLocaleString()}</span>` : '';
   const usePct = totalBudget ? (totalSpent/totalBudget*100).toFixed(0) : 0;
   document.getElementById('bud-strip').innerHTML = `
-    <div class="stat"><div class="stat-label">💰 월 수입</div><div class="stat-val">${income?'$'+Math.round(income).toLocaleString():'미설정'}</div><div class="stat-sub neu">${budgetIncomeKRW?fmtMan(budgetIncomeKRW)+'원':''}</div></div>
+    <div class="stat" style="cursor:pointer;" onclick="toggleExtraIncomeForm()"><div class="stat-label">💰 월 수입</div><div class="stat-val">${income?'$'+Math.round(income).toLocaleString():'미설정'}</div><div class="stat-sub neu">${monthExtra?'기본 $'+Math.round(baseIncome).toLocaleString()+extraLabel:'클릭하여 추가수입 입력'}</div></div>
     <div class="stat"><div class="stat-label">💳 총 지출</div><div class="stat-val ${totalSpent>totalBudget?'down':''}">$${Math.round(totalSpent).toLocaleString()}</div><div class="stat-sub ${totalSpent>totalBudget?'down':'up'}">${totalBudget?usePct+'% 사용 (총예산: $'+Math.round(totalBudget).toLocaleString()+')':'—'}</div></div>
     <div class="stat"><div class="stat-label">📊 저축률</div><div class="stat-val ${savingsRate>=20?'up':savingsRate>=0?'neu':'down'}">${income?savingsRate.toFixed(1)+'%':'—'}</div><div class="stat-sub ${remaining>=0?'up':'down'}">${totalBudget?'$'+Math.round(Math.abs(remaining)).toLocaleString()+(remaining>=0?' 남음':' 초과'):''}</div></div>
   `;
