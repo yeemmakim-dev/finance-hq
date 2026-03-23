@@ -2065,7 +2065,7 @@ function renderAIAssetUS(){
       const hasDefense = myStyles.has('헬스케어') || myStyles.has('필수소비재') || myStyles.has('유틸리티');
 
       if(!hasIndex) gaps.push({name:'시장 인덱스',rec:'VOO (S&P 500) 또는 VTI (전체 시장) — 개별주만으로는 시장 수익률을 따라가기 어려워요',sev:'high'});
-      if(!hasBond && stkPct > 40) gaps.push({name:'채권',rec:'BND (종합채권) — 주식 ${stkPct.toFixed(0)}% 집중, 하락장 방어 수단이 없어요',sev:'high'});
+      if(!hasBond) gaps.push({name:'채권',rec:`BND (종합채권) — 하락장 방어 수단이 없어요`,sev:'high'});
       if(hasTech && !hasDefense) gaps.push({name:'방어 섹터',rec:'XLV (헬스케어), XLP (필수소비재) — 기술주 중심 포트폴리오에 방어력을 추가하세요',sev:'mid'});
       if(!hasDividend) gaps.push({name:'배당/인컴',rec:'SCHD (배당성장) 또는 JEPI (월배당) — 하락장에서도 현금흐름을 제공합니다',sev:'mid'});
       if(!hasIntl) gaps.push({name:'국제 분산',rec:'VXUS (국제주식) — 미국 외 시장으로 지역 리스크를 분산하세요',sev:'low'});
@@ -2078,16 +2078,25 @@ function renderAIAssetUS(){
         }
       }
 
+      // 보유 현황 요약
+      const coverList = [];
+      if(hasIndex) coverList.push('✅ 인덱스'); else coverList.push('❌ 인덱스');
+      if(hasBond) coverList.push('✅ 채권'); else coverList.push('❌ 채권');
+      if(hasDividend) coverList.push('✅ 배당'); else coverList.push('❌ 배당');
+      if(hasIntl) coverList.push('✅ 국제분산'); else coverList.push('❌ 국제분산');
+      if(hasDefense) coverList.push('✅ 방어섹터'); else coverList.push('❌ 방어섹터');
+
       if(gaps.length){
         items.push({icon:'🔍',type:'warn',title:`내 포트폴리오에 부족한 영역 (${gaps.length}건)`,
-          desc:gaps.map(g=>{
+          desc:`<div style="margin-bottom:8px;font-size:11px;color:var(--t2);">${coverList.join(' · ')}</div>` +
+          gaps.map(g=>{
             const ic = g.sev==='high'?'🔴':g.sev==='mid'?'🟡':'🟢';
             return `<div style="margin-bottom:6px;">${ic} <strong>${g.name}</strong><br><span style="font-size:11px;color:var(--t2);">→ ${g.rec}</span></div>`;
           }).join('')
         });
       } else {
         items.push({icon:'✅',type:'good',title:'미국 포트폴리오 구성이 균형잡혀 있어요!',
-          desc:'인덱스, 채권, 배당, 국제분산 등 주요 영역을 잘 커버하고 있습니다.'});
+          desc:`${coverList.join(' · ')}`});
       }
 
       // 종목 주의 알림
