@@ -1565,10 +1565,20 @@ function renderHistory(){
     const g = ctx.getContext('2d').createLinearGradient(0,0,0,180);
     g.addColorStop(0,'rgba(91,156,255,.18)'); g.addColorStop(1,'rgba(91,156,255,0)');
 
+    // Y축 범위를 데이터 min/max 기준으로 설정 (변동이 잘 보이도록)
+    const totalData = all.map(s=>s.totalMan);
+    const allData = [...totalData, ...all.map(s=>s.usUSD*FX/10000), ...all.map(s=>s.krMan)];
+    const dataMin = Math.min(...allData.filter(v=>v>0));
+    const dataMax = Math.max(...allData);
+    const dataRange = dataMax - dataMin;
+    const yPad = Math.max(dataRange * 0.15, dataMax * 0.01); // 최소 1% 패딩
+    const yMin = Math.max(0, Math.floor((dataMin - yPad)/10)*10);
+    const yMax = Math.ceil((dataMax + yPad)/10)*10;
+
     charts['hist-chart'] = new Chart(ctx,{type:'line',data:{
       labels:all.map(s=>s.date==='오늘'?'오늘':s.date.slice(5)),
       datasets:[
-        { label:'총 자산', data:all.map(s=>s.totalMan), borderColor:'#5b9cff', backgroundColor:g, fill:true, tension:.4, pointRadius:4, pointBackgroundColor:'#5b9cff', pointBorderColor:'#12131a', pointBorderWidth:2, borderWidth:2 },
+        { label:'총 자산', data:totalData, borderColor:'#5b9cff', backgroundColor:g, fill:true, tension:.4, pointRadius:4, pointBackgroundColor:'#5b9cff', pointBorderColor:'#12131a', pointBorderWidth:2, borderWidth:2 },
         { label:'🇺🇸 미국 (만원)', data:all.map(s=>s.usUSD*FX/10000), borderColor:'#a78bfa', backgroundColor:'transparent', fill:false, tension:.4, pointRadius:2, borderWidth:1.5, borderDash:[4,3] },
         { label:'🇰🇷 한국', data:all.map(s=>s.krMan), borderColor:'#34d399', backgroundColor:'transparent', fill:false, tension:.4, pointRadius:2, borderWidth:1.5, borderDash:[4,3] },
       ]
@@ -1578,8 +1588,7 @@ function renderHistory(){
         tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmtMan(c.parsed.y)}원`}} },
       scales:{
         y:{
-          beginAtZero:false,
-          grace:'5%',
+          min:yMin, max:yMax,
           ticks:{callback:v=>fmtMan(v),color:'#4a4f65',font:{size:11}},
           grid:{color:'rgba(255,255,255,.04)'},border:{display:false}
         },
