@@ -1364,7 +1364,13 @@ function renderDonut(canvasId, totalId, legId, categories, total, totalText){
 function renderStockTable(tbodyId, list, cur){
   const tbody = document.getElementById(tbodyId);
   if(!list.length){ tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--t3);padding:32px 0;">종목이 없습니다. "✏️ 자산 수정"에서 추가하세요.</td></tr>'; return; }
-  tbody.innerHTML = list.map(s => {
+  // ETF/주식 분리 정렬
+  const etfs = list.filter(s=>getStockSector(s).type==='ETF');
+  const indiv = list.filter(s=>getStockSector(s).type!=='ETF');
+  const sorted = [];
+  if(etfs.length) sorted.push(...etfs);
+  if(indiv.length) sorted.push(...indiv);
+  const renderRow = (s, isFirst, groupLabel) => {
     const cp = curPrice(s), val = cp*s.qty;
     const live = isLive(s), q = liveQuotes[s.ticker], chg = q?.changePercent ?? 0;
     const sym = cur==='USD'?'$':'₩';
@@ -1395,7 +1401,8 @@ function renderStockTable(tbodyId, list, cur){
 
     const qtyF = s.qty % 1 !== 0 ? s.qty.toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:3}) : s.qty.toLocaleString();
 
-    return `<tr>
+    const headerRow = isFirst ? `<tr><td colspan="6" style="padding:10px 0 4px;font-size:11px;font-weight:700;color:var(--blue);letter-spacing:.03em;border-bottom:none;">${groupLabel}</td></tr>` : '';
+    return headerRow + `<tr>
       <td><div class="stk-name">${s.name}</div><div class="stk-ticker">${s.ticker} · <select class="sector-sel" onchange="applySector('${s.ticker}',this.value)">${sectorOptions(getStockSector(s).style)}</select></div></td>
       <td class="stk-live">${live?`<span class="${cls(chg)}">${curF}</span>`:`<span class="stk-loading">${curF}</span>`}</td>
       <td>${qtyF}</td>
@@ -1403,7 +1410,11 @@ function renderStockTable(tbodyId, list, cur){
       <td>${chgH}</td>
       <td>${plH}</td>
     </tr>`;
-  }).join('');
+  };
+  let html = '';
+  etfs.forEach((s,i) => { html += renderRow(s, i===0, `📦 ETF / 펀드 (${etfs.length})`); });
+  indiv.forEach((s,i) => { html += renderRow(s, i===0, `📈 개별주 (${indiv.length})`); });
+  tbody.innerHTML = html;
 }
 
 function renderStockPLSummary(elId, stks, cur){
