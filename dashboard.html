@@ -3261,6 +3261,35 @@ function changeTxnCategory(txnIdx, newCat){
   _lightUpdate();
 }
 
+function editTxnAmount(txnIdx, el){
+  const t = parsedTxns[txnIdx];
+  if(!t) return;
+  const sym = t.currency==='KRW'?'₩':'$';
+  const cur = Math.round(t.amount);
+  const inp = document.createElement('input');
+  inp.type='number'; inp.value=cur; inp.step='0.01';
+  inp.style.cssText='width:80px;font-size:12px;font-weight:600;text-align:right;padding:2px 6px;border-radius:6px;border:1px solid var(--blue);background:var(--bg);color:var(--t1);';
+  const finish = ()=>{
+    const nv = +inp.value;
+    if(nv>0 && nv!==t.amount){
+      t.amount = nv;
+      if(selectedMonth && spendingHistory[selectedMonth]){
+        const data = spendingHistory[selectedMonth];
+        const hi = data.txns.find(h=>h.desc===t.desc && h.date===t.date);
+        if(hi) hi.amount = nv;
+      }
+      _recalcSpending();
+    } else {
+      el.textContent = sym+cur.toLocaleString();
+    }
+  };
+  inp.onblur = finish;
+  inp.onkeydown = e=>{ if(e.key==='Enter') inp.blur(); if(e.key==='Escape'){ inp.value=cur; inp.blur(); }};
+  el.textContent = '';
+  el.appendChild(inp);
+  inp.focus(); inp.select();
+}
+
 function deleteTxn(txnIdx){
   const t = parsedTxns[txnIdx];
   if(!t) return;
@@ -3632,7 +3661,7 @@ function renderTxnList(){
       <div class="txn-cat-icon" style="background:${color}22">${icon}</div>
       <div class="txn-info"><div class="txn-desc">${t.desc}</div><div class="txn-date">${t.date}</div></div>
       <select onchange="changeTxnCategory(${tIdx},this.value)" style="font-size:11px;background:var(--bg2);color:var(--t2);border:1px solid var(--border);border-radius:6px;padding:3px 6px;cursor:pointer;">${getCatOptions(t.category)}</select>
-      <div class="txn-amt">${sym}${Math.round(t.amount).toLocaleString()}</div>
+      <div class="txn-amt" onclick="editTxnAmount(${tIdx},this)" style="cursor:pointer;" title="클릭하여 금액 수정">${sym}${Math.round(t.amount).toLocaleString()}</div>
       <span onclick="deleteTxn(${tIdx})" style="cursor:pointer;color:var(--t3);font-size:14px;padding:0 4px;transition:color .15s;flex-shrink:0;" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--t3)'" title="삭제 (환불 등)">✕</span>
     </div>`;
   }).join('');
