@@ -2781,10 +2781,13 @@ function renderBudgetTab(){
       const curMonth = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
       selectedMonth = months.includes(curMonth) ? curMonth : months[months.length-1];
     }
+    // 데이터가 있으면 항상 결과 화면 표시 (업로드 화면 숨김)
+    document.getElementById('csv-upload-area').style.display='none';
+    document.getElementById('csv-result').style.display='block';
+    document.getElementById('csv-reset').style.display='inline';
     const data = spendingHistory[selectedMonth];
     if(data && data.txns){
       parsedTxns = data.txns;
-      // Recalculate catSpent to include fixed expenses
       data.catSpent = {};
       data.txns.forEach(tx => {
         const amtUSD = tx.currency==='KRW' ? tx.amount/FX*10000 : tx.amount;
@@ -2793,9 +2796,6 @@ function renderBudgetTab(){
       addFixedToCatSpent(data.catSpent);
       data.totalSpent = Object.values(data.catSpent).reduce((a,b)=>a+b,0);
       applySpendingToBudget(selectedMonth);
-      document.getElementById('csv-upload-area').style.display='none';
-      document.getElementById('csv-result').style.display='block';
-      document.getElementById('csv-reset').style.display='inline';
       renderSpendingAnalysis(data.catSpent);
     }
   }
