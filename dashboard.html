@@ -717,6 +717,10 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
 // ═══════════════════════════════════════
 let FX = 1370;
 let FX_HKD = 0.128; // HKD → USD (1 HKD ≈ 0.128 USD)
+
+// LA(태평양) 타임존 기준 날짜
+function getToday(){ return new Date().toLocaleDateString('en-CA',{timeZone:'America/Los_Angeles'}); }
+function getNowLA(){ return new Date(new Date().toLocaleString('en-US',{timeZone:'America/Los_Angeles'})); }
 let liveQuotes = {};
 let currentTab = 'all';
 
@@ -1136,7 +1140,7 @@ async function fetchAllQuotes(){
 function setStatus(s){
   const el = document.getElementById('quote-status');
   if(s==='loading') el.innerHTML='<div class="sdot"></div><span>조회 중...</span>';
-  else if(s==='live'){ el.className='hdr-status status-live'; el.innerHTML='<div class="sdot"></div><span>실시간 · '+new Date().toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'})+'</span>'; }
+  else if(s==='live'){ el.className='hdr-status status-live'; el.innerHTML='<div class="sdot"></div><span>실시간 · '+getNowLA().toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'})+'</span>'; }
   else if(s==='error'){ el.className='hdr-status status-err'; el.innerHTML='<div class="sdot"></div><span>오류</span>'; }
   else if(s==='cached'){ el.className='hdr-status status-idle'; el.innerHTML='<div class="sdot"></div><span>캐시된 시세</span>'; }
   else{ el.className='hdr-status status-idle'; el.innerHTML='<div class="sdot"></div><span>시세 미조회</span>'; }
@@ -1503,7 +1507,7 @@ function renderStockPLSummary(elId, stks, cur){
 // HISTORY & SNAPSHOTS
 // ═══════════════════════════════════════
 function takeSnapshot(){
-  const today = new Date().toISOString().slice(0,10);
+  const today = getToday();
   const existing = snapshots.findIndex(s=>s.date===today);
   const snap = {
     date:today,
@@ -1571,7 +1575,7 @@ function renderHistory(){
   dc('hist-chart');
 
   const sorted = [...snapshots].sort((a,b)=>a.date.localeCompare(b.date));
-  const todayStr = new Date().toISOString().slice(0,10);
+  const todayStr = getToday();
   const now = { date:todayStr, totalMan:tot, usUSD:usTotalUSD(), krMan:krTotalMan() };
   // 오늘 날짜 스냅샷이 이미 있으면 그걸 최신값으로 교체, 없으면 추가
   const hasToday = sorted.some(s=>s.date===todayStr);
@@ -2773,7 +2777,7 @@ function renderBudgetTab(){
     renderMonthTabs();
     // 이번달 또는 가장 최근 달을 기본 선택
     if(!selectedMonth || !spendingHistory[selectedMonth]){
-      const now = new Date();
+      const now = getNowLA();
       const curMonth = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
       selectedMonth = months.includes(curMonth) ? curMonth : months[months.length-1];
     }
@@ -2839,7 +2843,7 @@ function renderBudgetTab(){
 // ═══════════════════════════════════════
 // ── PAYCHECK FUNCTIONS ──
 function isPayday(date){
-  if(!date) date = new Date();
+  if(!date) date = getNowLA();
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   if(d.getDay() !== 5) return false; // not Friday
   const diff = Math.round((d - new Date(PAY_ANCHOR.getFullYear(), PAY_ANCHOR.getMonth(), PAY_ANCHOR.getDate())) / 86400000);
@@ -2849,8 +2853,8 @@ function isPayday(date){
 function checkPaydayBanner(){
   const banner = document.getElementById('payday-banner');
   if(!banner) return;
-  const today = new Date();
-  const todayStr = today.toISOString().slice(0,10);
+  const today = getNowLA();
+  const todayStr = getToday();
   const alreadyLogged = paychecks.some(p => p.date === todayStr);
   if(isPayday(today) && !alreadyLogged){
     banner.style.display = 'block';
@@ -2862,7 +2866,7 @@ function checkPaydayBanner(){
 function openPaycheckInput(){
   const area = document.getElementById('paycheck-input-area');
   area.style.display = 'block';
-  const today = new Date().toISOString().slice(0,10);
+  const today = getToday();
   document.getElementById('pc-date').value = today;
   document.getElementById('pc-gross').value = '';
   document.getElementById('pc-net').value = '';
@@ -2920,8 +2924,8 @@ function renderPaychecks(){
 
   // Summary
   const summary = document.getElementById('paycheck-summary');
-  const thisYear = paychecks.filter(p => p.date.startsWith(new Date().getFullYear().toString()));
-  const thisMonth = paychecks.filter(p => p.date.startsWith(new Date().toISOString().slice(0,7)));
+  const thisYear = paychecks.filter(p => p.date.startsWith(getNowLA().getFullYear().toString()));
+  const thisMonth = paychecks.filter(p => p.date.startsWith(getToday().slice(0,7)));
   const ytdNet = thisYear.reduce((s,p) => s + (p.net||p.gross||0), 0);
   const monthNet = thisMonth.reduce((s,p) => s + (p.net||p.gross||0), 0);
   const avgNet = thisYear.length ? ytdNet / thisYear.length : 0;
@@ -3284,7 +3288,7 @@ function analyzeSpending(){
   // Group new txns by month
   const byMonth = {};
   parsedTxns.forEach(t => {
-    const m = t.date ? t.date.slice(0,7) : new Date().toISOString().slice(0,7);
+    const m = t.date ? t.date.slice(0,7) : getToday().slice(0,7);
     if(!byMonth[m]) byMonth[m] = [];
     byMonth[m].push(t);
   });
@@ -3318,7 +3322,7 @@ function analyzeSpending(){
   });
 
   // Select the month with most new txns
-  const primaryMonth = Object.entries(byMonth).sort((a,b)=>b[1].length-a[1].length)[0]?.[0] || new Date().toISOString().slice(0,7);
+  const primaryMonth = Object.entries(byMonth).sort((a,b)=>b[1].length-a[1].length)[0]?.[0] || getToday().slice(0,7);
   selectedMonth = primaryMonth;
   parsedTxns = spendingHistory[primaryMonth].txns;
   save();
@@ -3425,7 +3429,7 @@ function renderMonthTabs(){
   const list = document.getElementById('month-tab-list');
   if(!months.length){ list.innerHTML=''; return; }
 
-  const currentYear = new Date().getFullYear().toString();
+  const currentYear = getNowLA().getFullYear().toString();
 
   // Group by year
   const byYear = {};
@@ -3685,7 +3689,7 @@ function toggleManualExpForm(){
   const show = form.style.display==='none';
   form.style.display = show ? 'flex' : 'none';
   if(show){
-    document.getElementById('mexp-date').value = new Date().toISOString().slice(0,10);
+    document.getElementById('mexp-date').value = getToday();
     document.getElementById('mexp-desc').value = '';
     document.getElementById('mexp-amount').value = '';
     // Populate category select
