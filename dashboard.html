@@ -1571,8 +1571,11 @@ function renderHistory(){
   dc('hist-chart');
 
   const sorted = [...snapshots].sort((a,b)=>a.date.localeCompare(b.date));
-  const now = { date:'오늘', totalMan:tot, usUSD:usTotalUSD(), krMan:krTotalMan() };
-  const all = [...sorted, now];
+  const todayStr = new Date().toISOString().slice(0,10);
+  const now = { date:todayStr, totalMan:tot, usUSD:usTotalUSD(), krMan:krTotalMan() };
+  // 오늘 날짜 스냅샷이 이미 있으면 그걸 최신값으로 교체, 없으면 추가
+  const hasToday = sorted.some(s=>s.date===todayStr);
+  const all = hasToday ? sorted.map(s=>s.date===todayStr ? now : s) : [...sorted, now];
 
   const badgeEl = document.getElementById('hist-badge');
   if(sorted.length>=1){
@@ -1597,7 +1600,7 @@ function renderHistory(){
     const yMax = Math.ceil(tMax + yPad);
 
     charts['hist-chart'] = new Chart(ctx,{type:'line',data:{
-      labels:all.map(s=>s.date==='오늘'?'오늘':s.date.slice(5)),
+      labels:all.map(s=>s.date===todayStr?'오늘':s.date.slice(5)),
       datasets:[
         { label:'총 자산', data:totalData, borderColor:'#5b9cff', backgroundColor:g, fill:true, tension:.4, pointRadius:4, pointBackgroundColor:'#5b9cff', pointBorderColor:'#12131a', pointBorderWidth:2, borderWidth:2 },
         { label:'🇺🇸 미국 (만원)', data:all.map(s=>s.usUSD*FX/10000), borderColor:'#a78bfa', backgroundColor:'transparent', fill:false, tension:.4, pointRadius:2, borderWidth:1.5, borderDash:[4,3] },
@@ -1645,11 +1648,11 @@ function renderHistory(){
   }).join('');
 
   // ── 미국/한국 개별 자산추이 차트 ──
-  renderCountryHistChart('us-hist-chart', all, s=>s.usUSD*FX/10000, '#a78bfa', '미국 자산');
-  renderCountryHistChart('kr-hist-chart', all, s=>s.krMan, '#34d399', '한국 자산');
+  renderCountryHistChart('us-hist-chart', all, s=>s.usUSD*FX/10000, '#a78bfa', '미국 자산', todayStr);
+  renderCountryHistChart('kr-hist-chart', all, s=>s.krMan, '#34d399', '한국 자산', todayStr);
 }
 
-function renderCountryHistChart(canvasId, all, valueFn, color, label){
+function renderCountryHistChart(canvasId, all, valueFn, color, label, todayStr){
   dc(canvasId);
   const ctx = document.getElementById(canvasId);
   if(!ctx || all.length < 2) return;
@@ -1663,7 +1666,7 @@ function renderCountryHistChart(canvasId, all, valueFn, color, label){
   const g = ctx.getContext('2d').createLinearGradient(0,0,0,160);
   const rgba = color + '30';
   charts[canvasId] = new Chart(ctx,{type:'line',data:{
-    labels:all.map(s=>s.date==='오늘'?'오늘':s.date.slice(5)),
+    labels:all.map(s=>s.date===todayStr?'오늘':s.date.slice(5)),
     datasets:[{label,data,borderColor:color,backgroundColor:rgba,fill:true,tension:.4,pointRadius:4,pointBackgroundColor:color,pointBorderColor:'#12131a',pointBorderWidth:2,borderWidth:2}]
   },options:{
     responsive:true, maintainAspectRatio:false,
