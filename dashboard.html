@@ -3290,11 +3290,16 @@ function editTxnAmount(txnIdx, el){
   inp.focus(); inp.select();
 }
 
+let _lastDeletedTxn = null;
+let _undoTimer = null;
+
 function deleteTxn(txnIdx){
   const t = parsedTxns[txnIdx];
   if(!t) return;
 
-  // Remove the DOM row immediately (no re-render)
+  // 삭제 전 백업 (undo용)
+  _lastDeletedTxn = { txn: {...t}, txnIdx, month: selectedMonth };
+
   parsedTxns.splice(txnIdx, 1);
 
   if(selectedMonth && spendingHistory[selectedMonth]){
@@ -3303,12 +3308,54 @@ function deleteTxn(txnIdx){
     if(hi>=0) data.txns.splice(hi, 1);
   }
 
-  // Full re-render needed for delete (row removed), but preserve open
   _recalcSpending();
   const data = spendingHistory[selectedMonth];
   if(data) renderSpendingAnalysis(data.catSpent);
   renderBudgetTab();
   renderMonthTabs();
+
+  // Undo 토스트 표시
+  showUndoToast(t);
+}
+
+function showUndoToast(t){
+  let toast = document.getElementById('undo-toast');
+  if(!toast){
+    toast = document.createElement('div');
+    toast.id = 'undo-toast';
+    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;display:flex;align-items:center;gap:12px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.4);transition:opacity .3s;';
+    document.body.appendChild(toast);
+  }
+  const sym = t.currency==='KRW'?'₩':'$';
+  toast.innerHTML = `<span>🗑️ "${t.desc}" (${sym}${Math.round(t.amount).toLocaleString()}) 삭제됨</span><button onclick="undoDeleteTxn()" style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">↩ 되돌리기</button>`;
+  toast.style.display = 'flex';
+  toast.style.opacity = '1';
+  if(_undoTimer) clearTimeout(_undoTimer);
+  _undoTimer = setTimeout(()=>{ toast.style.opacity='0'; setTimeout(()=>toast.style.display='none',300); }, 6000);
+}
+
+function undoDeleteTxn(){
+  if(!_lastDeletedTxn) return;
+  const {txn, txnIdx, month} = _lastDeletedTxn;
+
+  // 복원
+  parsedTxns.splice(Math.min(txnIdx, parsedTxns.length), 0, txn);
+
+  if(month && spendingHistory[month]){
+    spendingHistory[month].txns.push(txn);
+  }
+
+  _lastDeletedTxn = null;
+  _recalcSpending();
+  const data = spendingHistory[selectedMonth];
+  if(data) renderSpendingAnalysis(data.catSpent);
+  renderBudgetTab();
+  renderMonthTabs();
+
+  // 토스트 숨기기
+  const toast = document.getElementById('undo-toast');
+  if(toast){ toast.style.opacity='0'; setTimeout(()=>toast.style.display='none',300); }
+  if(_undoTimer) clearTimeout(_undoTimer);
 }
 
 function txnKey(t){ return `${t.date}|${t.desc}|${Math.round(t.amount*100)}`; }
