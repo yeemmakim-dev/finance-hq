@@ -1223,7 +1223,7 @@ function renderAllTab(){
   document.getElementById('all-strip').innerHTML = `
     <div class="stat"><div class="stat-label">💰 총 자산</div><div class="stat-val">${fmtMan(tot)}원</div><div class="stat-sub neu">${Math.round(tot).toLocaleString()}만원 · ≈ ${fmtUSD(tot*10000/FX)}</div></div>
     <div class="stat"><div class="stat-label">🇺🇸 미국</div><div class="stat-val">${fmtUSD(usUSD)}</div><div class="stat-sub neu">≈ ${fmtMan(usMan)}원 · ${tot?(usMan/tot*100).toFixed(0):0}%</div></div>
-    <div class="stat"><div class="stat-label">🇰🇷 한국</div><div class="stat-val">${fmtMan(krMan)}원</div><div class="stat-sub neu">${tot?(krMan/tot*100).toFixed(0):0}%</div></div>
+    <div class="stat"><div class="stat-label">🇰🇷 한국</div><div class="stat-val">${fmtMan(krMan)}원</div><div class="stat-sub neu">≈ ${fmtUSD(krMan*10000/FX)} · ${tot?(krMan/tot*100).toFixed(0):0}%</div></div>
     <div class="stat"><div class="stat-label">📈 주식/ETF</div><div class="stat-val">${fmtMan(stockTotalMan)}원</div><div class="stat-sub neu">${stocks.length}종목 · ${stockPctAll.toFixed(0)}%</div></div>
     <div class="stat" style="border-color:${hColor}22;cursor:pointer;" onclick="toggleHealthPanel()">
       <div class="stat-label">🏆 포트폴리오 건강</div>
