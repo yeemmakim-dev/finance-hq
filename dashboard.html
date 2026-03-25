@@ -1178,7 +1178,7 @@ function totalDebtRemainingMan(){ return totalDebtMan()-totalDebtSavedMan(); }
 function netWorthMan(){ return grandTotalMan() - totalDebtRemainingMan(); }
 
 // FORMAT
-const fmtMan = v => { v=Math.abs(v); if(v>=10000) return Math.round(v).toLocaleString()+'만'; if(v>=1000) return (v/1000).toFixed(1)+'천만'; return Math.round(v).toLocaleString()+'만'; };
+const fmtMan = v => { v=Math.round(Math.abs(v)); if(v>=10000){ const uk=Math.floor(v/10000); const rest=v%10000; if(rest===0) return uk+'억'; const chun=Math.floor(rest/1000); const man=rest%1000; let s=uk+'억'; if(chun) s+=' '+chun+'천'; if(man) s+=' '+man; return s+'만'; } if(v>=1000){ const chun=Math.floor(v/1000); const man=v%1000; return man?chun+'천 '+man+'만':chun+'천만'; } return v.toLocaleString()+'만'; };
 const fmtManSigned = v => (v>=0?'+':'-') + fmtMan(v);
 const fmtUSD = v => '$'+Math.round(Math.abs(v)).toLocaleString('en');
 const fmtUSDSigned = v => (v>=0?'+$':'-$')+Math.round(Math.abs(v)).toLocaleString('en');
