@@ -166,13 +166,13 @@
   .plan-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border)}
   .plan-row:last-child{border-bottom:none}
   .plan-row.drop-target{background:var(--green-light);border-radius:8px;outline:2px dashed var(--primary);outline-offset:-2px}
-  .plan-item-move{cursor:pointer;user-select:none;-webkit-user-select:none;transition:all .15s}
+  .plan-item-move{cursor:pointer;-webkit-tap-highlight-color:rgba(76,175,80,.3);transition:all .15s;position:relative;z-index:1}
   .plan-item-move.selected-move{outline:2px solid var(--primary);outline-offset:2px;background:var(--primary)!important;color:#fff!important;animation:pulse-move .8s infinite}
   @keyframes pulse-move{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
   .plan-edit-hint{font-size:11px;color:var(--text-hint);padding:4px 16px 0;text-align:center}
-  .plan-drop-btn{display:inline-block;margin:4px 2px;padding:4px 12px;border-radius:12px;border:2px dashed var(--primary);color:var(--primary);font-size:12px;font-weight:600;cursor:pointer;background:var(--green-light);transition:all .15s}
+  .plan-drop-btn{display:block;margin:6px 0;padding:10px 16px;border-radius:12px;border:2px dashed var(--primary);color:var(--primary);font-size:13px;font-weight:600;cursor:pointer;background:var(--green-light);transition:all .15s;text-align:center;-webkit-tap-highlight-color:rgba(76,175,80,.3)}
   .plan-drop-btn:active{background:var(--primary);color:#fff}
-  .move-cancel-btn{display:inline-block;margin:6px auto;padding:6px 16px;border-radius:16px;border:1.5px solid #e74c3c;color:#e74c3c;font-size:12px;font-weight:600;cursor:pointer;background:#fff;text-align:center}
+  .move-cancel-btn{display:block;margin:8px auto;padding:10px 24px;border-radius:16px;border:1.5px solid #e74c3c;color:#e74c3c;font-size:13px;font-weight:600;cursor:pointer;background:#fff;text-align:center;-webkit-tap-highlight-color:rgba(231,76,60,.3)}
   .move-cancel-btn:active{background:#e74c3c;color:#fff}
   .plan-daybadge{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;margin-top:2px}
   .plan-daybadge.workout{background:var(--green-light);color:var(--green-xdark)}
@@ -1326,7 +1326,7 @@ function renderWeekPreview(){
   const isMoving=moveSrcDay!==null;
   const container=document.getElementById('week-plan-preview');
   let hint=isMoving
-    ?`<div class="plan-edit-hint" style="color:var(--primary);font-weight:600">📍 이동할 요일을 선택하세요</div><div style="text-align:center"><span class="move-cancel-btn" onclick="cancelMove()">✕ 취소</span></div>`
+    ?`<div class="plan-edit-hint" style="color:var(--primary);font-weight:600">📍 이동할 요일을 선택하세요</div><div style="text-align:center"><button type="button" class="move-cancel-btn" data-action="cancel">✕ 취소</button></div>`
     :`<div class="plan-edit-hint">💡 운동을 탭하면 다른 요일로 이동할 수 있어요</div>`;
 
   container.innerHTML=hint+Array.from({length:7},(_,i)=>{
@@ -1336,7 +1336,7 @@ function renderWeekPreview(){
 
     if(!items||!items.length){
       if(showDropBtn){
-        return `<div class="plan-row drop-target" data-day="${i}"><div class="plan-daybadge rest">${DAYS[i]}</div><div class="plan-body"><div class="plan-dayname">${DAYS_FULL[i]}</div><span class="plan-drop-btn" onclick="moveExercise(${i})">➕ 여기로 이동</span></div></div>`;
+        return `<div class="plan-row drop-target" data-day="${i}"><div class="plan-daybadge rest">${DAYS[i]}</div><div class="plan-body"><div class="plan-dayname">${DAYS_FULL[i]}</div><button type="button" class="plan-drop-btn" data-action="drop" data-target="${i}">➕ 여기로 이동</button></div></div>`;
       }
       return `<div class="plan-row" data-day="${i}"><div class="plan-daybadge rest">${DAYS[i]}</div><div class="plan-body"><div class="plan-dayname">${DAYS_FULL[i]}</div><div class="plan-rest">휴식 😴</div></div></div>`;
     }
@@ -1352,37 +1352,50 @@ function renderWeekPreview(){
     const totalMin=items.reduce((s,item)=>{const ex=findExercise(item.e);return s+(item.d||ex?.dur||0)},0);
 
     const pillsHtml=resolved.map(rv=>{
-      const cls=rv.isSrc?`pill ${rv.pill} plan-item-move selected-move`:`pill ${rv.pill} plan-item-move`;
-      if(isMoving){
-        return `<span class="${cls}">${rv.label}</span>`;
+      if(rv.isSrc){
+        return `<button type="button" class="pill ${rv.pill} plan-item-move selected-move">${rv.label}</button>`;
       }
-      return `<span class="${cls}" onclick="selectExerciseToMove(${i},${rv.idx})">${rv.label}</span>`;
+      if(isMoving){
+        return `<button type="button" class="pill ${rv.pill} plan-item-move">${rv.label}</button>`;
+      }
+      return `<button type="button" class="pill ${rv.pill} plan-item-move" data-action="select" data-src-day="${i}" data-src-idx="${rv.idx}">${rv.label}</button>`;
     }).join('');
 
-    const dropBtn=showDropBtn?`<span class="plan-drop-btn" onclick="moveExercise(${i})">여기로 이동</span>`:'';
+    const dropBtn=showDropBtn?`<button type="button" class="plan-drop-btn" data-action="drop" data-target="${i}">여기로 이동</button>`:'';
 
     return `<div class="plan-row${showDropBtn?' drop-target':''}" data-day="${i}"><div class="plan-daybadge workout">${DAYS[i]}</div><div class="plan-body"><div class="plan-dayname">${DAYS_FULL[i]}</div><div class="plan-items">${pillsHtml}</div>${dropBtn}<div class="plan-dur">약 ${totalMin}분</div></div></div>`;
   }).join('');
+
+  /* Event delegation — single listener, works on all mobile browsers */
+  container.querySelectorAll('[data-action]').forEach(btn=>{
+    btn.addEventListener('click',handleWeekAction);
+    btn.addEventListener('touchend',handleWeekAction);
+  });
 }
 
-function selectExerciseToMove(day,idx){
-  moveSrcDay=day;
-  moveSrcIdx=idx;
-  renderWeekPreview();
-  const srcRow=document.querySelector(`.plan-row[data-day="${day}"]`);
-  if(srcRow)srcRow.scrollIntoView({behavior:'smooth',block:'center'});
-}
-
-function cancelMove(){
-  moveSrcDay=null;moveSrcIdx=null;
-  renderWeekPreview();
+let _lastAction=0;
+function handleWeekAction(e){
+  e.preventDefault();
+  const now=Date.now();if(now-_lastAction<300)return;_lastAction=now;
+  const btn=e.currentTarget;
+  const action=btn.dataset.action;
+  if(action==='select'){
+    moveSrcDay=+btn.dataset.srcDay;
+    moveSrcIdx=+btn.dataset.srcIdx;
+    renderWeekPreview();
+  } else if(action==='drop'){
+    moveExercise(+btn.dataset.target);
+  } else if(action==='cancel'){
+    moveSrcDay=null;moveSrcIdx=null;
+    renderWeekPreview();
+  }
 }
 
 function moveExercise(targetDay){
   if(moveSrcDay===null||moveSrcIdx===null)return;
   const r=RS.routine;
   const srcItems=r.sched[moveSrcDay];
-  if(!srcItems||!srcItems[moveSrcIdx]){cancelMove();return;}
+  if(!srcItems||!srcItems[moveSrcIdx]){moveSrcDay=null;moveSrcIdx=null;renderWeekPreview();return;}
   const moved=srcItems.splice(moveSrcIdx,1)[0];
   if(!srcItems.length)delete r.sched[moveSrcDay];
   if(!r.sched[targetDay])r.sched[targetDay]=[];
