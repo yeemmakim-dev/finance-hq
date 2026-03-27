@@ -1,855 +1,2039 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Finance HQ</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="운동플랜">
+<meta name="theme-color" content="#1D9E75">
+<title>내 운동 플랜</title>
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-:root{
-  --bg:#09090b;--bg2:#111215;--bg3:#18191e;--bg4:#1f2128;--bg5:#272a33;
-  --b:rgba(255,255,255,0.06);--b2:rgba(255,255,255,0.11);--b3:rgba(255,255,255,0.18);
-  --t1:#edeef2;--t2:#7b8194;--t3:#464c5c;
-  --blue:#4b9eff;--green:#1ec97a;--amber:#f5a623;--pink:#e86db2;
-  --red:#f0564f;--purple:#9b7eff;--teal:#2dd4bf;--orange:#fb923c;
-  --font:'DM Sans',system-ui,sans-serif;--mono:'DM Mono',monospace;
-  --r:10px;--rl:14px;
-}
-html,body{height:100%;font-family:var(--font);}
-body{background:var(--bg);color:var(--t1);display:flex;min-height:100vh;font-size:14px;}
+  :root {
+    --green:#1D9E75;--green-light:#E1F5EE;--green-mid:#9FE1CB;--green-dark:#0F6E56;--green-xdark:#085041;
+    --amber:#BA7517;--amber-light:#FAEEDA;--pink:#993556;--pink-light:#FBEAF0;
+    --purple:#534AB7;--purple-light:#EEEDFE;
+    --text:#1a1a1a;--text-muted:#6b6b6b;--text-hint:#9e9e9e;
+    --bg:#ffffff;--surface:#f5f5f3;--border:rgba(0,0,0,0.1);--border-strong:rgba(0,0,0,0.2);
+    --radius:12px;--radius-sm:8px;
+    --safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px);
+  }
+  @media(prefers-color-scheme:dark){
+    :root{--text:#f0f0f0;--text-muted:#a0a0a0;--text-hint:#666;--bg:#121212;--surface:#1e1e1e;
+      --border:rgba(255,255,255,0.1);--border-strong:rgba(255,255,255,0.2);
+      --green-light:#0a2e20;--amber-light:#2a1c00;--pink-light:#2a0d18;--purple-light:#15113a;}
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden}
+  body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:var(--bg);color:var(--text);overscroll-behavior:none}
 
-/* SIDEBAR */
-.sb{width:220px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--b);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;}
-.sb-logo{display:flex;align-items:center;gap:10px;padding:1.375rem 1.25rem 1.125rem;border-bottom:1px solid var(--b);}
-.sb-mark{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--blue),var(--purple));display:flex;align-items:center;justify-content:center;font-size:16px;}
-.sb-title{font-size:14px;font-weight:600;letter-spacing:-.02em;}
-.sb-sub{font-size:10px;color:var(--t3);margin-top:1px;}
-.sb-nav{padding:.875rem .625rem;flex:1;}
-.sb-lbl{font-size:10px;color:var(--t3);letter-spacing:.07em;padding:0 .5rem;margin:.75rem 0 4px;}
-.sb-lbl:first-child{margin-top:0;}
-.ni{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--t2);cursor:pointer;transition:all .15s;margin-bottom:1px;}
-.ni:hover{background:var(--bg3);color:var(--t1);}
-.ni.on{background:var(--bg3);color:var(--t1);}
-.ni-ic{font-size:13px;width:16px;text-align:center;}
-.sb-div{height:1px;background:var(--b);margin:.375rem 0;}
-.sb-foot{padding:.875rem 1.125rem 1.375rem;border-top:1px solid var(--b);}
-.sb-meta{font-size:11px;color:var(--t3);margin-bottom:6px;display:flex;align-items:center;gap:4px;}
-.refresh-btn{width:100%;background:var(--bg3);color:var(--t1);border:1px solid var(--b2);border-radius:9px;padding:8px;font-size:12px;font-family:var(--font);cursor:pointer;margin-bottom:6px;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .15s;}
-.refresh-btn:hover{background:var(--bg4);}
-.refresh-btn.loading{opacity:.6;pointer-events:none;}
-.edit-btn{width:100%;background:var(--blue);color:#fff;border:none;border-radius:9px;padding:9px;font-size:13px;font-weight:500;font-family:var(--font);cursor:pointer;transition:opacity .15s;margin-bottom:6px;}
-.edit-btn:hover{opacity:.85;}
-.snap-btn{width:100%;background:transparent;color:var(--t2);border:1px solid var(--b2);border-radius:9px;padding:8px;font-size:12px;font-family:var(--font);cursor:pointer;transition:background .15s;}
-.snap-btn:hover{background:var(--bg3);}
+  #app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+  .screen{display:none;flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(70px + var(--safe-bottom))}
+  .screen.active{display:block}
+  .bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:0.5px solid var(--border);padding:8px 0 calc(8px + var(--safe-bottom));z-index:100}
+  .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;border:none;background:none;cursor:pointer;padding:4px 0;color:var(--text-hint);font-size:10px;font-family:inherit;transition:color .15s}
+  .nav-btn.active{color:var(--green)}
+  .nav-icon{font-size:22px;line-height:1}
 
-/* QUOTE STATUS */
-.q-status{display:flex;align-items:center;gap:5px;font-size:11px;padding:5px 10px;border-radius:6px;margin-bottom:8px;}
-.q-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
-.q-live{background:rgba(30,201,122,.12);color:var(--green);}
-.q-live .q-dot{background:var(--green);animation:pulse 2s infinite;}
-.q-stale{background:rgba(245,166,35,.12);color:var(--amber);}
-.q-stale .q-dot{background:var(--amber);}
-.q-err{background:rgba(240,86,79,.12);color:var(--red);}
-.q-err .q-dot{background:var(--red);}
-@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+  .page-header{padding:calc(16px + var(--safe-top)) 16px 12px;position:sticky;top:0;background:var(--bg);z-index:10;border-bottom:0.5px solid var(--border)}
+  .page-header h1{font-size:20px;font-weight:700}
+  .page-header p{font-size:13px;color:var(--text-muted);margin-top:2px}
 
-/* MAIN */
-.main{flex:1;padding:2.25rem 2.25rem 5rem;overflow-y:auto;min-width:0;}
-.page{display:none;}.page.on{display:block;}
-.ph{margin-bottom:1.5rem;}
-.ph-title{font-size:20px;font-weight:600;letter-spacing:-.03em;}
-.ph-sub{font-size:12px;color:var(--t3);margin-top:3px;}
+  .btn-primary{width:100%;padding:14px;background:var(--green);color:white;border:none;border-radius:var(--radius);font-size:15px;font-weight:500;font-family:inherit;cursor:pointer;transition:opacity .15s}
+  .btn-primary:disabled{background:var(--green-mid);cursor:not-allowed}
+  .btn-primary:active:not(:disabled){opacity:.85}
+  .btn-ghost{width:100%;padding:12px;background:none;color:var(--text-muted);border:0.5px solid var(--border);border-radius:var(--radius);font-size:14px;font-family:inherit;cursor:pointer;margin-top:8px}
 
-/* CARDS */
-.card{background:var(--bg2);border:1px solid var(--b);border-radius:var(--rl);padding:1.25rem;}
-.card-ttl{font-size:10px;color:var(--t3);letter-spacing:.06em;margin-bottom:1rem;}
-.up{color:var(--green);}.down{color:var(--red);}.neu{color:var(--t3);}
+  .pill{display:inline-block;font-size:11px;padding:3px 9px;border-radius:20px;font-weight:500;white-space:nowrap}
+  .pill-green{background:var(--green-light);color:var(--green-xdark)}
+  .pill-amber{background:var(--amber-light);color:#633806}
+  .pill-pink{background:var(--pink-light);color:#72243E}
+  .pill-purple{background:var(--purple-light);color:#3C3489}
+  .pill-gray{background:var(--surface);color:var(--text-muted)}
 
-/* STRIP */
-.strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px;}
-.sc{background:var(--bg3);border:1px solid var(--b);border-radius:var(--r);padding:13px 15px;}
-.sc-lbl{font-size:11px;color:var(--t3);margin-bottom:4px;}
-.sc-val{font-size:20px;font-weight:600;letter-spacing:-.03em;line-height:1.2;}
-.sc-sub{font-size:11px;margin-top:3px;}
+  /* ── Plan screen ── */
+  .weight-strip{margin:12px 16px 0;display:flex;align-items:center;gap:12px;background:var(--surface);border-radius:var(--radius);padding:12px 14px}
+  .weight-info{flex:1}
+  .weight-lbl{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+  .weight-val{font-size:24px;font-weight:700}
+  .weight-unit{font-size:13px;color:var(--text-muted)}
+  .weight-change{font-size:12px;margin-top:2px}
+  .weight-input-row{display:flex;gap:6px}
+  .weight-input-row input{width:72px;border:0.5px solid var(--border-strong);border-radius:8px;padding:7px 8px;font-size:14px;text-align:center;background:var(--bg);color:var(--text);font-family:inherit}
+  .weight-input-row button{background:var(--green);color:white;border:none;border-radius:8px;padding:7px 12px;font-size:13px;font-family:inherit;cursor:pointer}
 
-/* GRIDS */
-.g2{display:grid;grid-template-columns:1fr 1.45fr;gap:10px;margin-bottom:10px;}
-.g2b{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
-.full{margin-bottom:10px;}
+  .days-row{display:flex;gap:6px;padding:10px 16px 0;overflow-x:auto;scrollbar-width:none}
+  .days-row::-webkit-scrollbar{display:none}
+  .day-chip{flex-shrink:0;width:46px;height:64px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;border:0.5px solid var(--border);background:var(--bg);transition:all .15s}
+  .day-chip.active{background:var(--green);border-color:var(--green)}
+  .day-chip.has-w{border-color:var(--green)}
+  .day-chip .dn{font-size:10px;font-weight:500;color:var(--text-muted)}
+  .day-chip.active .dn{color:rgba(255,255,255,.8)}
+  .day-chip .dd{font-size:17px;font-weight:700;color:var(--text)}
+  .day-chip.active .dd{color:white}
+  .day-dot{width:5px;height:5px;border-radius:50%;background:var(--green)}
+  .day-chip.active .day-dot{background:rgba(255,255,255,.6)}
 
-/* DONUT */
-.donut-wrap{display:flex;flex-direction:column;align-items:center;gap:.75rem;}
-.donut-c{position:relative;}
-.donut-lbl{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;}
-.donut-main{font-size:15px;font-weight:600;}
-.donut-sub{font-size:10px;color:var(--t3);margin-top:1px;}
-.leg{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;width:100%;}
-.li{display:flex;align-items:center;gap:5px;font-size:11px;}
-.ld{width:7px;height:7px;border-radius:2px;flex-shrink:0;}
-.ln{color:var(--t2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.lp{font-weight:500;flex-shrink:0;}
+  .progress-wrap{margin:10px 16px 0}
+  .progress-meta{display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:6px}
+  .progress-bar{height:6px;background:var(--surface);border-radius:3px;overflow:hidden}
+  .progress-fill{height:100%;background:var(--green);border-radius:3px;transition:width .35s}
 
-/* ASSET ROWS */
-.ar{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--b);}
-.ar:last-child{border-bottom:none;padding-bottom:0;}
-.ar-ic{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
-.ar-info{flex:1;min-width:0;}
-.ar-name{font-size:13px;font-weight:500;}
-.ar-bar{height:2px;background:rgba(255,255,255,.05);border-radius:2px;margin-top:4px;overflow:hidden;}
-.ar-fill{height:100%;border-radius:2px;}
-.ar-r{text-align:right;flex-shrink:0;}
-.ar-v{font-size:13px;font-weight:500;}
-.ar-c{font-size:11px;margin-top:1px;}
+  .sec-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 6px}
+  .sec-title{font-size:14px;font-weight:500}
+  .sec-action{font-size:13px;color:var(--green);border:none;background:none;font-family:inherit;cursor:pointer}
 
-/* LINE */
-.line-wrap{background:var(--bg2);border:1px solid var(--b);border-radius:var(--rl);padding:1.25rem;margin-bottom:10px;}
-.line-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.875rem;}
-.line-v{font-size:20px;font-weight:600;letter-spacing:-.03em;}
-.lbadge{font-size:11px;border-radius:6px;padding:3px 9px;}
-.lbadge.up{color:var(--green);background:rgba(30,201,122,.12);}
-.lbadge.down{color:var(--red);background:rgba(240,86,79,.12);}
-.lbadge.neu{color:var(--t3);background:var(--bg3);}
+  .workout-list{padding:0 16px;display:flex;flex-direction:column;gap:8px}
+  .wcard{display:flex;align-items:flex-start;gap:10px;border:0.5px solid var(--border);border-radius:var(--radius);padding:12px 14px;background:var(--bg);transition:all .2s;position:relative}
+  .wcard.done{opacity:.5}
+  .wcard.done .wc-name{text-decoration:line-through}
+  .wcard.dragging{opacity:.6;transform:scale(.97);border-color:var(--green);box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:50}
+  .wcard.drag-over{border-top:2px solid var(--green)}
+  .wc-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;margin-top:2px}
+  .wc-body{flex:1;min-width:0}
+  .wc-name{font-size:14px;font-weight:600}
+  .wc-meta{font-size:12px;color:var(--text-muted);margin-top:2px}
+  .wc-top-row{display:flex;align-items:center;justify-content:space-between}
+  .wc-actions{display:flex;gap:4px;align-items:center;flex-shrink:0}
+  .wc-action-btn{width:26px;height:26px;border-radius:6px;border:none;background:var(--surface);color:var(--text-muted);font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s}
+  .wc-action-btn:active{transform:scale(.9)}
+  .wc-drag-handle{width:24px;height:24px;border-radius:6px;border:none;background:none;color:var(--text-hint);font-size:14px;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none;flex-shrink:0;margin-top:2px}
+  .wc-check{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--border-strong);display:flex;align-items:center;justify-content:center;cursor:pointer;background:none;font-size:13px;color:white;flex-shrink:0;transition:all .15s}
+  .wc-check.checked{background:var(--green);border-color:var(--green)}
 
-/* STOCK TABLE */
-.stk-table{width:100%;border-collapse:collapse;font-size:12px;}
-.stk-table th{font-size:10px;color:var(--t3);font-weight:400;letter-spacing:.05em;padding:0 8px 8px 0;border-bottom:1px solid var(--b);text-align:left;}
-.stk-table th:not(:first-child){text-align:right;}
-.stk-table td{padding:9px 8px 9px 0;border-bottom:1px solid var(--b);vertical-align:middle;}
-.stk-table td:not(:first-child){text-align:right;}
-.stk-table tr:last-child td{border-bottom:none;}
-.live-price{font-family:var(--mono);font-size:12px;}
-.price-loading{color:var(--t3);font-size:11px;animation:shimmer 1.5s infinite;}
-@keyframes shimmer{0%,100%{opacity:.4;}50%{opacity:1;}}
+  /* Set tracking */
+  .set-track{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+  .set-btn{width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border-strong);background:var(--bg);color:var(--text-muted);font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+  .set-btn.done{background:var(--green);border-color:var(--green);color:white}
+  .set-btn:active{transform:scale(.9)}
+  .set-progress{font-size:11px;color:var(--text-hint);margin-top:4px}
 
-/* STOCK ROWS */
-.sr{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--b);}
-.sr:last-child{border-bottom:none;padding-bottom:0;}
-.sr-rk{font-size:10px;color:var(--t3);width:14px;text-align:center;flex-shrink:0;}
-.sr-info{flex:1;min-width:0;}
-.sr-top{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
-.sr-n{font-size:13px;font-weight:500;}
-.sr-warn{font-size:9px;color:var(--amber);background:rgba(245,166,35,.12);border-radius:3px;padding:1px 5px;}
-.badge{font-size:9px;border-radius:3px;padding:1px 5px;font-weight:500;}
-.b-us{color:var(--blue);background:rgba(75,158,255,.12);}
-.b-kr{color:var(--green);background:rgba(30,201,122,.12);}
-.sr-cat{font-size:10px;margin-top:1px;}
-.sr-bar{height:2px;background:rgba(255,255,255,.05);border-radius:2px;margin-top:4px;overflow:hidden;}
-.sr-fill{height:100%;border-radius:2px;}
-.sr-r{text-align:right;flex-shrink:0;min-width:120px;}
-.sr-v{font-size:13px;font-weight:500;}
-.sr-gain{font-size:11px;margin-top:1px;}
-.sr-p{font-size:10px;color:var(--t3);}
+  .rest-card{margin:0 16px;background:var(--surface);border-radius:var(--radius);padding:24px 16px;text-align:center}
+  .rest-card strong{display:block;font-size:16px;margin-bottom:4px}
+  .rest-card p{font-size:13px;color:var(--text-muted)}
 
-/* SNAPSHOT */
-.snap-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--b);}
-.snap-item:last-child{border-bottom:none;}
+  .ai-card{margin:10px 16px 0;background:var(--green-light);border-radius:var(--radius);padding:14px;display:flex;gap:10px}
+  .ai-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+  .ai-title{font-size:13px;font-weight:700;color:var(--green-xdark)}
+  .ai-msg{font-size:12px;color:var(--green-dark);line-height:1.5;margin-top:3px}
+  .ai-refresh{font-size:12px;color:var(--green-xdark);border:none;background:none;font-family:inherit;cursor:pointer;margin-top:6px;font-weight:500}
 
-/* BUDGET */
-.budget-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:10px;}
-.cat-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--b);}
-.cat-row:last-child{border-bottom:none;}
-.cat-ic{font-size:18px;width:28px;text-align:center;flex-shrink:0;}
+  /* ── Routine picker ── */
+  .step-dots{display:flex;gap:6px;justify-content:center;padding:12px 0 4px}
+  .sdot{width:6px;height:6px;border-radius:50%;background:var(--border-strong);transition:all .2s}
+  .sdot.active{background:var(--green);width:18px;border-radius:3px}
+  .sdot.done{background:var(--green-mid)}
+  .step-wrap{display:none}.step-wrap.active{display:block}
+  .step-header{padding:12px 16px 4px}
+  .step-title{font-size:18px;font-weight:700}
+  .step-sub{font-size:13px;color:var(--text-muted);margin-top:3px}
+  .goal-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px 16px 0}
+  .goal-card{border:0.5px solid var(--border);border-radius:var(--radius);padding:14px 12px;cursor:pointer;background:var(--bg);transition:all .15s}
+  .goal-card:active{transform:scale(.97)}
+  .goal-card.sel{border:2px solid var(--green);background:var(--green-light)}
+  .goal-card.sel .gc-name{color:var(--green-xdark)}
+  .goal-card.sel .gc-desc{color:var(--green-dark)}
+  .gc-icon{font-size:26px;margin-bottom:6px}
+  .gc-name{font-size:14px;font-weight:700}
+  .gc-desc{font-size:11px;color:var(--text-muted);margin-top:2px;line-height:1.4}
+  .days-selector{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;padding:8px 16px 0}
+  .dsel{border:0.5px solid var(--border);border-radius:8px;padding:10px 4px;text-align:center;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-muted);background:var(--bg);transition:all .15s;font-family:inherit}
+  .dsel.sel{background:var(--green);border-color:var(--green);color:white}
+  .level-row{display:flex;gap:8px;padding:0 16px}
+  .lbtn{flex:1;border:0.5px solid var(--border);border-radius:8px;padding:10px;text-align:center;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-muted);background:var(--bg);transition:all .15s;font-family:inherit}
+  .lbtn.sel{background:var(--green);border-color:var(--green);color:white}
+  .dur-config{padding:12px 16px 0}
+  .dur-config-title{font-size:13px;font-weight:500;color:var(--text-muted);margin-bottom:8px}
+  .dur-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .dur-row .dur-icon{font-size:18px;width:28px;text-align:center}
+  .dur-row .dur-label{flex:1;font-size:13px;font-weight:500}
+  .dur-row input[type=range]{flex:2;accent-color:var(--green)}
+  .dur-row .dur-val{font-size:13px;font-weight:600;color:var(--green);min-width:40px;text-align:right}
+  .routine-card{border:0.5px solid var(--border);border-radius:var(--radius);padding:14px;margin:0 16px 10px;cursor:pointer;background:var(--bg);transition:all .15s;position:relative}
+  .routine-card:active{transform:scale(.98)}
+  .routine-card.sel{border:2px solid var(--green);background:var(--green-light)}
+  .rc-name{font-size:15px;font-weight:700;margin:4px 0}
+  .rc-desc{font-size:12px;color:var(--text-muted);line-height:1.5;margin-bottom:8px}
+  .rc-tags{display:flex;flex-wrap:wrap;gap:4px}
+  .rc-days-badge{position:absolute;top:14px;right:14px;font-size:12px;color:var(--green-dark);font-weight:500}
+  .routine-card.sel .rc-days-badge{display:none}
+  .rc-check-mark{display:none;position:absolute;top:12px;right:12px;width:22px;height:22px;border-radius:50%;background:var(--green);color:white;font-size:12px;align-items:center;justify-content:center}
+  .routine-card.sel .rc-check-mark{display:flex}
+  .week-plan{padding:0 16px}
+  .plan-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border)}
+  .plan-row:last-child{border-bottom:none}
+  .plan-row.drag-over-day{background:var(--green-light);border-radius:8px}
+  .plan-item-drag{cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none}
+  .plan-item-drag:active{cursor:grabbing;opacity:.7}
+  .plan-item-drag.dragging-pill{opacity:.4}
+  .plan-edit-hint{font-size:11px;color:var(--text-hint);padding:4px 16px 0;text-align:center}
+  .plan-daybadge{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;margin-top:2px}
+  .plan-daybadge.workout{background:var(--green-light);color:var(--green-xdark)}
+  .plan-daybadge.rest{background:var(--surface);color:var(--text-muted)}
+  .plan-body{flex:1}
+  .plan-dayname{font-size:12px;color:var(--text-muted);margin-bottom:4px}
+  .plan-items{display:flex;flex-wrap:wrap;gap:4px}
+  .plan-rest{font-size:13px;color:var(--text-muted)}
+  .plan-dur{font-size:11px;color:var(--text-hint);margin-top:4px}
+  .confirm-box{margin:10px 16px 0;background:var(--green-light);border-radius:var(--radius);padding:14px;display:flex;gap:10px}
+  .confirm-box .cb-icon{font-size:22px;flex-shrink:0}
+  .cb-title{font-size:14px;font-weight:700;color:var(--green-xdark)}
+  .cb-sub{font-size:12px;color:var(--green-dark);margin-top:2px}
 
-/* UPLOAD */
-.upload-zone{border:2px dashed var(--b2);border-radius:var(--rl);padding:2.25rem;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;position:relative;}
-.upload-zone:hover{border-color:var(--b3);background:var(--bg3);}
-.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
-.txn{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--b);}
-.txn:last-child{border-bottom:none;}
+  /* ── Calendar ── */
+  .cal-nav{display:flex;align-items:center;justify-content:center;gap:16px;padding:12px 16px 4px}
+  .cal-nav-btn{width:32px;height:32px;border-radius:8px;border:0.5px solid var(--border);background:none;color:var(--text-muted);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .cal-month{font-size:16px;font-weight:700;min-width:120px;text-align:center}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:8px 12px}
+  .cal-head{text-align:center;font-size:11px;color:var(--text-hint);padding:6px 0;font-weight:500}
+  .cal-cell{aspect-ratio:1;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:13px;cursor:pointer;transition:all .15s;position:relative;color:var(--text)}
+  .cal-cell.today{font-weight:700;background:var(--surface)}
+  .cal-cell.selected{background:var(--green);color:white;font-weight:700}
+  .cal-cell.selected .cal-dots span{background:rgba(255,255,255,.7)}
+  .cal-cell.other-month{color:var(--text-hint)}
+  .cal-dots{display:flex;gap:2px;height:5px}
+  .cal-dots .dot-done{width:5px;height:5px;border-radius:50%;background:var(--green)}
+  .cal-dots .dot-pending{width:5px;height:5px;border-radius:50%;background:var(--amber)}
+  .cal-detail{margin:8px 16px 0;background:var(--surface);border-radius:var(--radius);padding:14px}
+  .cal-detail-title{font-size:14px;font-weight:700;margin-bottom:8px}
+  .cal-detail-item{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;border-bottom:0.5px solid var(--border)}
+  .cal-detail-item:last-child{border-bottom:none}
+  .cal-detail-empty{font-size:13px;color:var(--text-muted);text-align:center;padding:12px}
+  .cal-summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:10px 16px 0}
+  .cal-stat{background:var(--surface);border-radius:var(--radius-sm);padding:10px;text-align:center}
+  .cal-stat-val{font-size:18px;font-weight:700;color:var(--green)}
+  .cal-stat-lbl{font-size:11px;color:var(--text-muted);margin-top:2px}
 
-/* RECS */
-.rec{display:flex;align-items:flex-start;gap:11px;background:var(--bg3);border-radius:var(--r);padding:13px 14px;margin-bottom:8px;}
-.rec-ic{font-size:18px;flex-shrink:0;margin-top:1px;}
-.rec-title{font-size:13px;font-weight:500;margin-bottom:2px;}
-.rec-desc{font-size:12px;color:var(--t2);line-height:1.55;}
+  /* ── Stats ── */
+  .stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:12px 16px 0}
+  .stat-box{background:var(--surface);border-radius:var(--radius-sm);padding:12px;text-align:center}
+  .stat-val{font-size:22px;font-weight:700}
+  .stat-lbl{font-size:11px;color:var(--text-muted);margin-top:2px}
+  .chart-area{margin:10px 16px 0}
+  .bar-chart{display:flex;align-items:flex-end;gap:4px;height:80px}
+  .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+  .bar-day{font-size:10px;color:var(--text-muted)}
+  .weight-history{margin:10px 16px 0}
+  .wh-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--border);font-size:13px}
+  .wh-row:last-child{border-bottom:none}
+  .summary-rows{padding:0 16px}
+  .sum-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:0.5px solid var(--border);font-size:13px}
+  .sum-row:last-child{border-bottom:none}
+  .sum-key{color:var(--text-muted)}.sum-val{font-weight:500}
 
-/* MODAL */
-.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999;align-items:center;justify-content:center;}
-.ov.open{display:flex;}
-.modal{background:var(--bg2);border:1px solid var(--b2);border-radius:16px;padding:1.75rem;width:640px;max-height:90vh;overflow-y:auto;}
-.modal h2{font-size:15px;font-weight:600;margin-bottom:.25rem;}
-.modal-sub{font-size:12px;color:var(--t3);margin-bottom:1.25rem;}
-.msec{font-size:10px;color:var(--t3);letter-spacing:.06em;padding-bottom:7px;border-bottom:1px solid var(--b);margin:1.125rem 0 .75rem;}
-.field{margin-bottom:9px;}
-.field label{display:block;font-size:10px;color:var(--t3);margin-bottom:3px;}
-.field input,.field select{width:100%;background:var(--bg3);border:1px solid var(--b2);border-radius:8px;color:var(--t1);font-size:13px;font-family:var(--font);padding:7px 10px;outline:none;transition:border-color .15s;}
-.field input:focus,.field select:focus{border-color:var(--blue);}
-.sfrow{display:grid;grid-template-columns:1.6fr 1fr 60px 90px 80px 60px auto;gap:6px;align-items:flex-end;background:var(--bg3);border-radius:9px;padding:10px;margin-bottom:7px;}
-.sfrow .field{margin-bottom:0;}
-.sfrow-hdr{display:grid;grid-template-columns:1.6fr 1fr 60px 90px 80px 60px auto;gap:6px;padding:0 0 5px;font-size:10px;color:var(--t3);}
-.del{background:transparent;border:none;color:var(--t3);font-size:17px;cursor:pointer;padding:0 2px;align-self:flex-end;padding-bottom:2px;transition:color .15s;}
-.del:hover{color:var(--red);}
-.add-btn{display:flex;align-items:center;gap:6px;width:100%;background:transparent;border:1px dashed var(--b2);border-radius:8px;padding:8px 12px;color:var(--t2);font-size:12px;font-family:var(--font);cursor:pointer;transition:background .15s;margin-top:3px;}
-.add-btn:hover{background:var(--bg3);}
-.g2i{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.mbtns{display:flex;gap:7px;justify-content:flex-end;margin-top:1.375rem;}
-.btn-c{background:transparent;color:var(--t2);border:1px solid var(--b2);border-radius:8px;padding:8px 18px;font-size:13px;font-family:var(--font);cursor:pointer;}
-.btn-s{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-family:var(--font);font-weight:500;cursor:pointer;}
-.btn-s:hover{opacity:.85;}
+  /* ── Meal Plan ── */
+  .ing-section{padding:0 16px;margin-top:12px}
+  .ing-title{font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+  .ing-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+  .ing-chip{padding:6px 12px;border-radius:20px;border:1px solid var(--border);font-size:12px;cursor:pointer;transition:all .15s;background:var(--bg);font-family:inherit}
+  .ing-chip.sel{background:var(--green);color:white;border-color:var(--green)}
+  .meal-gen-btn{margin:16px}
+  .meal-week{padding:0 16px}
+  .meal-day-card{background:var(--surface);border-radius:var(--radius);padding:14px;margin-bottom:10px}
+  .meal-day-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .meal-day-name{font-size:14px;font-weight:700}
+  .meal-day-kcal{font-size:12px;color:var(--green);font-weight:500}
+  .meal-slot{margin-bottom:10px;border-bottom:0.5px solid var(--border);padding-bottom:10px}
+  .meal-slot:last-child{margin-bottom:0;border-bottom:none;padding-bottom:0}
+  .meal-slot-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .meal-slot-label{font-size:11px;color:var(--text-muted);font-weight:500}
+  .meal-slot-check{width:24px;height:24px;border-radius:50%;border:2px solid var(--border);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .15s;flex-shrink:0;color:transparent}
+  .meal-slot-check.eaten{background:var(--green);border-color:var(--green);color:white}
+  .meal-opts{display:flex;flex-direction:column;gap:6px}
+  .meal-opt{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;transition:all .15s;background:var(--bg)}
+  .meal-opt:active{transform:scale(.98)}
+  .meal-opt.picked{border-color:var(--green);background:var(--green-light)}
+  .meal-opt-info{flex:1}
+  .meal-opt-name{font-size:13px;font-weight:500}
+  .meal-opt-desc{font-size:11px;color:var(--text-hint);margin-top:1px}
+  .meal-opt-missing{font-size:10px;color:var(--amber);margin-top:3px;font-weight:500}
+  .meal-opt-kcal{font-size:11px;color:var(--green);font-weight:500;flex-shrink:0}
+  .meal-opt-pick{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;color:transparent}
+  .meal-opt.picked .meal-opt-pick{border-color:var(--green);background:var(--green);color:white}
+  .meal-recipe-btn{font-size:11px;color:var(--green);background:none;border:1px solid var(--green);border-radius:12px;padding:2px 8px;cursor:pointer;font-family:inherit;margin-top:4px}
+  .meal-recipe{background:var(--surface);border-radius:var(--radius-sm);padding:10px 12px;margin-top:6px;font-size:12px;line-height:1.7;color:var(--text-muted)}
+  .meal-recipe ol{margin:0;padding-left:18px}
+  .meal-recipe li{margin-bottom:2px}
+  .meal-day-nav{display:flex;align-items:center;justify-content:center;gap:12px;padding:12px 16px 4px}
+  .meal-day-nav-btn{width:32px;height:32px;border-radius:8px;border:0.5px solid var(--border);background:none;color:var(--text-muted);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .meal-day-nav-btn:disabled{opacity:.3;cursor:not-allowed}
+  .meal-day-nav-title{font-size:15px;font-weight:700;min-width:100px;text-align:center}
+  .meal-day-nav-sub{font-size:11px;color:var(--text-hint);text-align:center;margin-top:-2px;padding-bottom:4px}
+  .meal-tip{margin:12px 16px;background:var(--green-light);border-radius:var(--radius);padding:12px;display:flex;gap:8px}
+  .meal-tip-icon{font-size:18px;flex-shrink:0}
+  .meal-tip-text{font-size:12px;color:var(--green-dark);line-height:1.5}
+  .meal-tab-row{display:flex;gap:0;margin:0 16px;border-bottom:1px solid var(--border)}
+  .meal-tab{flex:1;text-align:center;padding:10px 0;font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit}
+  .meal-tab.active{color:var(--green);border-bottom-color:var(--green)}
+  .meal-custom-btn{font-size:11px;color:var(--text-muted);background:none;border:1px solid var(--border);border-radius:12px;padding:2px 8px;cursor:pointer;font-family:inherit;margin-left:4px}
+  .meal-custom-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;align-items:center;justify-content:center}
+  .meal-custom-modal.open{display:flex}
+  .meal-custom-box{background:var(--bg);border-radius:var(--radius);width:90%;max-width:360px;padding:20px;position:relative}
+  .meal-custom-title{font-size:16px;font-weight:700;margin-bottom:12px}
+  .meal-custom-close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:20px;color:var(--text-muted);cursor:pointer}
+  .meal-search-wrap{position:relative}
+  .meal-search-input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;background:var(--bg);color:var(--text);outline:none}
+  .meal-search-input:focus{border-color:var(--green)}
+  .meal-ac-list{position:absolute;top:100%;left:0;right:0;background:var(--bg);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);max-height:200px;overflow-y:auto;z-index:10;display:none}
+  .meal-ac-list.show{display:block}
+  .meal-ac-item{padding:10px 12px;cursor:pointer;border-bottom:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:13px}
+  .meal-ac-item:last-child{border-bottom:none}
+  .meal-ac-item:active{background:var(--green-light)}
+  .meal-ac-kcal{color:var(--green);font-weight:500;font-size:12px;flex-shrink:0}
+  .meal-custom-picked{margin-top:12px;padding:12px;background:var(--surface);border-radius:var(--radius-sm);display:none}
+  .meal-custom-picked.show{display:block}
+  .meal-cp-name{font-size:14px;font-weight:600}
+  .meal-cp-kcal{font-size:13px;color:var(--green);margin-top:2px}
+  .meal-cp-qty{display:flex;align-items:center;gap:8px;margin-top:8px}
+  .meal-cp-qty label{font-size:12px;color:var(--text-muted)}
+  .meal-cp-qty input{width:50px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;text-align:center;font-family:inherit}
+  .meal-cp-total{font-size:13px;font-weight:600;color:var(--green);margin-top:6px}
+  .plan-meal-card{margin:0 16px 10px;background:var(--surface);border-radius:var(--radius);padding:14px;cursor:pointer}
+  .plan-meal-card:active{transform:scale(.99)}
+  .plan-meal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .plan-meal-title{font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px}
+  .plan-meal-kcal{font-size:12px;color:var(--green);font-weight:500}
+  .plan-meal-row{display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px}
+  .plan-meal-slot{color:var(--text-muted);min-width:30px}
+  .plan-meal-name{flex:1;font-weight:500}
+  .plan-meal-check{font-size:11px}
+  .plan-meal-empty{font-size:12px;color:var(--text-hint);text-align:center;padding:8px 0}
+  .ing-add-row{display:flex;gap:6px;padding:8px 16px 0}
+  .ing-add-input{flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--bg);color:var(--text)}
+  .ing-add-btn{padding:8px 14px;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);font-size:13px;font-family:inherit;cursor:pointer;white-space:nowrap}
+  .meal-summary{display:flex;gap:8px;margin:12px 16px;text-align:center}
+  .meal-sum-box{flex:1;background:var(--surface);border-radius:var(--radius-sm);padding:10px}
+  .meal-sum-val{font-size:18px;font-weight:700;color:var(--green)}
+  .meal-sum-lbl{font-size:10px;color:var(--text-muted);margin-top:2px}
 
-.empty{color:var(--t3);font-size:13px;padding:1.5rem 0;text-align:center;}
-::-webkit-scrollbar{width:5px;}
-::-webkit-scrollbar-track{background:transparent;}
-::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:3px;}
-@media(max-width:820px){.sb{display:none;}.main{padding:1.25rem 1rem 4rem;}.strip{grid-template-columns:1fr 1fr;}.g2,.g2b{grid-template-columns:1fr;}.sfrow{grid-template-columns:1fr 1fr;}.sfrow-hdr{display:none;}}
+  /* ── Exercise Picker Modal ── */
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:flex-end;justify-content:center}
+  .modal-bg.open{display:flex}
+  .modal{background:var(--bg);border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:85vh;display:flex;flex-direction:column}
+  .modal-handle{width:36px;height:4px;background:var(--border-strong);border-radius:2px;margin:12px auto 0;flex-shrink:0}
+  .modal-top{padding:12px 16px;flex-shrink:0}
+  .modal-title{font-size:16px;font-weight:700}
+  .modal-sub{font-size:12px;color:var(--text-muted);margin-top:2px}
+  .picker-tabs{display:flex;gap:3px;padding:0 12px 8px;flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+  .picker-tabs::-webkit-scrollbar{display:none}
+  .picker-tab{flex:1;min-width:0;padding:6px 4px;border-radius:8px;border:none;background:var(--surface);font-size:11px;font-family:inherit;cursor:pointer;text-align:center;transition:all .15s;color:var(--text-muted);font-weight:500}
+  .picker-tab.active{background:var(--green);color:white}
+  .picker-tab .pt-icon{font-size:18px;display:block;margin-bottom:2px}
+  .picker-body{flex:1;overflow-y:auto;padding:0 16px calc(16px + var(--safe-bottom));-webkit-overflow-scrolling:touch}
+  .picker-group{font-size:11px;font-weight:600;color:var(--text-hint);text-transform:uppercase;letter-spacing:.5px;padding:12px 0 6px}
+  .ex-card{border:0.5px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:all .15s;background:var(--bg)}
+  .ex-card:active{transform:scale(.98)}
+  .ex-card.expanded{border-color:var(--green);background:var(--green-light)}
+  .ex-row{display:flex;align-items:center;gap:10px}
+  .ex-icon{font-size:20px;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .ex-info{flex:1;min-width:0}
+  .ex-name{font-size:14px;font-weight:600}
+  .ex-desc{font-size:11px;color:var(--text-muted);margin-top:1px}
+  .ex-default{font-size:11px;color:var(--green-dark);margin-top:2px;font-weight:500}
+  .ex-add-btn{width:30px;height:30px;border-radius:50%;border:none;background:var(--green);color:white;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+  .ex-config{margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);display:none}
+  .ex-card.expanded .ex-config{display:block}
+  .ex-config-row{display:flex;gap:6px;margin-bottom:8px}
+  .ex-field{flex:1}
+  .ex-field label{font-size:11px;color:var(--text-muted);display:block;margin-bottom:3px}
+  .ex-field input{width:100%;border:0.5px solid var(--border-strong);border-radius:6px;padding:7px 8px;font-size:13px;background:var(--bg);color:var(--text);font-family:inherit;text-align:center}
+  .ex-confirm-btn{width:100%;padding:10px;background:var(--green);color:white;border:none;border-radius:8px;font-size:13px;font-weight:500;font-family:inherit;cursor:pointer}
+  .ex-card.restricted{opacity:.6}
+  .ex-days{font-size:10px;color:var(--text-hint);font-weight:400;margin-left:4px}
+  .ex-day-warn{font-size:12px;color:#c0392b;padding:8px 0;text-align:center}
+  .ex-how{background:var(--surface);border-radius:8px;padding:10px 12px;margin-bottom:10px}
+  .ex-how-title{font-size:12px;font-weight:600;color:var(--green);margin-bottom:6px}
+  .ex-how-steps{font-size:12px;color:var(--text-muted);line-height:1.7}
+
+  .how-toggle{background:none;border:none;color:var(--green);font-size:12px;font-family:inherit;cursor:pointer;padding:6px 0 2px;font-weight:500}
+  .how-box{display:none;background:var(--surface);border-radius:8px;padding:10px 12px;margin-top:6px;font-size:12px;color:var(--text-muted);line-height:1.7}
+  .how-box.show{display:block}
+
+  /* ── Confirm / Toast ── */
+  .confirm-dialog{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;align-items:center;justify-content:center}
+  .confirm-dialog.open{display:flex}
+  .confirm-content{background:var(--bg);border-radius:var(--radius);padding:20px;width:280px;text-align:center}
+  .confirm-content p{font-size:15px;font-weight:500;margin-bottom:16px}
+  .confirm-btns{display:flex;gap:8px}
+  .confirm-btns button{flex:1;padding:10px;border-radius:8px;font-size:14px;font-family:inherit;cursor:pointer;border:none}
+  .confirm-yes{background:#E24B4A;color:white}
+  .confirm-no{background:var(--surface);color:var(--text-muted)}
+  .toast{position:fixed;bottom:calc(80px + var(--safe-bottom));left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:20px;font-size:13px;z-index:400;opacity:0;transition:opacity .3s;pointer-events:none}
+  .toast.show{opacity:1}
 </style>
 </head>
 <body>
+<div id="app">
 
-<aside class="sb">
-  <div class="sb-logo">
-    <div class="sb-mark">💰</div>
-    <div><div class="sb-title">Finance HQ</div><div class="sb-sub">US & Korea</div></div>
+  <!-- ══ SCREEN: 플랜 ══ -->
+  <div class="screen active" id="screen-plan">
+    <div class="page-header" style="display:flex;align-items:center;justify-content:space-between">
+      <div><h1>내 운동 플랜</h1><p id="today-label"></p></div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button class="cal-nav-btn" onclick="changeWeek(-1)">‹</button>
+        <span style="font-size:14px;font-weight:500" id="week-label">이번 주</span>
+        <button class="cal-nav-btn" onclick="changeWeek(1)">›</button>
+      </div>
+    </div>
+    <div class="weight-strip">
+      <div class="weight-info">
+        <div class="weight-lbl">몸무게</div>
+        <div><span class="weight-val" id="w-display">-</span><span class="weight-unit"> kg</span></div>
+        <div class="weight-change" id="w-change" style="color:var(--text-muted)">입력해 주세요</div>
+      </div>
+      <div class="weight-input-row">
+        <input type="number" id="w-input" placeholder="kg" step="0.1" min="30" max="250">
+        <button onclick="saveWeight()">저장</button>
+      </div>
+    </div>
+    <div class="days-row" id="days-row"></div>
+    <div class="progress-wrap">
+      <div class="progress-meta"><span>완료율</span><span id="prog-text">0 / 0</span></div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+    </div>
+    <div class="sec-header">
+      <span class="sec-title" id="day-title">오늘 운동</span>
+      <button class="sec-action" onclick="openPicker()">+ 운동 추가</button>
+    </div>
+    <div class="workout-list" id="workout-list"></div>
+    <div id="plan-meal-area"></div>
+    <div class="ai-card">
+      <div class="ai-icon">✦</div>
+      <div style="flex:1">
+        <div class="ai-title">PCOS 맞춤 팁</div>
+        <div class="ai-msg" id="ai-msg"></div>
+        <button class="ai-refresh" onclick="refreshAI()">새 팁 보기 →</button>
+      </div>
+    </div>
   </div>
-  <nav class="sb-nav">
-    <div class="sb-lbl">자산</div>
-    <div class="ni on"  onclick="goPage('overview',this)"><span class="ni-ic">📊</span>전체 개요</div>
-    <div class="ni"     onclick="goPage('us',this)"><span class="ni-ic">🇺🇸</span>미국 자산</div>
-    <div class="ni"     onclick="goPage('kr',this)"><span class="ni-ic">🇰🇷</span>한국 자산</div>
-    <div class="ni"     onclick="goPage('stocks',this)"><span class="ni-ic">📈</span>주식/ETF 분석</div>
-    <div class="ni"     onclick="goPage('history',this)"><span class="ni-ic">📅</span>자산 히스토리</div>
-    <div class="sb-div"></div>
-    <div class="sb-lbl">지출</div>
-    <div class="ni"     onclick="goPage('budget',this)"><span class="ni-ic">🎯</span>월 예산</div>
-    <div class="ni"     onclick="goPage('spending',this)"><span class="ni-ic">💳</span>지출 분석</div>
-    <div class="sb-div"></div>
-    <div class="sb-lbl">인사이트</div>
-    <div class="ni"     onclick="goPage('recs',this)"><span class="ni-ic">💡</span>AI 추천</div>
+
+  <!-- ══ SCREEN: 루틴 ══ -->
+  <div class="screen" id="screen-routine">
+    <div class="page-header"><h1>루틴 선택</h1><p>PCOS·인슐린저항성 맞춤 루틴을 골라보세요</p></div>
+    <div class="step-dots" id="step-dots"><div class="sdot active"></div><div class="sdot"></div><div class="sdot"></div><div class="sdot"></div><div class="sdot"></div></div>
+    <div class="step-wrap active" id="swrap-0">
+      <div class="step-header">
+        <div class="step-title">어떤 걸 집중 관리할까요?</div>
+        <div class="step-sub">PCOS 증상에 맞게 루틴을 추천해 드려요</div>
+      </div>
+      <div class="goal-grid">
+        <div class="goal-card" onclick="selGoal(this,'insulin')"><div class="gc-icon">🩸</div><div class="gc-name">인슐린 감수성</div><div class="gc-desc">혈당 조절, 근력+유산소</div></div>
+        <div class="goal-card" onclick="selGoal(this,'hormone')"><div class="gc-icon">🧘</div><div class="gc-name">호르몬 밸런스</div><div class="gc-desc">코르티솔↓ 스트레스 완화</div></div>
+        <div class="goal-card" onclick="selGoal(this,'body')"><div class="gc-icon">💪</div><div class="gc-name">체성분 개선</div><div class="gc-desc">근육↑ 체지방↓ 대사 개선</div></div>
+        <div class="goal-card" onclick="selGoal(this,'total')"><div class="gc-icon">✨</div><div class="gc-name">PCOS 종합 관리</div><div class="gc-desc">인슐린·호르몬·체성분 종합</div></div>
+      </div>
+      <div style="padding:14px 16px 0"><button class="btn-primary" id="snext0" onclick="goSt(1)" disabled>다음</button></div>
+    </div>
+    <!-- Step 1: 운동 종목 선택 -->
+    <div class="step-wrap" id="swrap-1">
+      <div class="step-header">
+        <div class="step-title">어떤 운동을 할까요?</div>
+        <div class="step-sub">하고 싶은 운동 종목을 골라주세요 (1개 이상)</div>
+      </div>
+      <div class="goal-grid" style="padding-top:12px">
+        <div class="goal-card" onclick="togType(this,'running')"><div class="gc-icon">🏃</div><div class="gc-name">런닝</div><div class="gc-desc">심폐 강화 유산소</div></div>
+        <div class="goal-card" onclick="togType(this,'walking')"><div class="gc-icon">🚶‍♀️</div><div class="gc-name">걷기</div><div class="gc-desc">혈당 조절, 코르티솔↓</div></div>
+        <div class="goal-card" onclick="togType(this,'strength')"><div class="gc-icon">🏋️</div><div class="gc-name">근력운동</div><div class="gc-desc">웨이트, 인슐린 감수성↑</div></div>
+        <div class="goal-card" onclick="togType(this,'ballet')"><div class="gc-icon">🩰</div><div class="gc-name">발레</div><div class="gc-desc">발레수업, 바워크</div></div>
+        <div class="goal-card" onclick="togType(this,'pilates')"><div class="gc-icon">🤸‍♀️</div><div class="gc-name">필라테스</div><div class="gc-desc">코어 강화, 유연성↑</div></div>
+        <div class="goal-card" onclick="togType(this,'stretching')"><div class="gc-icon">🧘‍♀️</div><div class="gc-name">스트레칭</div><div class="gc-desc">유연성, 이완, 숙면</div></div>
+        <div class="goal-card" onclick="togType(this,'hometraining')"><div class="gc-icon">🏠</div><div class="gc-name">홈트레이닝</div><div class="gc-desc">맨몸·밴드 집에서 운동</div></div>
+      </div>
+      <div style="padding:14px 16px 0">
+        <button class="btn-primary" id="snext1" onclick="goSt(2)" disabled>다음</button>
+        <button class="btn-ghost" onclick="goSt(0)">이전</button>
+      </div>
+    </div>
+
+    <!-- Step 2: 요일+강도 -->
+    <div class="step-wrap" id="swrap-2">
+      <div class="step-header"><div class="step-title">운동 일정과 강도</div><div class="step-sub">요일과 강도를 선택해 주세요</div></div>
+      <div class="days-selector" id="days-sel">
+        <button class="dsel" onclick="togDsel(this,0)">월</button><button class="dsel" onclick="togDsel(this,1)">화</button><button class="dsel" onclick="togDsel(this,2)">수</button><button class="dsel" onclick="togDsel(this,3)">목</button><button class="dsel" onclick="togDsel(this,4)">금</button><button class="dsel" onclick="togDsel(this,5)">토</button><button class="dsel" onclick="togDsel(this,6)">일</button>
+      </div>
+      <div style="padding:12px 16px 4px;font-size:13px;font-weight:500;color:var(--text-muted)">운동 강도</div>
+      <div class="level-row">
+        <button class="lbtn" onclick="selLevel(this,'beginner')">입문</button>
+        <button class="lbtn" onclick="selLevel(this,'intermediate')">중급</button>
+        <button class="lbtn" onclick="selLevel(this,'advanced')">고급</button>
+      </div>
+      <div id="dur-config-area"></div>
+      <div style="padding:14px 16px 0">
+        <button class="btn-primary" id="snext2" onclick="goSt(3)" disabled>다음</button>
+        <button class="btn-ghost" onclick="goSt(1)">이전</button>
+      </div>
+    </div>
+
+    <!-- Step 3: 루틴 선택 -->
+    <div class="step-wrap" id="swrap-3">
+      <div class="step-header"><div class="step-title">루틴을 선택해 주세요</div><div class="step-sub" id="r-sub">목표 맞춤 추천이에요</div></div>
+      <div id="routine-list"></div>
+      <div style="padding:4px 16px 0">
+        <button class="btn-primary" id="snext3" onclick="goSt(4)" disabled>이 루틴으로 할게요</button>
+        <button class="btn-ghost" onclick="goSt(2)">이전</button>
+      </div>
+    </div>
+
+    <!-- Step 4: 주간 미리보기 -->
+    <div class="step-wrap" id="swrap-4">
+      <div class="step-header"><div class="step-title">주간 운동 계획</div><div class="step-sub" id="plan-sub"></div></div>
+      <div class="confirm-box"><div class="cb-icon">✦</div><div><div class="cb-title" id="cb-title"></div><div class="cb-sub" id="cb-sub"></div></div></div>
+      <div style="height:10px"></div>
+      <div class="week-plan" id="week-plan-preview"></div>
+      <div style="padding:14px 16px 0">
+        <button class="btn-primary" onclick="applyRoutine()">플랜에 적용하기 ✓</button>
+        <button class="btn-ghost" onclick="goSt(3)">다른 루틴 보기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN: 캘린더 ══ -->
+  <div class="screen" id="screen-calendar">
+    <div class="page-header"><h1>캘린더</h1><p>월간 운동 현황</p></div>
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="calMove(-1)">‹</button>
+      <span class="cal-month" id="cal-month"></span>
+      <button class="cal-nav-btn" onclick="calMove(1)">›</button>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <div class="cal-summary" id="cal-summary"></div>
+    <div id="cal-detail-wrap"></div>
+  </div>
+
+  <!-- ══ SCREEN: 통계 ══ -->
+  <div class="screen" id="screen-stats">
+    <div class="page-header"><h1>내 통계</h1><p id="stats-week-label">이번 주</p></div>
+    <div class="stats-grid">
+      <div class="stat-box"><div class="stat-val" id="st-total">0</div><div class="stat-lbl">총 운동</div></div>
+      <div class="stat-box"><div class="stat-val" id="st-done">0</div><div class="stat-lbl">완료</div></div>
+      <div class="stat-box"><div class="stat-val" id="st-streak">0</div><div class="stat-lbl">연속 일수</div></div>
+    </div>
+    <div class="sec-header" style="margin-top:4px"><span class="sec-title">이번 주 활동</span></div>
+    <div class="chart-area"><div class="bar-chart" id="bar-chart"></div></div>
+    <div class="sec-header"><span class="sec-title">몸무게 기록</span></div>
+    <div class="weight-history" id="weight-history"></div>
+    <div class="sec-header"><span class="sec-title">주간 요약</span></div>
+    <div class="summary-rows" id="summary-rows"></div>
+  </div>
+
+  <div class="screen" id="screen-meal">
+    <div class="page-header"><h1>🥗 식단 플래너</h1><p>저탄수 고단백 · PCOS 맞춤</p></div>
+
+    <div class="meal-tab-row">
+      <button class="meal-tab active" onclick="mealTab('input')">재료 입력</button>
+      <button class="meal-tab" onclick="mealTab('plan')">식단표</button>
+    </div>
+
+    <div id="meal-input-view">
+      <div style="padding:14px 16px 0;font-size:13px;color:var(--text-muted);line-height:1.6">
+        🛒 장본 재료를 선택하면 일주일 식단을 만들어 드려요<br>
+        <span style="font-size:11px;color:var(--text-hint)">단백질·채소·탄수화물 각 1개 이상 선택</span>
+      </div>
+
+      <div class="ing-add-row">
+        <input class="ing-add-input" id="ing-add-input" type="text" placeholder="재료 직접 추가 (예: 닭다리살)">
+        <button class="ing-add-btn" onclick="addCustomIng()">추가</button>
+      </div>
+
+      <div id="ing-list"></div>
+
+      <div class="meal-gen-btn">
+        <button class="btn-primary" id="gen-meal-btn" onclick="generateMealPlan()" disabled>식단 생성하기</button>
+      </div>
+    </div>
+
+    <div id="meal-plan-view" style="display:none">
+      <div class="meal-tip">
+        <span class="meal-tip-icon">💡</span>
+        <span class="meal-tip-text">메뉴를 눌러서 선택하고, ✓ 버튼으로 먹었는지 체크하세요. PCOS·인슐린저항성 맞춤 저GI·고단백 식단이에요.</span>
+      </div>
+      <div class="meal-summary" id="meal-summary"></div>
+      <div id="meal-week-content"></div>
+      <div style="padding:0 16px 16px">
+        <button class="btn-primary" onclick="generateMealPlan()" style="margin-bottom:8px">🔄 다시 추천받기</button>
+        <button class="btn-ghost" onclick="mealTab('input')">재료 다시 선택</button>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-plan" onclick="switchScreen('plan')"><span class="nav-icon">📋</span>플랜</button>
+    <button class="nav-btn" id="nav-routine" onclick="switchScreen('routine')"><span class="nav-icon">⚡</span>루틴</button>
+    <button class="nav-btn" id="nav-meal" onclick="switchScreen('meal')"><span class="nav-icon">🥗</span>식단</button>
+    <button class="nav-btn" id="nav-calendar" onclick="switchScreen('calendar')"><span class="nav-icon">📅</span>캘린더</button>
+    <button class="nav-btn" id="nav-stats" onclick="switchScreen('stats')"><span class="nav-icon">📊</span>통계</button>
   </nav>
-  <div class="sb-foot">
-    <div id="q-status-bar" class="q-status q-stale"><div class="q-dot"></div><span>시세 미조회</span></div>
-    <div class="sb-meta">💱 $1 = ₩<span id="fx-rate">1,340</span></div>
-    <div class="sb-meta" id="last-update">—</div>
-    <button class="refresh-btn" id="refresh-btn" onclick="fetchQuotes()">🔄 시세 업데이트</button>
-    <button class="edit-btn" onclick="openModal()">✏️ 자산 수정</button>
-    <button class="snap-btn" onclick="takeSnapshot()">📸 오늘 스냅샷 저장</button>
-  </div>
-</aside>
+</div>
 
-<main class="main">
-
-  <!-- OVERVIEW -->
-  <div class="page on" id="page-overview">
-    <div class="ph"><div class="ph-title">전체 개요</div><div class="ph-sub">미국 + 한국 통합 자산 현황</div></div>
-    <div class="strip" id="ov-strip"></div>
-    <div class="g2">
-      <div class="card">
-        <div class="card-ttl">전체 자산 배분</div>
-        <div class="donut-wrap">
-          <div class="donut-c"><canvas id="ov-donut" width="144" height="144"></canvas>
-            <div class="donut-lbl"><div class="donut-main" id="ov-dtotal"></div><div class="donut-sub">총 자산 USD</div></div>
-          </div>
-          <div class="leg" id="ov-leg"></div>
-        </div>
-      </div>
-      <div class="card"><div class="card-ttl">주식/ETF 평가손익 TOP 5</div><div id="ov-gain"></div></div>
+<!-- ══ Custom Meal Modal ══ -->
+<div class="meal-custom-modal" id="custom-meal-modal" onclick="if(event.target===this)closeCustomMeal()">
+  <div class="meal-custom-box">
+    <button class="meal-custom-close" onclick="closeCustomMeal()">✕</button>
+    <div class="meal-custom-title">🍽️ 먹은 음식 기록</div>
+    <div class="meal-search-wrap">
+      <input class="meal-search-input" id="meal-search" type="text" placeholder="음식 이름 검색 (예: 치킨, 김밥...)" oninput="searchFood(this.value)" autocomplete="off">
+      <div class="meal-ac-list" id="meal-ac"></div>
     </div>
-    <div class="line-wrap">
-      <div class="line-hdr">
-        <div><div class="card-ttl">자산 추이 (스냅샷 기반)</div><div class="line-v" id="ov-linev"></div></div>
-        <div class="lbadge neu" id="ov-lbadge">스냅샷 없음</div>
-      </div>
-      <div style="position:relative;height:140px;"><canvas id="ov-line"></canvas></div>
-      <div style="font-size:11px;color:var(--t3);margin-top:8px;">💡 "오늘 스냅샷 저장"을 정기적으로 눌러두면 추이가 쌓여요</div>
-    </div>
-  </div>
-
-  <!-- US -->
-  <div class="page" id="page-us">
-    <div class="ph"><div class="ph-title">🇺🇸 미국 자산</div><div class="ph-sub">USD 기준</div></div>
-    <div class="strip" id="us-strip"></div>
-    <div class="g2">
-      <div class="card">
-        <div class="card-ttl">미국 자산 배분</div>
-        <div class="donut-wrap">
-          <div class="donut-c"><canvas id="us-donut" width="144" height="144"></canvas>
-            <div class="donut-lbl"><div class="donut-main" id="us-dtotal"></div><div class="donut-sub">USD</div></div>
-          </div>
-          <div class="leg" id="us-leg"></div>
-        </div>
-      </div>
-      <div class="card"><div class="card-ttl">자산별 현황</div><div id="us-rows"></div></div>
-    </div>
-  </div>
-
-  <!-- KR -->
-  <div class="page" id="page-kr">
-    <div class="ph"><div class="ph-title">🇰🇷 한국 자산</div><div class="ph-sub">KRW 기준</div></div>
-    <div class="strip" id="kr-strip"></div>
-    <div class="g2">
-      <div class="card">
-        <div class="card-ttl">한국 자산 배분</div>
-        <div class="donut-wrap">
-          <div class="donut-c"><canvas id="kr-donut" width="144" height="144"></canvas>
-            <div class="donut-lbl"><div class="donut-main" id="kr-dtotal"></div><div class="donut-sub">억원</div></div>
-          </div>
-          <div class="leg" id="kr-leg"></div>
-        </div>
-      </div>
-      <div class="card"><div class="card-ttl">자산별 현황</div><div id="kr-rows"></div></div>
-    </div>
-  </div>
-
-  <!-- STOCKS -->
-  <div class="page" id="page-stocks">
-    <div class="ph"><div class="ph-title">주식/ETF 분석</div><div class="ph-sub">실시간 시세 기반 평가손익</div></div>
-    <div class="g2b">
-      <div class="card">
-        <div class="card-ttl">집중도 (HHI)</div>
-        <div style="font-size:36px;font-weight:600;letter-spacing:-.04em;margin:8px 0 3px;" id="s-score">—</div>
-        <div style="font-size:13px;font-weight:500;" id="s-lbl"></div>
-        <div style="height:5px;background:rgba(255,255,255,.06);border-radius:3px;margin-top:12px;overflow:hidden;"><div id="s-fill" style="height:100%;border-radius:3px;transition:width .6s;"></div></div>
-        <div style="font-size:11px;color:var(--t3);margin-top:7px;" id="s-detail"></div>
-      </div>
-      <div class="card"><div class="card-ttl">카테고리 배분</div><div style="position:relative;height:145px;"><canvas id="cat-donut"></canvas></div></div>
-    </div>
-    <div class="card full">
-      <div class="card-ttl" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>종목별 평가손익</span>
-        <button onclick="fetchQuotes()" style="font-size:11px;color:var(--blue);background:transparent;border:none;cursor:pointer;font-family:var(--font);">🔄 시세 갱신</button>
-      </div>
-      <div style="overflow-x:auto;">
-        <table class="stk-table">
-          <thead><tr>
-            <th>종목</th><th>매수가</th><th>현재가 (실시간)</th><th>수량</th><th>평가금액</th><th>평가손익</th><th>수익률</th>
-          </tr></thead>
-          <tbody id="gain-tbody"></tbody>
-        </table>
+    <div class="meal-custom-picked" id="meal-cp">
+      <div class="meal-cp-name" id="meal-cp-name"></div>
+      <div class="meal-cp-kcal" id="meal-cp-kcal"></div>
+      <div class="meal-cp-qty">
+        <label>수량</label>
+        <input type="number" id="meal-cp-qty" value="1" min="0.5" max="5" step="0.5" onchange="updateCustomTotal()">
+        <span>인분</span>
+        <span class="meal-cp-total" id="meal-cp-total"></span>
       </div>
     </div>
-    <div class="card"><div class="card-ttl">종목별 비중</div><div id="stock-rows"></div></div>
-  </div>
-
-  <!-- HISTORY -->
-  <div class="page" id="page-history">
-    <div class="ph"><div class="ph-title">자산 히스토리</div><div class="ph-sub">스냅샷 기록 기반 추이</div></div>
-    <div class="line-wrap">
-      <div class="line-hdr">
-        <div><div class="card-ttl">총 자산 추이 (USD)</div><div class="line-v" id="hist-linev">—</div></div>
-        <div id="hist-badge" class="lbadge neu">스냅샷 없음</div>
-      </div>
-      <div style="position:relative;height:200px;"><canvas id="hist-line"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="card-ttl" style="display:flex;justify-content:space-between;">
-        <span>스냅샷 기록</span>
-        <span style="color:var(--red);font-size:11px;cursor:pointer;" onclick="if(confirm('모두 삭제?')){snapshots=[];saveData();renderHistory();}">전체 삭제</span>
-      </div>
-      <div id="snap-list"></div>
-    </div>
-  </div>
-
-  <!-- BUDGET -->
-  <div class="page" id="page-budget">
-    <div class="ph"><div class="ph-title">월 예산</div><div class="ph-sub">카테고리별 한도 설정</div></div>
-    <div class="budget-strip" id="bud-strip"></div>
-    <div class="card full"><div class="card-ttl">카테고리별 현황</div><div id="bud-cats"></div></div>
-    <div class="card"><div class="card-ttl">예산 수정</div><div id="bud-editor"></div><button class="add-btn" onclick="addBudgetCat()" style="margin-top:6px;">+ 카테고리 추가</button></div>
-  </div>
-
-  <!-- SPENDING -->
-  <div class="page" id="page-spending">
-    <div class="ph"><div class="ph-title">💳 지출 분석</div><div class="ph-sub">CSV 업로드 → 자동 분류 분석</div></div>
-    <div id="upload-area">
-      <div class="card full">
-        <div class="upload-zone" id="drop-zone">
-          <input type="file" accept=".csv,.txt" onchange="handleFile(this.files[0])"/>
-          <div style="font-size:28px;margin-bottom:.625rem;">📂</div>
-          <div style="font-size:14px;font-weight:500;margin-bottom:3px;">CSV 파일 드래그 또는 클릭</div>
-          <div style="font-size:12px;color:var(--t3);">Chase, BofA, 신한, 국민카드 등 · 날짜/설명/금액 컬럼</div>
-        </div>
-      </div>
-    </div>
-    <div id="spending-content" style="display:none;">
-      <div class="strip" id="sp-strip"></div>
-      <div class="g2b">
-        <div class="card"><div class="card-ttl">카테고리별 지출</div><div style="position:relative;height:190px;"><canvas id="sp-donut"></canvas></div></div>
-        <div class="card"><div class="card-ttl">예산 대비</div><div id="sp-cats"></div></div>
-      </div>
-      <div class="card full">
-        <div class="card-ttl" style="display:flex;justify-content:space-between;align-items:center;">
-          <span>거래 내역 (상위 30건)</span>
-          <span style="font-size:11px;color:var(--blue);cursor:pointer;" onclick="resetUpload()">↩ 다시 업로드</span>
-        </div>
-        <div id="txn-list"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- RECS -->
-  <div class="page" id="page-recs">
-    <div class="ph"><div class="ph-title">💡 AI 추천</div><div class="ph-sub">자산 현황 기반 맞춤 조언</div></div>
-    <div id="rec-list"></div>
-  </div>
-
-</main>
-
-<!-- MODAL -->
-<div class="ov" id="ov">
-  <div class="modal">
-    <h2>자산 정보 수정</h2>
-    <div class="modal-sub">주식 티커는 Yahoo Finance 기준 (예: VOO, 005930.KS)</div>
-    <div class="msec">🇺🇸 미국 자산 (USD)</div>
-    <div class="g2i">
-      <div class="field"><label>현금/예금 ($)</label><input type="number" id="us-cash" min="0"/></div>
-      <div class="field"><label>부동산 ($)</label><input type="number" id="us-realty" min="0"/></div>
-      <div class="field"><label>암호화폐 ($)</label><input type="number" id="us-crypto" min="0"/></div>
-      <div class="field"><label>401k/IRA ($)</label><input type="number" id="us-retire" min="0"/></div>
-    </div>
-    <div class="msec">🇰🇷 한국 자산 (만원)</div>
-    <div class="g2i">
-      <div class="field"><label>현금/예적금 (만원)</label><input type="number" id="kr-cash" min="0"/></div>
-      <div class="field"><label>부동산 (만원)</label><input type="number" id="kr-realty" min="0"/></div>
-      <div class="field"><label>암호화폐 (만원)</label><input type="number" id="kr-crypto" min="0"/></div>
-      <div class="field"><label>연금/퇴직금 (만원)</label><input type="number" id="kr-retire" min="0"/></div>
-    </div>
-    <div class="msec">📈 주식/ETF 종목</div>
-    <div class="sfrow-hdr"><span>종목명</span><span>카테고리</span><span>통화</span><span>티커</span><span>매수가</span><span>수량</span><span></span></div>
-    <div id="stock-fields"></div>
-    <button class="add-btn" onclick="addStockField()">+ 종목 추가</button>
-    <div class="msec">⚙️ 설정</div>
-    <div class="field"><label>USD/KRW 환율 (예: 1340)</label><input type="number" id="fx-input" min="1000" max="2000"/></div>
-    <div class="mbtns">
-      <button class="btn-c" onclick="closeModal()">취소</button>
-      <button class="btn-s" onclick="saveModal()">저장 후 시세 조회</button>
-    </div>
+    <button class="btn-primary" id="meal-cp-save" style="margin-top:14px;display:none" onclick="saveCustomMeal()">기록하기</button>
   </div>
 </div>
 
+<!-- ══ Exercise Picker Modal ══ -->
+<div class="modal-bg" id="modal" onclick="closeModalBg(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-top">
+      <div class="modal-title">운동 선택</div>
+      <div class="modal-sub" id="picker-sub">추가할 운동을 골라보세요</div>
+    </div>
+    <div class="picker-tabs">
+      <button class="picker-tab active" onclick="pickTab('running')"><span class="pt-icon">🏃</span>런닝</button>
+      <button class="picker-tab" onclick="pickTab('walking')"><span class="pt-icon">🚶‍♀️</span>걷기</button>
+      <button class="picker-tab" onclick="pickTab('strength')"><span class="pt-icon">🏋️</span>근력</button>
+      <button class="picker-tab" onclick="pickTab('ballet')"><span class="pt-icon">🩰</span>발레</button>
+      <button class="picker-tab" onclick="pickTab('pilates')"><span class="pt-icon">🤸‍♀️</span>필라테스</button>
+      <button class="picker-tab" onclick="pickTab('stretching')"><span class="pt-icon">🧘‍♀️</span>스트레칭</button>
+      <button class="picker-tab" onclick="pickTab('hometraining')"><span class="pt-icon">🏠</span>홈트</button>
+    </div>
+    <div class="picker-body" id="picker-body"></div>
+  </div>
+</div>
+
+<div class="confirm-dialog" id="confirm-dialog">
+  <div class="confirm-content">
+    <p id="confirm-msg">삭제할까요?</p>
+    <div class="confirm-btns">
+      <button class="confirm-no" onclick="closeConfirm()">취소</button>
+      <button class="confirm-yes" id="confirm-yes">삭제</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
 <script>
-// ── CONSTANTS ──
-const CATS=['미국주식','국내주식','채권/안정형','원자재/금','비트코인ETF','기타'];
-const CAT_COLORS=['#4b9eff','#1ec97a','#9b7eff','#f5a623','#fb923c','#7b8194'];
-const CAT_ICONS={'미국주식':'🇺🇸','국내주식':'🇰🇷','채권/안정형':'🏦','원자재/금':'🥇','비트코인ETF':'₿','기타':'📦'};
-const SPEND_KW={'식비':['restaurant','food','cafe','coffee','starbucks','mcdonald','chipotle','doordash','grubhub','편의점','식당','카페'],'교통/주유':['uber','lyft','gas','shell','chevron','metro','transit','parking','주유','교통'],'쇼핑':['amazon','walmart','target','costco','zara','apple store','best buy','쿠팡'],'여가/외식':['netflix','spotify','hulu','cinema','movie','gym','hotel','airbnb'],'구독서비스':['subscription','google','microsoft','adobe','notion','dropbox']};
+const DAYS=['월','화','수','목','금','토','일'];
+const DAYS_FULL=['월요일','화요일','수요일','목요일','금요일','토요일','일요일'];
+const TYPE_ICON={running:'🏃',walking:'🚶‍♀️',strength:'🏋️',ballet:'🩰',pilates:'🤸‍♀️',stretching:'🧘‍♀️',hometraining:'🏠'};
+const TYPE_NAME={running:'런닝',walking:'걷기',strength:'근력',ballet:'발레',pilates:'필라테스',stretching:'스트레칭',hometraining:'홈트'};
+const TYPE_BG={running:'#E1F5EE',walking:'#E1F5EE',strength:'#FAEEDA',ballet:'#FBEAF0',pilates:'#FBEAF0',stretching:'#EEEDFE',hometraining:'#FFF3E0'};
+const TYPE_PILL={running:'pill-green',walking:'pill-green',strength:'pill-amber',ballet:'pill-pink',pilates:'pill-pink',stretching:'pill-purple',hometraining:'pill-amber'};
 
-// ── STATE ──
-let FX = 1340;
-let liveQuotes = {};   // { SYMBOL: { price, changePercent, currency } }
-let quoteStatus = 'idle'; // idle | loading | live | error
-
-let usAssets={
-  cash:{label:'현금/예금',value:45000,icon:'💵',color:'#4b9eff',bg:'rgba(75,158,255,.15)'},
-  realty:{label:'부동산',value:0,icon:'🏠',color:'#1ec97a',bg:'rgba(30,201,122,.15)'},
-  crypto:{label:'암호화폐',value:8000,icon:'🪙',color:'#fb923c',bg:'rgba(251,146,60,.15)'},
-  retire:{label:'401k/IRA',value:32000,icon:'📋',color:'#9b7eff',bg:'rgba(155,126,255,.15)'},
+/* ══ Exercise Library ══ */
+const EXERCISES = {
+  running: [
+    {eid:'r1',name:'런닝',dur:30,desc:'심폐 강화 유산소'},
+    {eid:'r2',name:'인터벌 런닝',dur:25,desc:'고강도/저강도 번갈아 뛰기'},
+    {eid:'r3',name:'조깅',dur:35,desc:'가볍게 뛰는 유산소. 혈당 조절'},
+    {eid:'r4',name:'트레드밀 경사 런닝',dur:30,desc:'경사로 심박수↑ 칼로리↑'},
+  ],
+  walking: [
+    {eid:'w1',name:'걷기',dur:30,desc:'가장 안전한 유산소. 코르티솔↓ 혈당 관리'},
+    {eid:'w2',name:'경사 걷기',dur:30,desc:'경사로 심박수↑ 관절 부담↓'},
+    {eid:'w3',name:'인터벌 걷기',dur:25,desc:'빠르게/느리게 번갈아 걷기'},
+    {eid:'w4',name:'식후 걷기',dur:15,desc:'식후 혈당 스파이크 방지'},
+    {eid:'w5',name:'파워워킹',dur:30,desc:'빠른 걸음으로 유산소 효과↑'},
+  ],
+  strength: [
+    {eid:'s1',name:'스쿼트',sets:4,reps:10,dur:8,group:'하체',desc:'하체 왕 운동. 인슐린 감수성↑',
+      how:'① 발 어깨너비로 벌리고 발끝 살짝 바깥\n② 엉덩이를 뒤로 빼며 무릎 굽히기 (허벅지 평행까지)\n③ 무릎이 발끝을 넘지 않게 주의\n④ 코어에 힘주고 발뒤꿈치로 밀며 올라오기'},
+    {eid:'s2',name:'런지',sets:3,reps:10,dur:7,group:'하체',desc:'좌우 균형+하체 근력',
+      how:'① 한 발 앞으로 크게 내딛기\n② 뒷무릎이 바닥에 거의 닿을 때까지 내려가기\n③ 상체는 곧게 유지, 앞무릎 90도\n④ 앞발 뒤꿈치로 밀며 원위치'},
+    {eid:'s3',name:'점프스쿼트',sets:3,reps:10,dur:7,group:'하체',desc:'폭발적 하체 파워+유산소 효과',
+      how:'① 발 어깨너비, 스쿼트 자세로 앉기\n② 팔 반동과 함께 힘차게 점프\n③ 착지 시 무릎 살짝 굽혀 충격 흡수\n④ 착지 즉시 다시 스쿼트 자세로'},
+    {eid:'s4',name:'힙브릿지',sets:3,reps:15,dur:6,group:'하체',desc:'둔근 활성화+골반 안정성',
+      how:'① 누워서 무릎 굽히고 발바닥 바닥에\n② 둔근에 힘주며 골반을 천장으로 들어올리기\n③ 어깨~무릎 일직선, 정점 2초 유지\n④ 천천히 내려오기 (등 순서대로)'},
+    {eid:'s5',name:'불가리안 스플릿',sets:3,reps:10,dur:7,group:'하체',desc:'한쪽 다리 집중 런지',
+      how:'① 뒤쪽 발등을 의자나 소파 위에 올리기\n② 앞다리 무릎 90도까지 내려가기\n③ 상체 곧게, 코어에 힘주기\n④ 앞발 뒤꿈치로 밀며 올라오기'},
+    {eid:'s6',name:'월싯',sets:3,reps:30,dur:5,group:'하체',desc:'벽에 기대 버티기 (초 단위)',
+      how:'① 등을 벽에 붙이고 발을 한 걸음 앞으로\n② 무릎 90도까지 미끄러지듯 앉기\n③ 허벅지가 바닥과 평행하게 유지\n④ 시간 동안 버티기, 코어에 힘주기'},
+    {eid:'s7',name:'사이드런지',sets:3,reps:10,dur:6,group:'하체',desc:'내전근+외전근 균형',
+      how:'① 양발 모으고 서기\n② 한쪽 발을 옆으로 크게 벌리며 앉기\n③ 반대쪽 다리는 곧게 유지\n④ 밀며 원위치, 반대쪽 반복'},
+    {eid:'s8',name:'수모스쿼트',sets:3,reps:12,dur:7,group:'하체',desc:'내전근+둔근 집중 와이드 스쿼트',
+      how:'① 발을 어깨 2배 너비로 넓게, 발끝 45도 바깥\n② 엉덩이를 아래로 내리며 앉기\n③ 무릎이 발끝 방향을 따라가게\n④ 둔근 쥐어짜며 올라오기'},
+    {eid:'s9',name:'싱글레그 데드리프트',sets:3,reps:10,dur:6,group:'하체',desc:'균형감각+햄스트링 강화',
+      how:'① 한 발로 서고 반대쪽 다리 뒤로\n② 상체를 앞으로 숙이며 뒷다리 들기\n③ 몸이 T자 형태가 될 때까지\n④ 천천히 원위치 (흔들리면 벽 잡기)'},
+    {eid:'s10',name:'카프레이즈',sets:3,reps:15,dur:5,group:'하체',desc:'종아리 근력',
+      how:'① 발 앞꿈치를 계단이나 스텝 가장자리에\n② 최대한 높이 까치발 올리기\n③ 정점 1초 유지\n④ 뒤꿈치를 스텝 아래까지 천천히 내리기'},
+    {eid:'s11',name:'푸시업',sets:3,reps:10,dur:5,group:'상체',desc:'가슴+삼두 맨몸 기본',
+      how:'① 손 어깨너비, 머리~발끝 일직선\n② 팔꿈치 45도 각도로 가슴이 바닥 가까이 올 때까지\n③ 코어에 힘주고 밀어 올리기\n④ 허리 처지지 않게 주의'},
+    {eid:'s12',name:'다이아몬드 푸시업',sets:3,reps:8,dur:5,group:'상체',desc:'삼두근 집중 푸시업',
+      how:'① 양손 엄지+검지로 다이아몬드 모양 만들기\n② 가슴 아래에 손 위치\n③ 팔꿈치를 몸에 붙이며 내려가기\n④ 삼두에 힘주며 밀어 올리기'},
+    {eid:'s13',name:'파이크 푸시업',sets:3,reps:10,dur:5,group:'상체',desc:'어깨 집중 맨몸 운동',
+      how:'① 엎드려 엉덩이를 높이 들어 역V자 만들기\n② 머리를 양손 사이로 내리기\n③ 팔꿈치 굽혀 머리가 바닥 가까이\n④ 어깨 힘으로 밀어 올리기'},
+    {eid:'s14',name:'딥스',sets:3,reps:10,dur:5,group:'상체',desc:'의자로 삼두+가슴 운동',
+      how:'① 의자 가장자리에 손 짚고 엉덩이 앞으로 빼기\n② 팔꿈치 90도까지 몸을 내리기\n③ 팔꿈치가 뒤로 향하게 유지\n④ 삼두로 밀어 올라오기'},
+    {eid:'s15',name:'슈퍼맨',sets:3,reps:12,dur:5,group:'상체',desc:'등+허리 강화 맨몸 운동',
+      how:'① 엎드려 팔다리 쭉 뻗기\n② 동시에 팔·가슴·다리를 바닥에서 들어올리기\n③ 정점에서 2초 유지\n④ 천천히 내려오기'},
+    {eid:'s16',name:'플랭크',sets:3,reps:30,dur:5,group:'코어',desc:'코어 안정성 (초 단위)',
+      how:'① 팔꿈치를 바닥에, 어깨 바로 아래\n② 머리~발끝 일직선 유지\n③ 배꼽을 척추 쪽으로 당기듯 코어 힘주기\n④ 엉덩이가 올라가거나 처지지 않게'},
+    {eid:'s17',name:'바이시클 크런치',sets:3,reps:15,dur:5,group:'코어',desc:'복근+복사근',
+      how:'① 누워서 양손 귀 옆에\n② 한쪽 무릎 당기며 반대쪽 팔꿈치 터치\n③ 자전거 페달 돌리듯 교차 반복\n④ 허리가 바닥에서 뜨지 않게'},
+    {eid:'s18',name:'마운틴 클라이머',sets:3,reps:20,dur:5,group:'코어',desc:'코어+유산소',
+      how:'① 푸시업 자세에서 시작\n② 한쪽 무릎을 가슴 쪽으로 빠르게 당기기\n③ 다리 교대하며 달리듯 반복\n④ 엉덩이 높이 일정하게 유지'},
+  ],
+  ballet: [
+    {eid:'b1',name:'발레수업',dur:90,desc:'발레 클래스 1시간 반 풀 수업',days:[1,3,5,6]},
+    {eid:'b2',name:'발레 바워크',dur:30,desc:'플리에·텐듀·데가제 기본 바 연습'},
+  ],
+  pilates: [
+    {eid:'p1',name:'필라테스 코어',dur:35,desc:'골반저근·브릿지·플랭크'},
+    {eid:'p2',name:'필라테스 전신',dur:40,desc:'척추분절·사이드킥·스완'},
+    {eid:'p3',name:'필라테스 하체',dur:35,desc:'레그서클·클램·사이드레그'},
+    {eid:'p4',name:'필라테스 스트레칭',dur:25,desc:'유연성+근막 이완'},
+    {eid:'p5',name:'리포머 필라테스',dur:45,desc:'기구 필라테스 전신 운동'},
+  ],
+  stretching: [
+    {eid:'st1',name:'전신 스트레칭',dur:20,desc:'머리부터 발끝까지 전신 이완'},
+    {eid:'st2',name:'하체 스트레칭',dur:15,desc:'허벅지·종아리·고관절 유연성'},
+    {eid:'st3',name:'상체 스트레칭',dur:15,desc:'어깨·목·등 긴장 풀기'},
+    {eid:'st4',name:'폼롤러 마사지',dur:20,desc:'근막 이완·뭉친 근육 풀기'},
+    {eid:'st5',name:'취침 전 스트레칭',dur:15,desc:'이완+숙면 도움. 코르티솔↓'},
+  ],
+  hometraining: [
+    {eid:'h1',name:'전신 홈트',dur:30,desc:'맨몸 전신 운동 루틴'},
+    {eid:'h2',name:'하체 홈트',dur:25,desc:'스쿼트·런지·힙브릿지 맨몸'},
+    {eid:'h3',name:'상체 홈트',dur:25,desc:'푸시업·딥스·플랭크 맨몸'},
+    {eid:'h4',name:'코어 홈트',dur:20,desc:'복근·허리·골반 집중 루틴'},
+    {eid:'h5',name:'HIIT 홈트',dur:20,desc:'고강도 인터벌 전신 운동'},
+    {eid:'h6',name:'밴드 홈트',dur:25,desc:'저항밴드 활용 전신 운동'},
+  ]
 };
-let krAssets={
-  cash:{label:'현금/예적금',value:3500,icon:'💵',color:'#1ec97a',bg:'rgba(30,201,122,.15)'},
-  realty:{label:'부동산',value:80000,icon:'🏠',color:'#f5a623',bg:'rgba(245,166,35,.15)'},
-  crypto:{label:'암호화폐',value:800,icon:'🪙',color:'#fb923c',bg:'rgba(251,146,60,.15)'},
-  retire:{label:'연금/퇴직금',value:2000,icon:'📋',color:'#9b7eff',bg:'rgba(155,126,255,.15)'},
-};
-// ticker: Yahoo Finance symbol (e.g. VOO, 005930.KS)
-let stocks=[
-  {name:'VOO',ticker:'VOO',cat:'미국주식',currency:'USD',buyPrice:420,qty:40},
-  {name:'QQQ',ticker:'QQQ',cat:'미국주식',currency:'USD',buyPrice:350,qty:25},
-  {name:'IBIT',ticker:'IBIT',cat:'비트코인ETF',currency:'USD',buyPrice:30,qty:100},
-  {name:'GLD',ticker:'GLD',cat:'원자재/금',currency:'USD',buyPrice:180,qty:20},
-  {name:'BND',ticker:'BND',cat:'채권/안정형',currency:'USD',buyPrice:72,qty:60},
-  {name:'TIGER 미국S&P500',ticker:'459580.KS',cat:'미국주식',currency:'KRW',buyPrice:15000,qty:60},
-  {name:'삼성전자',ticker:'005930.KS',cat:'국내주식',currency:'KRW',buyPrice:68000,qty:10},
-];
-let budgetIncome = 7000;
-let budgetCats=[
-  {name:'식비',icon:'🍔',budget:800,color:'#4b9eff',spent:0},
-  {name:'교통/주유',icon:'🚗',budget:300,color:'#1ec97a',spent:0},
-  {name:'쇼핑',icon:'🛍️',budget:400,color:'#9b7eff',spent:0},
-  {name:'여가/외식',icon:'🎬',budget:300,color:'#f5a623',spent:0},
-  {name:'구독서비스',icon:'📱',budget:150,color:'#e86db2',spent:0},
-  {name:'기타',icon:'📦',budget:200,color:'#7b8194',spent:0},
-];
-let snapshots=[], transactions=[];
 
-// ── PERSIST ──
-function saveData(){ try{localStorage.setItem('fhq_v3',JSON.stringify({snapshots,stocks,usAssets,krAssets,budgetCats,FX,budgetIncome}));}catch(e){} }
-function loadData(){
-  try{
-    const d=localStorage.getItem('fhq_v3');
-    if(d){ const p=JSON.parse(d); if(p.snapshots)snapshots=p.snapshots; if(p.stocks)stocks=p.stocks; if(p.usAssets)Object.assign(usAssets,p.usAssets); if(p.krAssets)Object.assign(krAssets,p.krAssets); if(p.budgetCats)budgetCats=p.budgetCats; if(p.FX)FX=p.FX; if(p.budgetIncome!=null)budgetIncome=p.budgetIncome; }
-  }catch(e){}
+const AI_TIPS=[
+  '근력운동은 인슐린 감수성 개선에 가장 효과적이에요. 하체 위주로!',
+  '식후 15~20분 걷기만으로도 혈당 스파이크를 줄일 수 있어요.',
+  '과도한 유산소는 코르티솔을 높여 탈모를 악화시킬 수 있어요. 걷기가 최고!',
+  '스트레칭으로 긴장을 풀면 코르티솔↓ PCOS 증상 완화에 도움돼요.',
+  '스쿼트·데드리프트 같은 복합운동이 인슐린저항성 개선에 효과적이에요.',
+  '주 3~4회 근력운동 + 매일 걷기가 PCOS 관리의 골든 조합이에요.',
+  '수면 부족은 인슐린저항성을 악화시켜요. 취침 전 스트레칭으로 숙면을!',
+  '하체 근육량이 늘면 포도당 흡수가 좋아져 인슐린 감수성이 올라가요.',
+  '운동 강도보다 꾸준함이 중요해요. 무리하지 말고 지속 가능하게!',
+  '필라테스 코어 운동은 복부 지방 감소와 자세 교정에 모두 좋아요.',
+];
+
+/* ══ Routines (structured: e=eid, s=sets, r=reps, d=dur) ══ */
+/* ══ Routine Generator ══ */
+const GOAL_DESC={
+  insulin:'인슐린 감수성 개선에 집중. 하체 복합운동+유산소로 혈당 조절.',
+  hormone:'코르티솔↓ 스트레스 완화. 과도한 운동 없이 호르몬 밸런스.',
+  body:'근육↑ 체지방↓. 상하체 분할 근력으로 기초대사량 UP.',
+  total:'인슐린·호르몬·체성분을 골고루 관리하는 종합 플랜.'
+};
+const GOAL_PRIORITY={
+  insulin:['strength','walking','running','hometraining','pilates','ballet','stretching'],
+  hormone:['stretching','walking','pilates','ballet','hometraining','running','strength'],
+  body:['strength','hometraining','pilates','ballet','running','walking','stretching'],
+  total:['strength','hometraining','pilates','ballet','walking','running','stretching']
+};
+
+function pick(arr,n){return[...arr].sort(()=>Math.random()-.5).slice(0,Math.min(n,arr.length))}
+
+function buildDayExercises(type, cfg, variant, dayIdx){
+  const items=[];
+  if(type==='strength'){
+    const lowerPool=['s1','s2','s4','s5','s6','s7','s8','s9','s10'];
+    const upperPool=['s11','s12','s13','s14','s15'];
+    const corePool=['s16','s17','s18'];
+    let pool;
+    if(variant==='lower') pool=lowerPool;
+    else if(variant==='upper') pool=[...upperPool,...corePool];
+    else pool=[...pick(lowerPool,2),...pick(upperPool,2)];
+    pick(pool,cfg.n).forEach(e=>items.push({e,s:cfg.s,r:cfg.r}));
+  } else if(type==='running'){
+    const pool=cfg.gentle?['r3']:['r1','r2','r3','r4'];
+    items.push({e:pick(pool,1)[0],d:cfg.dur});
+  } else if(type==='walking'){
+    const pool=cfg.gentle?['w1','w4']:['w1','w2','w3','w4','w5'];
+    items.push({e:pick(pool,1)[0],d:cfg.dur});
+  } else if(type==='ballet'){
+    const balletDays=[1,3,5,6]; // 화목토일
+    const canClass=dayIdx!==undefined&&balletDays.includes(dayIdx);
+    items.push({e:canClass?'b1':'b2',d:canClass?90:cfg.dur});
+  } else if(type==='pilates'){
+    items.push({e:pick(['p1','p2','p3','p4','p5'],1)[0],d:cfg.dur});
+  } else if(type==='stretching'){
+    const pool=cfg.gentle?['st1','st5']:['st1','st2','st3','st4','st5'];
+    items.push({e:pick(pool,1)[0],d:cfg.dur});
+  } else if(type==='hometraining'){
+    const pool=cfg.gentle?['h1','h2','h4']:['h1','h2','h3','h4','h5','h6'];
+    items.push({e:pick(pool,1)[0],d:cfg.dur});
+  }
+  return items;
 }
 
-// ── QUOTE FETCHING ──
-async function fetchQuotes(){
-  const tickers=stocks.map(s=>s.ticker).filter(Boolean);
-  if(!tickers.length) return;
-  setQuoteStatus('loading');
-  const btn=document.getElementById('refresh-btn');
-  btn.classList.add('loading'); btn.textContent='⏳ 조회 중...';
-  try{
-    const res=await fetch(`/api/quote?symbols=${tickers.join(',')}`);
-    if(!res.ok) throw new Error('API error '+res.status);
-    const data=await res.json();
-    if(data.error) throw new Error(data.error);
-    liveQuotes=data;
-    setQuoteStatus('live');
-    const now=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
-    document.getElementById('last-update').textContent='업데이트: '+now;
-    renderActivePages();
-  }catch(err){
-    setQuoteStatus('error',err.message);
-    console.error('Quote fetch error:',err);
-  }finally{
-    btn.classList.remove('loading');
-    btn.textContent='🔄 시세 업데이트';
+function generateRoutines(){
+  const {types,goal,level}=RS;
+  const sortedDays=[...RS.days].sort((a,b)=>a-b);
+  const nDays=sortedDays.length;
+  const ordered=GOAL_PRIORITY[goal].filter(t=>types.includes(t));
+  if(!ordered.length||!nDays) return [];
+
+  const cfgMap={
+    beginner:{s:3,r:12,n:3,durS:20,durM:35,durL:45},
+    intermediate:{s:3,r:10,n:4,durS:25,durM:40,durL:50},
+    advanced:{s:4,r:8,n:5,durS:25,durM:40,durL:55}
+  };
+  const cfg=cfgMap[level];
+  const typeLabel=ordered.map(t=>TYPE_NAME[t]).join('+');
+  const goalLabel={insulin:'혈당 케어',hormone:'호르몬 밸런스',body:'체성분 개선',total:'종합 관리'}[goal];
+
+  // Assign types to days: primary type gets more days, but every selected type appears at least once
+  function assignTypes(focusRatio){
+    const assignments=[];
+    if(ordered.length>=nDays){
+      // More types than days: cycle through in priority order
+      for(let i=0;i<nDays;i++) assignments.push(ordered[i]);
+    } else {
+      // Guarantee each type at least once, then fill remaining with primary
+      const reserved=ordered.slice(1); // non-primary types each get 1 day
+      const primaryCount=Math.max(nDays-reserved.length, Math.ceil(nDays*focusRatio));
+      const actualPrimary=Math.min(primaryCount, nDays-reserved.length);
+      for(let i=0;i<actualPrimary;i++) assignments.push(ordered[0]);
+      reserved.forEach(t=>assignments.push(t));
+      // Fill remaining with primary
+      while(assignments.length<nDays) assignments.push(ordered[0]);
+    }
+    return assignments;
+  }
+
+  function getDur(type,fallback){return RS.durConfig[type]||fallback}
+
+  function buildSched(typeAssignments,c){
+    const sched={};
+    let strIdx=0;
+    typeAssignments.forEach((type,i)=>{
+      const day=sortedDays[i];
+      let items=[];
+      if(type==='strength'||type==='hometraining'){
+        if(type==='strength'){
+          const variant=['lower','upper','full'][strIdx%3];
+          strIdx++;
+          items=buildDayExercises('strength',{n:c.n,s:c.s,r:c.r},variant,day);
+        } else {
+          items=buildDayExercises('hometraining',{dur:getDur('hometraining',c.durL),gentle:false},undefined,day);
+        }
+        // Add short cardio after strength/hometraining
+        if(types.includes('walking')) items.push({e:'w1',d:Math.min(getDur('walking',c.durS),c.durS)});
+        else if(types.includes('running')) items.push({e:'r1',d:Math.min(getDur('running',c.durS),c.durS)});
+        // Add stretching cooldown if selected
+        if(types.includes('stretching')) items.push({e:'st1',d:Math.min(getDur('stretching',10),15)});
+      } else {
+        items=buildDayExercises(type,{dur:getDur(type,c.durL),gentle:false},undefined,day);
+      }
+      sched[day]=items;
+    });
+    return sched;
+  }
+
+  const routines=[];
+
+  // Routine 1: 집중 플랜 (primary type 70%)
+  routines.push({
+    id:'gen1',name:`${typeLabel} ${goalLabel} 집중`,level,popular:true,
+    desc:`${TYPE_NAME[ordered[0]]} 중심으로 ${goalLabel}에 최적화. PCOS 맞춤 구성.`,
+    tags:ordered.map(t=>TYPE_NAME[t]),
+    sched:buildSched(assignTypes(0.7),cfg)
+  });
+
+  // Routine 2: 밸런스 플랜 (even distribution)
+  if(ordered.length>=2){
+    const balanced=[];
+    for(let i=0;i<nDays;i++) balanced.push(ordered[i%ordered.length]);
+    routines.push({
+      id:'gen2',name:`${typeLabel} 밸런스 플랜`,level,
+      desc:`${ordered.map(t=>TYPE_NAME[t]).join('·')}를 골고루 배치. 다양하게 즐기는 루틴.`,
+      tags:ordered.map(t=>TYPE_NAME[t]),
+      sched:buildSched(balanced,cfg)
+    });
+  }
+
+  // Routine 3: 가볍게 시작 (beginner-friendly)
+  const lightCfg={...cfgMap.beginner,n:Math.max(cfgMap.beginner.n-1,2),durL:cfgMap.beginner.durM};
+  const lightTypes=[];
+  for(let i=0;i<nDays;i++) lightTypes.push(ordered[i%ordered.length]);
+  routines.push({
+    id:'gen3',name:`${typeLabel} 가볍게 시작`,level:'beginner',
+    desc:'부담 없이 시작하는 가벼운 플랜. 무리하지 않고 꾸준히.',
+    tags:ordered.map(t=>TYPE_NAME[t]),
+    sched:buildSched(lightTypes,lightCfg)
+  });
+
+  return routines;
+}
+
+function findExercise(eid){
+  for(const type in EXERCISES){
+    const ex=EXERCISES[type].find(e=>e.eid===eid);
+    if(ex) return {...ex, exType:type};
+  }
+  return null;
+}
+
+/* ══ State ══ */
+const S=JSON.parse(localStorage.getItem('wapp')||'{}');
+if(S.workouts&&!S.weeks){S.weeks={};S.weeks[getWeekKey(0)]=S.workouts;delete S.workouts;save();}
+if(!S.weeks)S.weeks={};
+if(!S.weights)S.weights={};
+if(!S.weekOffset)S.weekOffset=0;
+if(!S.nextId)S.nextId=1;
+
+const RS={goal:null,types:[],days:[],level:null,routine:null,durConfig:{}};
+const DUR_DEFAULTS={running:30,walking:30,ballet:90,pilates:40,stretching:20,hometraining:30};
+let aiIdx=0, selDay=todayIdx(), curPickerTab='running', expandedEid=null;
+let calYear,calMonth,calSelectedDate=null;
+
+function save(){localStorage.setItem('wapp',JSON.stringify(S))}
+function todayIdx(){const d=new Date().getDay();return d===0?6:d-1}
+function getWeekKey(offset){
+  const now=new Date(),dow=now.getDay(),mon=new Date(now);
+  mon.setDate(now.getDate()-(dow===0?6:dow-1)+(offset||0)*7);
+  return mon.toISOString().slice(0,10);
+}
+function getWeekWorkouts(){
+  const key=getWeekKey(S.weekOffset||0);
+  if(!S.weeks[key])S.weeks[key]={0:[],1:[],2:[],3:[],4:[],5:[],6:[]};
+  return S.weeks[key];
+}
+function getWeekDates(){
+  const now=new Date(),dow=now.getDay(),mon=new Date(now);
+  mon.setDate(now.getDate()-(dow===0?6:dow-1)+(S.weekOffset||0)*7);
+  return Array.from({length:7},(_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d});
+}
+function showToast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+/* ══ Screens ══ */
+function switchScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('nav-'+name).classList.add('active');
+  if(name==='stats')renderStats();
+  if(name==='calendar')renderCalendar();
+  if(name==='meal')renderMealScreen();
+}
+
+/* ══ Plan Screen ══ */
+function renderPlan(){
+  const dates=getWeekDates(), wk=getWeekWorkouts(), now=new Date();
+  document.getElementById('today-label').textContent=`${now.getMonth()+1}월 ${now.getDate()}일 · ${DAYS_FULL[todayIdx()]}`;
+
+  const wKey=`w_${getWeekKey(S.weekOffset||0)}_${selDay}`;
+  const wData=S.weights[wKey];
+  document.getElementById('w-display').textContent=wData?parseFloat(wData).toFixed(1):'-';
+  const prevKey=`w_${getWeekKey(S.weekOffset||0)}_${selDay-1>=0?selDay-1:6}`;
+  const prevW=S.weights[prevKey];
+  const wc=document.getElementById('w-change');
+  if(wData&&prevW){const diff=(prevW-wData).toFixed(1);if(diff>0){wc.textContent='▼ '+diff+' kg';wc.style.color='var(--green)';}else if(diff<0){wc.textContent='▲ '+Math.abs(diff)+' kg';wc.style.color='#E24B4A';}else{wc.textContent='변화 없음';wc.style.color='var(--text-muted)';}}
+  else if(!wData){wc.textContent='입력해 주세요';wc.style.color='var(--text-muted)';}
+  else{wc.textContent='첫 기록!';wc.style.color='var(--green)';}
+
+  const row=document.getElementById('days-row');row.innerHTML='';
+  dates.forEach((d,i)=>{
+    const ws=wk[i]||[];
+    const chip=document.createElement('div');
+    chip.className='day-chip'+(i===selDay?' active':'')+(ws.length&&i!==selDay?' has-w':'');
+    chip.innerHTML=`<span class="dn">${DAYS[i]}</span><span class="dd">${d.getDate()}</span>${ws.length?'<div class="day-dot"></div>':'<div style="height:5px"></div>'}`;
+    chip.onclick=()=>{selDay=i;renderPlan()};
+    row.appendChild(chip);
+  });
+
+  const ws=wk[selDay]||[];
+  document.getElementById('day-title').textContent=DAYS_FULL[selDay]+' 운동';
+
+  // Progress: count all sets for strength, or just done for others
+  let totalUnits=0, doneUnits=0;
+  ws.forEach(w=>{
+    if(w.setsCompleted){
+      totalUnits+=w.setsCompleted.length;
+      doneUnits+=w.setsCompleted.filter(Boolean).length;
+    } else {
+      totalUnits++;
+      if(w.done) doneUnits++;
+    }
+  });
+  const pct=totalUnits?Math.round(doneUnits/totalUnits*100):0;
+  document.getElementById('prog-fill').style.width=pct+'%';
+  document.getElementById('prog-text').textContent=`${doneUnits} / ${totalUnits}`;
+
+  const list=document.getElementById('workout-list');
+  if(!ws.length){
+    list.innerHTML=`<div class="rest-card"><strong>휴식일 😴</strong><p>운동을 추가하거나 오늘은 푹 쉬어요!</p></div>`;
+    return;
+  }
+
+  list.innerHTML=ws.map((w,idx)=>{
+    const isStrength=w.type==='strength'&&w.setsCompleted;
+    const allDone=isStrength?w.setsCompleted.every(Boolean):w.done;
+
+    if(isStrength){
+      const doneSets=w.setsCompleted.filter(Boolean).length;
+      const totalSets=w.setsCompleted.length;
+      const metaParts=[`${w.sets}세트 × ${w.reps}회`];
+      if(w.kg)metaParts.push(w.kg+'kg');
+      return `
+      <div class="wcard${allDone?' done':''}" data-id="${w.id}" data-idx="${idx}">
+        <div class="wc-drag-handle" data-drag="true">⠿</div>
+        <div class="wc-icon" style="background:${TYPE_BG.strength}">${TYPE_ICON.strength}</div>
+        <div class="wc-body">
+          <div class="wc-top-row">
+            <div class="wc-name">${w.name}</div>
+            <div class="wc-actions">
+              <button class="wc-action-btn" onclick="confirmDelete(${w.id})">🗑</button>
+            </div>
+          </div>
+          <div class="wc-meta">${metaParts.join(' · ')}</div>
+          <div class="set-track">
+            ${w.setsCompleted.map((done,si)=>`<button class="set-btn${done?' done':''}" onclick="toggleSet(${w.id},${si})">${si+1}</button>`).join('')}
+          </div>
+          <div class="set-progress">${doneSets}/${totalSets} 세트 완료</div>
+          ${w.how?`<button class="how-toggle" onclick="event.stopPropagation();this.nextElementSibling.classList.toggle('show');this.textContent=this.nextElementSibling.classList.contains('show')?'방법 접기 ▲':'하는 방법 ▼'">하는 방법 ▼</button><div class="how-box">${w.how.split('\n').join('<br>')}</div>`:''}
+        </div>
+      </div>`;
+    } else {
+      return `
+      <div class="wcard${allDone?' done':''}" data-id="${w.id}" data-idx="${idx}">
+        <div class="wc-drag-handle" data-drag="true">⠿</div>
+        <div class="wc-icon" style="background:${TYPE_BG[w.type]}">${TYPE_ICON[w.type]}</div>
+        <div class="wc-body">
+          <div class="wc-top-row">
+            <div class="wc-name">${w.name}</div>
+            <div class="wc-actions">
+              <button class="wc-action-btn" onclick="confirmDelete(${w.id})">🗑</button>
+            </div>
+          </div>
+          <div class="wc-meta">${w.dur}분 · ${TYPE_NAME[w.type]}</div>
+        </div>
+        <button class="wc-check${w.done?' checked':''}" onclick="toggleDone(${w.id})">${w.done?'✓':''}</button>
+      </div>`;
+    }
+  }).join('');
+  initDragDrop();
+  renderPlanMeal();
+}
+
+function renderPlanMeal(){
+  const area=document.getElementById('plan-meal-area');
+  const saved=JSON.parse(localStorage.getItem('wapp')||'{}');
+  const plan=saved.mealPlan;
+  if(!plan||!plan.length){area.innerHTML='';return;}
+  // Show today's meals (index 0 = today)
+  const today=plan[0];
+  if(!today){area.innerHTML='';return;}
+  const slots=['아침','점심','저녁','간식'];
+  const totalKcal=today.slots.reduce((s,sl)=>{const m=sl.options[sl.picked||0];return s+(sl.eaten?m.kcal:0)},0);
+  area.innerHTML=`
+    <div class="sec-header"><span class="sec-title">오늘 식단</span></div>
+    <div class="plan-meal-card" onclick="switchScreen('meal')">
+      <div class="plan-meal-header">
+        <span class="plan-meal-title">🥗 ${today.day}</span>
+        <span class="plan-meal-kcal">${totalKcal>0?totalKcal+'kcal 섭취':''}</span>
+      </div>
+      ${today.slots.map((sl,i)=>{
+        const m=sl.options[sl.picked||0];
+        return `<div class="plan-meal-row">
+          <span class="plan-meal-slot">${slots[i]}</span>
+          <span class="plan-meal-name">${m.name}</span>
+          <span class="plan-meal-check">${sl.eaten?'✅':''}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function toggleDone(id){
+  const wk=getWeekWorkouts();
+  for(let d in wk){const w=(wk[d]||[]).find(x=>x.id===id);if(w){w.done=!w.done;break;}}
+  save();renderPlan();
+}
+
+function toggleSet(id,setIdx){
+  const wk=getWeekWorkouts();
+  for(let d in wk){
+    const w=(wk[d]||[]).find(x=>x.id===id);
+    if(w&&w.setsCompleted){
+      w.setsCompleted[setIdx]=!w.setsCompleted[setIdx];
+      w.done=w.setsCompleted.every(Boolean);
+      break;
+    }
+  }
+  save();renderPlan();
+}
+
+function changeWeek(d){
+  S.weekOffset=(S.weekOffset||0)+d;
+  const lbl=S.weekOffset===0?'이번 주':S.weekOffset===-1?'저번 주':S.weekOffset===1?'다음 주':S.weekOffset>0?`+${S.weekOffset}주`:`${S.weekOffset}주`;
+  document.getElementById('week-label').textContent=lbl;
+  save();renderPlan();
+}
+
+function saveWeight(){
+  const v=parseFloat(document.getElementById('w-input').value);
+  if(isNaN(v)||v<30||v>250)return;
+  S.weights[`w_${getWeekKey(S.weekOffset||0)}_${selDay}`]=v;
+  document.getElementById('w-input').value='';
+  save();renderPlan();showToast('몸무게 저장됨');
+}
+
+function refreshAI(){aiIdx=(aiIdx+1)%AI_TIPS.length;document.getElementById('ai-msg').textContent=AI_TIPS[aiIdx]}
+
+/* ══ Delete ══ */
+let deleteTargetId=null;
+function confirmDelete(id){
+  deleteTargetId=id;
+  document.getElementById('confirm-msg').textContent='이 운동을 삭제할까요?';
+  document.getElementById('confirm-yes').textContent='삭제';
+  document.getElementById('confirm-yes').onclick=doDelete;
+  document.getElementById('confirm-dialog').classList.add('open');
+}
+function closeConfirm(){document.getElementById('confirm-dialog').classList.remove('open');deleteTargetId=null}
+function doDelete(){
+  if(deleteTargetId===null)return;
+  const wk=getWeekWorkouts();
+  for(let d in wk){const idx=(wk[d]||[]).findIndex(x=>x.id===deleteTargetId);if(idx>=0){wk[d].splice(idx,1);break;}}
+  closeConfirm();save();renderPlan();showToast('삭제됨');
+}
+
+/* ══ Exercise Picker ══ */
+function openPicker(){
+  expandedEid=null;
+  document.getElementById('picker-sub').textContent=DAYS_FULL[selDay]+'에 추가할 운동을 골라보세요';
+  document.getElementById('modal').classList.add('open');
+  pickTab('running');
+}
+function closeModal(){document.getElementById('modal').classList.remove('open')}
+function closeModalBg(e){if(e.target===document.getElementById('modal'))closeModal()}
+
+function pickTab(type){
+  curPickerTab=type;expandedEid=null;
+  document.querySelectorAll('.picker-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.picker-tab').forEach(t=>{
+    if(t.textContent.includes(TYPE_NAME[type]))t.classList.add('active');
+  });
+  renderPickerBody();
+}
+
+function renderPickerBody(){
+  const body=document.getElementById('picker-body');
+  const exs=EXERCISES[curPickerTab]||[];
+
+  if(curPickerTab==='strength'){
+    const groups={};
+    exs.forEach(ex=>{const g=ex.group||'기타';if(!groups[g])groups[g]=[];groups[g].push(ex)});
+    body.innerHTML=Object.entries(groups).map(([group,items])=>`
+      <div class="picker-group">${group}</div>
+      ${items.map(ex=>renderExCard(ex)).join('')}
+    `).join('');
+  } else {
+    body.innerHTML=exs.map(ex=>renderExCard(ex)).join('');
   }
 }
-function setQuoteStatus(status,msg=''){
-  quoteStatus=status;
-  const bar=document.getElementById('q-status-bar');
-  if(status==='loading'){bar.className='q-status q-stale';bar.innerHTML='<div class="q-dot"></div><span>조회 중...</span>';}
-  else if(status==='live'){bar.className='q-status q-live';bar.innerHTML='<div class="q-dot"></div><span>실시간 시세</span>';}
-  else if(status==='error'){bar.className='q-status q-err';bar.innerHTML=`<div class="q-dot"></div><span>오류: ${msg.slice(0,20)}</span>`;}
-  else{bar.className='q-status q-stale';bar.innerHTML='<div class="q-dot"></div><span>시세 미조회</span>';}
-}
 
-// ── PRICE HELPERS ──
-function getCurPrice(s){
-  const q=liveQuotes[s.ticker];
-  if(q&&q.price!=null) return q.price;
-  return s.buyPrice; // fallback to buy price
-}
-function stockCurUSD(s){
-  const cur=getCurPrice(s);
-  if(s.currency==='USD') return cur*s.qty;
-  return cur*s.qty/FX; // KRW price × qty / FX = USD
-}
-function stockCostUSD(s){
-  if(s.currency==='USD') return s.buyPrice*s.qty;
-  return s.buyPrice*s.qty/FX;
-}
-function stockGainUSD(s){ return stockCurUSD(s)-stockCostUSD(s); }
-function stockGainPct(s){ const c=stockCostUSD(s); return c?((stockGainUSD(s)/c)*100):0; }
-function hasLivePrice(s){ return liveQuotes[s.ticker]?.price!=null; }
+function renderExCard(ex){
+  const isExpanded=expandedEid===ex.eid;
+  const isStrength=ex.sets!==undefined;
+  const bg=TYPE_BG[curPickerTab]||'#E1F5EE';
+  const dayRestricted=ex.days&&!ex.days.includes(selDay);
+  const daysLabel=ex.days?ex.days.map(d=>DAYS[d]).join('·'):'';
 
-// ── TOTALS ──
-function totalUSUSD(){ return Object.values(usAssets).reduce((s,a)=>s+a.value,0)+stocks.filter(s=>s.currency==='USD').reduce((s,x)=>s+stockCurUSD(x),0); }
-function totalKRUSD(){ return Object.values(krAssets).reduce((s,a)=>s+a.value/FX*10000,0)+stocks.filter(s=>s.currency==='KRW').reduce((s,x)=>s+stockCurUSD(x),0); }
-function totalUSD(){ return totalUSUSD()+totalKRUSD(); }
-function totalStockUSD(){ return stocks.reduce((s,x)=>s+stockCurUSD(x),0); }
-function totalStockGain(){ return stocks.reduce((s,x)=>s+stockGainUSD(x),0); }
-function hhi(arr){ const t=arr.reduce((s,x)=>s+x,0); if(!t)return 0; return arr.reduce((s,x)=>s+Math.pow(x/t,2),0); }
+  let configHTML='';
+  if(isStrength){
+    const howHTML=ex.how?`<div class="ex-how"><div class="ex-how-title">하는 방법</div><div class="ex-how-steps">${ex.how.replace(/\n/g,'<br>')}</div></div>`:'';
+    configHTML=`
+      <div class="ex-config">
+        ${howHTML}
+        <div class="ex-config-row">
+          <div class="ex-field"><label>세트</label><input type="number" id="cfg-sets-${ex.eid}" value="${ex.sets}" min="1" max="10"></div>
+          <div class="ex-field"><label>횟수</label><input type="number" id="cfg-reps-${ex.eid}" value="${ex.reps}" min="1" max="100"></div>
+          <div class="ex-field"><label>무게(kg)</label><input type="number" id="cfg-kg-${ex.eid}" placeholder="선택" min="0" max="300" step="0.5"></div>
+        </div>
+        <button class="ex-confirm-btn" onclick="addFromPicker('${ex.eid}')">이 운동 추가</button>
+      </div>`;
+  } else {
+    configHTML=`
+      <div class="ex-config">
+        <div class="ex-config-row">
+          <div class="ex-field"><label>시간(분)</label><input type="number" id="cfg-dur-${ex.eid}" value="${ex.dur}" min="5" max="120"></div>
+        </div>
+        ${dayRestricted?`<div class="ex-day-warn">⚠ ${DAYS_FULL[selDay]}에는 수업이 없어요 (${daysLabel}만 가능)</div>`:`<button class="ex-confirm-btn" onclick="addFromPicker('${ex.eid}')">이 운동 추가</button>`}
+      </div>`;
+  }
 
-// ── FORMAT ──
-const fmtUSD=v=>'$'+Math.round(v).toLocaleString('en-US');
-const fmtKRW=v=>v>=10000?(v/10000).toFixed(1)+'억':v.toLocaleString()+'만';
-const sign=v=>v>=0?'+':'-';
-const cls=v=>v>=0?'up':'down';
+  const defaultText=isStrength?`${ex.sets}세트 × ${ex.reps}회`:`${ex.dur}분`;
 
-// ── CHARTS ──
-let charts={};
-function dc(id){ if(charts[id]){charts[id].destroy();delete charts[id];} }
-function mkDonut(id,data,colors){
-  dc(id);const ctx=document.getElementById(id);if(!ctx)return;
-  charts[id]=new Chart(ctx,{type:'doughnut',data:{datasets:[{data,backgroundColor:colors,borderWidth:0,hoverOffset:4}]},options:{responsive:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{enabled:false}}}});
-}
-function mkLine(id,labels,dataset,fmtY=v=>v){
-  dc(id);const ctx=document.getElementById(id);if(!ctx)return;
-  charts[id]=new Chart(ctx,{type:'line',data:{labels,datasets:[{data:dataset,borderColor:'#4b9eff',
-    backgroundColor:(c)=>{const g=c.chart.ctx.createLinearGradient(0,0,0,140);g.addColorStop(0,'rgba(75,158,255,.18)');g.addColorStop(1,'rgba(75,158,255,0)');return g;},
-    fill:true,tension:.4,pointRadius:3,pointBackgroundColor:'#4b9eff',pointBorderColor:'#111215',pointBorderWidth:2}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-      scales:{y:{ticks:{callback:fmtY,color:'#464c5c',font:{size:11}},grid:{color:'rgba(255,255,255,.04)'},border:{display:false}},
-        x:{ticks:{color:'#464c5c',font:{size:11}},grid:{display:false},border:{display:false}}}}});
-}
-
-// ── NAV ──
-function goPage(id,el){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
-  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
-  document.getElementById('page-'+id).classList.add('on');
-  if(el)el.classList.add('on');
-  ({overview:renderOverview,us:renderUS,kr:renderKR,stocks:renderStocks,history:renderHistory,budget:renderBudget,spending:()=>{},recs:renderRecs}[id]||Function())();
-}
-function renderActivePages(){
-  const id=document.querySelector('.ni.on')?.getAttribute('onclick')?.match(/'(\w+)'/)?.[1]||'overview';
-  ({overview:renderOverview,us:renderUS,kr:renderKR,stocks:renderStocks,history:renderHistory,budget:renderBudget,recs:renderRecs}[id]||Function())();
-  if(id!=='overview') renderOverview(); // always keep overview fresh
-}
-
-// ── OVERVIEW ──
-function renderOverview(){
-  const tot=totalUSD(),usT=totalUSUSD(),krT=totalKRUSD();
-  const sg=totalStockGain(),st=totalStockUSD();
-  const sgPct=st-sg?sg/(st-sg)*100:0;
-  document.getElementById('ov-strip').innerHTML=`
-    <div class="sc"><div class="sc-lbl">총 자산 (USD)</div><div class="sc-val">${fmtUSD(tot)}</div><div class="sc-sub neu">${snapshots.length}개 스냅샷</div></div>
-    <div class="sc"><div class="sc-lbl">🇺🇸 미국</div><div class="sc-val">${fmtUSD(usT)}</div><div class="sc-sub neu">${Math.round(usT/tot*100)}%</div></div>
-    <div class="sc"><div class="sc-lbl">🇰🇷 한국</div><div class="sc-val">${fmtUSD(krT)}</div><div class="sc-sub neu">${Math.round(krT/tot*100)}%</div></div>
-    <div class="sc"><div class="sc-lbl">주식 평가손익</div><div class="sc-val ${cls(sg)}">${sign(sg)}${fmtUSD(Math.abs(sg))}</div><div class="sc-sub ${cls(sg)}">${sign(sgPct)}${Math.abs(sgPct).toFixed(1)}%</div></div>
-  `;
-  mkDonut('ov-donut',[usT,krT],['#4b9eff','#1ec97a']);
-  document.getElementById('ov-dtotal').textContent='$'+(tot/1000).toFixed(0)+'k';
-  document.getElementById('ov-leg').innerHTML=`
-    <div class="li"><div class="ld" style="background:#4b9eff"></div><span class="ln">🇺🇸 미국</span><span class="lp">${Math.round(usT/tot*100)}%</span></div>
-    <div class="li"><div class="ld" style="background:#1ec97a"></div><span class="ln">🇰🇷 한국</span><span class="lp">${Math.round(krT/tot*100)}%</span></div>
-  `;
-  const top5=[...stocks].sort((a,b)=>Math.abs(stockGainUSD(b))-Math.abs(stockGainUSD(a))).slice(0,5);
-  document.getElementById('ov-gain').innerHTML=top5.map(s=>{
-    const g=stockGainUSD(s),p=stockGainPct(s),live=hasLivePrice(s);
-    return `<div class="ar">
-      <div class="ar-ic" style="background:${s.currency==='USD'?'rgba(75,158,255,.12)':'rgba(30,201,122,.12)'}">${s.currency==='USD'?'🇺🇸':'🇰🇷'}</div>
-      <div class="ar-info"><div class="ar-name" style="font-size:12px;">${s.name}${live?'':' <span style="font-size:10px;color:var(--t3)">(매수가 기준)</span>'}</div></div>
-      <div class="ar-r"><div class="${cls(g)}" style="font-size:13px;font-weight:500;">${sign(g)}${fmtUSD(Math.abs(g))}</div><div style="font-size:10px;" class="${cls(p)}">${sign(p)}${Math.abs(p).toFixed(1)}%</div></div>
-    </div>`;
-  }).join('');
-  // snapshot line
-  const snapEl=document.getElementById('ov-linev'),badge=document.getElementById('ov-lbadge');
-  snapEl.textContent=fmtUSD(tot);
-  if(snapshots.length>=2){
-    const sorted=[...snapshots].sort((a,b)=>new Date(a.date)-new Date(b.date));
-    const all=[...sorted,{date:'오늘',total:tot}];
-    const chg=tot-sorted[0].total,chgP=(chg/sorted[0].total*100).toFixed(1);
-    badge.textContent=`${sign(chg)}${Math.abs(chgP)}% (${sorted.length}건)`;
-    badge.className=`lbadge ${cls(chg)}`;
-    mkLine('ov-line',all.map(s=>s.date==='오늘'?'오늘':s.date.slice(5)),all.map(s=>s.total),v=>'$'+(v/1000).toFixed(0)+'k');
-  } else { badge.textContent='스냅샷 없음';badge.className='lbadge neu';dc('ov-line'); }
-}
-
-// ── US ──
-function renderUS(){
-  const usStUSD=stocks.filter(s=>s.currency==='USD').reduce((a,b)=>a+stockCurUSD(b),0);
-  const usT=totalUSUSD();
-  const usG=stocks.filter(s=>s.currency==='USD').reduce((a,b)=>a+stockGainUSD(b),0);
-  document.getElementById('us-strip').innerHTML=`
-    <div class="sc"><div class="sc-lbl">미국 총 자산</div><div class="sc-val">${fmtUSD(usT)}</div><div class="sc-sub neu">${Math.round(usT/totalUSD()*100)}%</div></div>
-    <div class="sc"><div class="sc-lbl">주식/ETF</div><div class="sc-val">${fmtUSD(usStUSD)}</div><div class="sc-sub neu">${stocks.filter(s=>s.currency==='USD').length}종목</div></div>
-    <div class="sc"><div class="sc-lbl">401k/IRA</div><div class="sc-val">${fmtUSD(usAssets.retire.value)}</div><div class="sc-sub neu">은퇴 계좌</div></div>
-    <div class="sc"><div class="sc-lbl">주식 손익</div><div class="sc-val ${cls(usG)}">${sign(usG)}${fmtUSD(Math.abs(usG))}</div><div class="sc-sub ${cls(usG)}">${sign(usG)}${usStUSD?(Math.abs(usG)/(usStUSD-usG)*100).toFixed(1):0}%</div></div>
-  `;
-  const o={...usAssets,stocks:{label:'주식/ETF',value:usStUSD,icon:'📈',color:'#2dd4bf',bg:'rgba(45,212,191,.15)'}};
-  const vals=Object.values(o).map(a=>a.value),cols=Object.values(o).map(a=>a.color);
-  document.getElementById('us-dtotal').textContent='$'+(usT/1000).toFixed(0)+'k';
-  mkDonut('us-donut',vals,cols);
-  document.getElementById('us-leg').innerHTML=Object.values(o).map((a,i)=>`<div class="li"><div class="ld" style="background:${cols[i]}"></div><span class="ln">${a.label}</span><span class="lp">${usT?Math.round(vals[i]/usT*100):0}%</span></div>`).join('');
-  document.getElementById('us-rows').innerHTML=Object.values(o).map(a=>{const p=usT?Math.round(a.value/usT*100):0;return `<div class="ar"><div class="ar-ic" style="background:${a.bg}">${a.icon}</div><div class="ar-info"><div class="ar-name">${a.label}</div><div class="ar-bar"><div class="ar-fill" style="width:${p}%;background:${a.color}"></div></div></div><div class="ar-r"><div class="ar-v">${fmtUSD(a.value)}</div><div class="ar-c neu">${p}%</div></div></div>`;}).join('');
-}
-
-// ── KR ──
-function renderKR(){
-  const krStKRW=stocks.filter(s=>s.currency==='KRW').reduce((a,b)=>a+getCurPrice(b)*b.qty,0);
-  const krTotMan=Object.values(krAssets).reduce((s,a)=>s+a.value,0)+Math.round(krStKRW/10000);
-  const krTUSD=totalKRUSD();
-  const krG=stocks.filter(s=>s.currency==='KRW').reduce((a,b)=>a+stockGainUSD(b),0);
-  document.getElementById('kr-strip').innerHTML=`
-    <div class="sc"><div class="sc-lbl">한국 총 자산</div><div class="sc-val">${fmtKRW(krTotMan)}원</div><div class="sc-sub neu">≈${fmtUSD(krTUSD)}</div></div>
-    <div class="sc"><div class="sc-lbl">주식/ETF</div><div class="sc-val">${fmtKRW(Math.round(krStKRW/10000))}원</div><div class="sc-sub neu">${stocks.filter(s=>s.currency==='KRW').length}종목</div></div>
-    <div class="sc"><div class="sc-lbl">부동산</div><div class="sc-val">${fmtKRW(krAssets.realty.value)}원</div><div class="sc-sub neu">≈${fmtUSD(krAssets.realty.value*10000/FX)}</div></div>
-    <div class="sc"><div class="sc-lbl">주식 손익</div><div class="sc-val ${cls(krG)}">${sign(krG)}${fmtUSD(Math.abs(krG))}</div><div class="sc-sub ${cls(krG)}">USD 환산</div></div>
-  `;
-  const o={...krAssets,stocks:{label:'주식/ETF',value:Math.round(krStKRW/10000),icon:'📈',color:'#2dd4bf',bg:'rgba(45,212,191,.15)'}};
-  const vals=Object.values(o).map(a=>a.value),tot=vals.reduce((s,v)=>s+v,0),cols=Object.values(o).map(a=>a.color);
-  document.getElementById('kr-dtotal').textContent=(tot/10000).toFixed(1);
-  mkDonut('kr-donut',vals,cols);
-  document.getElementById('kr-leg').innerHTML=Object.values(o).map((a,i)=>`<div class="li"><div class="ld" style="background:${cols[i]}"></div><span class="ln">${a.label}</span><span class="lp">${tot?Math.round(vals[i]/tot*100):0}%</span></div>`).join('');
-  document.getElementById('kr-rows').innerHTML=Object.values(o).map(a=>{const p=tot?Math.round(a.value/tot*100):0;return `<div class="ar"><div class="ar-ic" style="background:${a.bg}">${a.icon}</div><div class="ar-info"><div class="ar-name">${a.label}</div><div class="ar-bar"><div class="ar-fill" style="width:${p}%;background:${a.color}"></div></div></div><div class="ar-r"><div class="ar-v">${fmtKRW(a.value)}원</div><div class="ar-c neu">${p}%</div></div></div>`;}).join('');
-}
-
-// ── STOCKS ──
-function renderStocks(){
-  const totUSD=totalStockUSD();
-  if(!totUSD){document.getElementById('gain-tbody').innerHTML='<tr><td colspan="7" class="empty">종목을 추가해주세요.</td></tr>';return;}
-  const h=hhi(stocks.map(s=>stockCurUSD(s)));
-  const score=Math.round(h*100);
-  let label,color;
-  if(h<0.18){label='분산 양호';color='#1ec97a';}else if(h<0.30){label='다소 집중';color='#f5a623';}else{label='집중 위험';color='#f0564f';}
-  document.getElementById('s-score').textContent=score;document.getElementById('s-score').style.color=color;
-  document.getElementById('s-lbl').textContent=label;document.getElementById('s-lbl').style.color=color;
-  document.getElementById('s-fill').style.cssText=`width:${Math.min(score*2,100)}%;background:${color}`;
-  const top=[...stocks].sort((a,b)=>stockCurUSD(b)-stockCurUSD(a))[0];
-  document.getElementById('s-detail').textContent=`최대 비중: ${top.name} ${Math.round(stockCurUSD(top)/totUSD*100)}%`;
-  const catMap={};CATS.forEach(c=>catMap[c]=0);stocks.forEach(s=>catMap[s.cat]=(catMap[s.cat]||0)+stockCurUSD(s));
-  dc('cat-donut');
-  const cctx=document.getElementById('cat-donut').getContext('2d');
-  charts['cat-donut']=new Chart(cctx,{type:'doughnut',data:{datasets:[{data:CATS.map(c=>catMap[c]),backgroundColor:CAT_COLORS,borderWidth:0,hoverOffset:4}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:true,position:'right',labels:{color:'#7b8194',font:{size:11},boxWidth:8,boxHeight:8,padding:8,
-      generateLabels:()=>CATS.map((c,i)=>({text:`${c} ${Math.round(catMap[c]/totUSD*100)}%`,fillStyle:CAT_COLORS[i],strokeStyle:'transparent',index:i}))
-    }},tooltip:{callbacks:{label:ctx=>`${fmtUSD(CATS.map(c=>catMap[c])[ctx.dataIndex])}`}}}}
-  });
-  const sorted=[...stocks].sort((a,b)=>stockCurUSD(b)-stockCurUSD(a));
-  document.getElementById('gain-tbody').innerHTML=sorted.map(s=>{
-    const cur=getCurPrice(s),g=stockGainUSD(s),p=stockGainPct(s),live=hasLivePrice(s);
-    const q=liveQuotes[s.ticker];
-    const chgPct=q?.changePercent!=null?`<span class="${cls(q.changePercent)}" style="font-size:10px;"> ${sign(q.changePercent)}${Math.abs(q.changePercent).toFixed(2)}%</span>`:'';
-    const buyFmt=s.currency==='USD'?`$${s.buyPrice.toLocaleString()}`:`₩${s.buyPrice.toLocaleString()}`;
-    const curFmt=s.currency==='USD'?`$${cur.toLocaleString()}`:`₩${cur.toLocaleString()}`;
-    const curUSD=s.currency==='KRW'?` <span style="font-size:10px;color:var(--t3)">(≈$${(cur/FX).toFixed(1)})</span>`:'';
-    return `<tr>
-      <td><div style="font-weight:500;font-size:13px;">${s.name}</div>
-          <div style="font-size:10px;margin-top:1px;"><span class="badge ${s.currency==='USD'?'b-us':'b-kr'}">${s.ticker}</span> <span style="color:var(--t3)">${s.cat}</span></div></td>
-      <td class="live-price">${buyFmt}</td>
-      <td class="live-price">${live?`<span class="${cls(q?.changePercent||0)}">${curFmt}</span>${chgPct}${curUSD}`:`<span style="color:var(--t3);font-size:11px;">${curFmt} (매수가)</span>`}</td>
-      <td class="live-price">${s.qty.toLocaleString()}</td>
-      <td class="live-price">${fmtUSD(stockCurUSD(s))}</td>
-      <td class="live-price ${cls(g)}">${sign(g)}${fmtUSD(Math.abs(g))}</td>
-      <td class="live-price ${cls(p)}" style="font-weight:500;">${sign(p)}${Math.abs(p).toFixed(1)}%</td>
-    </tr>`;
-  }).join('');
-  const maxV=stockCurUSD(sorted[0]);
-  document.getElementById('stock-rows').innerHTML=sorted.map((s,i)=>{
-    const usd=stockCurUSD(s),g=stockGainUSD(s),p=stockGainPct(s),pct=Math.round(usd/totUSD*100);
-    const catColor=CAT_COLORS[CATS.indexOf(s.cat)]||'#7b8194';
-    const live=hasLivePrice(s);
-    return `<div class="sr">
-      <div class="sr-rk">${i+1}</div>
-      <div class="sr-info">
-        <div class="sr-top"><span class="sr-n">${s.name}</span>${pct>=25?'<span class="sr-warn">집중</span>':''}<span class="badge ${s.currency==='USD'?'b-us':'b-kr'}">${s.currency}</span>${live?'<span style="font-size:9px;color:var(--green)">● live</span>':''}</div>
-        <div class="sr-cat" style="color:${catColor}">${CAT_ICONS[s.cat]||''} ${s.cat}</div>
-        <div class="sr-bar"><div class="sr-fill" style="width:${Math.round(usd/maxV*100)}%;background:${catColor}"></div></div>
+  return `
+    <div class="ex-card${isExpanded?' expanded':''}${dayRestricted?' restricted':''}" id="exc-${ex.eid}">
+      <div class="ex-row" onclick="toggleExCard('${ex.eid}')">
+        <div class="ex-icon" style="background:${bg}">${TYPE_ICON[curPickerTab]}</div>
+        <div class="ex-info">
+          <div class="ex-name">${ex.name}${daysLabel?` <span class="ex-days">${daysLabel}</span>`:''}</div>
+          <div class="ex-desc">${ex.desc}</div>
+          <div class="ex-default">${defaultText}</div>
+        </div>
+        <div class="ex-add-btn">+</div>
       </div>
-      <div class="sr-r"><div class="sr-v">${fmtUSD(usd)}</div><div class="sr-gain ${cls(g)}">${sign(g)}${fmtUSD(Math.abs(g))} (${sign(p)}${Math.abs(p).toFixed(1)}%)</div><div class="sr-p">${pct}% of 주식</div></div>
+      ${configHTML}
     </div>`;
-  }).join('');
 }
 
-// ── HISTORY ──
-function takeSnapshot(){
-  const today=new Date().toISOString().slice(0,10);
-  const dateStr=(prompt('스냅샷 날짜 (YYYY-MM-DD):',today)||'').trim();
-  if(!dateStr)return;
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)){alert('날짜 형식이 잘못됐어요. YYYY-MM-DD 형식으로 입력해주세요.');return;}
-  const tot=totalUSD();
-  const ex=snapshots.findIndex(s=>s.date===dateStr);
-  if(ex>=0){ if(!confirm(`${dateStr} 스냅샷 덮어쓸까요?`))return; snapshots[ex]={date:dateStr,total:tot,us:totalUSUSD(),kr:totalKRUSD()}; }
-  else snapshots.push({date:dateStr,total:tot,us:totalUSUSD(),kr:totalKRUSD()});
-  saveData();alert(`📸 저장: ${fmtUSD(tot)} (${dateStr})`);renderOverview();
-}
-function renderHistory(){
-  const tot=totalUSD(),snapEl=document.getElementById('hist-linev'),badge=document.getElementById('hist-badge');
-  snapEl.textContent=fmtUSD(tot);
-  if(snapshots.length>=2){
-    const sorted=[...snapshots].sort((a,b)=>new Date(a.date)-new Date(b.date));
-    const all=[...sorted,{date:'오늘',total:tot}];
-    const chg=tot-sorted[0].total,chgP=(chg/sorted[0].total*100).toFixed(1);
-    badge.textContent=`${sign(chg)}${Math.abs(chgP)}% (${sorted.length}건)`;badge.className=`lbadge ${cls(chg)}`;
-    mkLine('hist-line',all.map(s=>s.date==='오늘'?'오늘':s.date.slice(5)),all.map(s=>s.total),v=>'$'+(v/1000).toFixed(0)+'k');
-  } else { badge.textContent='스냅샷 없음';badge.className='lbadge neu';dc('hist-line'); }
-  const sorted2=[...snapshots].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  document.getElementById('snap-list').innerHTML=sorted2.length?sorted2.map((s,i)=>{
-    const prev=sorted2[i+1],chg=prev?s.total-prev.total:null,chgP=prev?((chg/prev.total)*100).toFixed(1):null;
-    return `<div class="snap-item">
-      <div style="font-size:12px;color:var(--t2);font-family:var(--mono);min-width:90px;">${s.date}</div>
-      <div style="font-size:14px;font-weight:500;flex:1;">${fmtUSD(s.total)}</div>
-      <div style="font-size:12px;text-align:right;">${chg!=null?`<span class="${cls(chg)}">${sign(chg)}${fmtUSD(Math.abs(chg))} (${sign(chg)}${Math.abs(chgP)}%)</span>`:'<span style="color:var(--t3)">—</span>'}</div>
-    </div>`;
-  }).join(''):'<div class="empty">스냅샷이 없어요. 사이드바에서 저장해보세요.</div>';
+function toggleExCard(eid){
+  expandedEid=expandedEid===eid?null:eid;
+  renderPickerBody();
 }
 
-// ── BUDGET ──
-function renderBudget(){
-  const tot=budgetCats.reduce((s,c)=>s+c.budget,0),spent=budgetCats.reduce((s,c)=>s+(c.spent||0),0),rem=tot-spent,p=tot?Math.round(spent/tot*100):0;
-  const savable=budgetIncome-spent,saveRate=budgetIncome?Math.round(savable/budgetIncome*100):0;
-  document.getElementById('bud-strip').innerHTML=`
-    <div class="sc"><div class="sc-lbl">💰 월 수입</div><div class="sc-val">$${budgetIncome.toLocaleString()}</div><div class="sc-sub neu">세후 월급</div></div>
-    <div class="sc"><div class="sc-lbl">지출 예산 (${p}%)</div><div class="sc-val ${spent>tot?'down':'neu'}">$${spent.toLocaleString()}</div><div class="sc-sub ${spent>tot?'down':'neu'}">${spent>tot?'예산 초과':'예산 내'} / $${tot.toLocaleString()}</div></div>
-    <div class="sc"><div class="sc-lbl">저축 가능액</div><div class="sc-val ${savable<0?'down':'up'}">$${Math.abs(savable).toLocaleString()}</div><div class="sc-sub ${savable<0?'down':'up'}">${savable<0?'수입 초과':'저축 가능'}</div></div>
-    <div class="sc"><div class="sc-lbl">저축률</div><div class="sc-val ${saveRate<10?'down':saveRate<20?'neu':'up'}">${saveRate}%</div><div class="sc-sub ${saveRate<10?'down':saveRate<20?'neu':'up'}">${saveRate>=20?'양호':saveRate>=10?'보통':'저조'}</div></div>
-  `;
-  document.getElementById('bud-cats').innerHTML=budgetCats.map(c=>{const sp=c.spent||0,pp=c.budget?Math.min(Math.round(sp/c.budget*100),100):0,ov=sp>c.budget;return `<div class="cat-row"><div class="cat-ic">${c.icon}</div><div style="flex:1"><div style="font-size:13px;font-weight:500;">${c.name}</div><div style="height:3px;background:rgba(255,255,255,.05);border-radius:2px;margin-top:4px;overflow:hidden;"><div style="height:100%;border-radius:2px;width:${pp}%;background:${ov?'var(--red)':c.color}"></div></div></div><div style="text-align:right"><div class="${ov?'cat-over':''}" style="font-size:13px;font-weight:500;">$${sp}</div><div style="font-size:10px;color:var(--t3);">/ $${c.budget}</div></div></div>`;}).join('');
-  document.getElementById('bud-editor').innerHTML=
-    `<div style="display:flex;align-items:center;gap:8px;background:rgba(30,201,122,.08);border:1px solid rgba(30,201,122,.2);border-radius:8px;padding:8px 11px;margin-bottom:10px;"><span style="font-size:15px;">💰</span><span style="flex:1;font-size:13px;font-weight:500;">월 수입 (세후)</span><span style="font-size:11px;color:var(--t3);">$</span><input type="number" value="${budgetIncome}" min="0" style="width:90px;background:var(--bg4);border:1px solid var(--b2);border-radius:7px;color:var(--t1);font-size:13px;font-family:var(--font);padding:5px 8px;outline:none;" onchange="budgetIncome=parseInt(this.value)||0;saveData();renderBudget()"/></div>`+
-    budgetCats.map((c,i)=>`<div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border-radius:8px;padding:8px 11px;margin-bottom:6px;"><span style="font-size:15px;">${c.icon}</span><span style="flex:1;font-size:13px;font-weight:500;">${c.name}</span><span style="font-size:11px;color:var(--t3);">$</span><input type="number" value="${c.budget}" min="0" style="width:75px;background:var(--bg4);border:1px solid var(--b2);border-radius:7px;color:var(--t1);font-size:13px;font-family:var(--font);padding:5px 8px;outline:none;" onchange="budgetCats[${i}].budget=parseInt(this.value)||0;renderBudget()"/></div>`).join('');
-}
-function addBudgetCat(){const n=prompt('카테고리 이름:');if(!n)return;const b=parseInt(prompt('월 예산 ($):')||'0')||0;budgetCats.push({name:n,icon:'📦',budget:b,color:'#7b8194',spent:0});renderBudget();}
+function addFromPicker(eid){
+  const ex=findExercise(eid);
+  if(!ex)return;
+  const wk=getWeekWorkouts();
+  if(!wk[selDay])wk[selDay]=[];
 
-// ── SPENDING ──
-function guessCategory(desc){const d=desc.toLowerCase();for(const [cat,kws] of Object.entries(SPEND_KW)){if(kws.some(k=>d.includes(k)))return cat;}return '기타';}
-function handleFile(file){if(!file)return;const r=new FileReader();r.onload=e=>parseCSV(e.target.result);r.readAsText(file);}
-function parseCSV(text){
-  const lines=text.trim().split('\n').filter(l=>l.trim());if(lines.length<2){alert('데이터 부족');return;}
-  const sep=lines[0].includes('\t')?'\t':',';transactions=[];
-  lines.slice(1).forEach(l=>{const r=l.split(sep).map(c=>c.replace(/^"|"$/g,'').trim());let date='',desc='',amount=0;
-    r.forEach(cell=>{if(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}/.test(cell))date=cell;else if(/^-?[\d,]+\.?\d*$/.test(cell.replace(/[$₩,]/g,''))){const v=parseFloat(cell.replace(/[$₩,]/g,''));if(!isNaN(v)&&Math.abs(v)>0)amount=Math.abs(v);}else if(cell.length>2&&!desc)desc=cell;});
-    if(!desc&&r[1])desc=r[1];if(amount>0)transactions.push({date,desc,amount,cat:guessCategory(desc)});});
-  if(!transactions.length){alert('파싱 실패');return;}
-  const catSpent={};transactions.forEach(t=>catSpent[t.cat]=(catSpent[t.cat]||0)+t.amount);
-  budgetCats.forEach(c=>c.spent=Math.round(catSpent[c.name]||0));renderSpending();
-}
-function renderSpending(){
-  document.getElementById('upload-area').style.display='none';document.getElementById('spending-content').style.display='block';
-  const total=transactions.reduce((s,t)=>s+t.amount,0),totalBud=budgetCats.reduce((s,c)=>s+c.budget,0),diff=totalBud-total;
-  document.getElementById('sp-strip').innerHTML=`<div class="sc"><div class="sc-lbl">총 지출</div><div class="sc-val">$${Math.round(total).toLocaleString()}</div><div class="sc-sub ${cls(diff)}">${diff<0?'예산 초과':'예산 내'}</div></div><div class="sc"><div class="sc-lbl">거래 건수</div><div class="sc-val">${transactions.length}</div><div class="sc-sub neu">건</div></div><div class="sc"><div class="sc-lbl">예산 대비</div><div class="sc-val ${cls(diff)}">${diff>=0?'+':'-'}$${Math.abs(Math.round(diff)).toLocaleString()}</div><div class="sc-sub ${cls(diff)}">${diff>=0?'남음':'초과'}</div></div><div class="sc"><div class="sc-lbl">건당 평균</div><div class="sc-val">$${(total/transactions.length).toFixed(0)}</div><div class="sc-sub neu">평균</div></div>`;
-  const catMap={};transactions.forEach(t=>catMap[t.cat]=(catMap[t.cat]||0)+t.amount);
-  const cnames=Object.keys(catMap),cvals=Object.values(catMap),ccols=cnames.map((_,i)=>['#4b9eff','#1ec97a','#9b7eff','#f5a623','#e86db2','#fb923c','#7b8194'][i%7]);
-  dc('sp-donut');const sdctx=document.getElementById('sp-donut').getContext('2d');
-  charts['sp-donut']=new Chart(sdctx,{type:'doughnut',data:{datasets:[{data:cvals,backgroundColor:ccols,borderWidth:0,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:true,position:'bottom',labels:{color:'#7b8194',font:{size:11},boxWidth:8,boxHeight:8,padding:8,generateLabels:()=>cnames.map((c,i)=>({text:`${c} ${Math.round(cvals[i]/total*100)}%`,fillStyle:ccols[i],strokeStyle:'transparent',index:i}))}},tooltip:{callbacks:{label:ctx=>`$${Math.round(cvals[ctx.dataIndex]).toLocaleString()}`}}}}});
-  document.getElementById('sp-cats').innerHTML=budgetCats.map(c=>{const sp=c.spent||0,pp=c.budget?Math.min(Math.round(sp/c.budget*100),100):0,ov=sp>c.budget;return `<div class="cat-row"><div class="cat-ic">${c.icon}</div><div style="flex:1"><div style="font-size:13px;font-weight:500;">${c.name}</div><div style="height:3px;background:rgba(255,255,255,.05);border-radius:2px;margin-top:4px;overflow:hidden;"><div style="height:100%;border-radius:2px;width:${pp}%;background:${ov?'var(--red)':c.color}"></div></div></div><div style="text-align:right"><div class="${ov?'cat-over':''}" style="font-size:13px;font-weight:500;">$${sp}</div><div style="font-size:10px;color:var(--t3);">/ $${c.budget}</div></div></div>`;}).join('');
-  const topTxn=[...transactions].sort((a,b)=>b.amount-a.amount).slice(0,30);
-  document.getElementById('txn-list').innerHTML=topTxn.map(t=>`<div class="txn"><div style="font-size:14px;width:22px;text-align:center;">${CAT_ICONS[t.cat]||'📦'}</div><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.desc}</div><div style="font-size:10px;color:var(--t3);">${t.date} · ${t.cat}</div></div><div style="font-size:13px;font-weight:500;color:var(--red);">-$${t.amount.toFixed(2)}</div></div>`).join('');
-}
-function resetUpload(){transactions=[];budgetCats.forEach(c=>delete c.spent);document.getElementById('upload-area').style.display='block';document.getElementById('spending-content').style.display='none';}
-const dz=document.getElementById('drop-zone');
-dz.addEventListener('dragover',e=>{e.preventDefault();dz.style.borderColor='var(--blue)';});
-dz.addEventListener('dragleave',()=>{dz.style.borderColor='';});
-dz.addEventListener('drop',e=>{e.preventDefault();dz.style.borderColor='';if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
+  const w={id:S.nextId++, type:ex.exType, name:ex.name, done:false};
 
-// ── RECS ──
-function renderRecs(){
-  const tot=totalUSD(),usT=totalUSUSD(),krT=totalKRUSD(),h=hhi(stocks.map(s=>stockCurUSD(s)));
-  const sg=totalStockGain(),btcPct=Math.round(stocks.filter(s=>s.cat==='비트코인ETF').reduce((a,b)=>a+stockCurUSD(b),0)/tot*100);
-  const cryptoUSD=usAssets.crypto.value+krAssets.crypto.value*10000/FX;
-  const recs=[];
-  if(sg<0)recs.push({ic:'📉',bg:'rgba(240,86,79,.1)',title:`주식 평가손실 ${fmtUSD(Math.abs(sg))}`,desc:'매수가 대비 손실 상태입니다. 장기 보유 전략 여부와 손절 기준을 재검토해 보세요.'});
-  else recs.push({ic:'💚',bg:'rgba(30,201,122,.1)',title:`주식 평가이익 ${fmtUSD(sg)}`,desc:`수익 실현 시점과 세금(capital gains tax) 계획을 함께 고려해 보세요.`});
-  if(h>=0.30)recs.push({ic:'⚠️',bg:'rgba(240,86,79,.1)',title:'주식 집중도 위험',desc:'특정 종목 집중도가 높습니다. 분산을 늘리거나 ETF 비중을 확대해 보세요.'});
-  if(btcPct>10)recs.push({ic:'₿',bg:'rgba(251,146,60,.1)',title:`비트코인 ETF ${btcPct}%`,desc:'변동성이 크므로 전체 포트폴리오의 5~10% 이내 관리를 권장해요.'});
-  if(cryptoUSD/tot>0.1)recs.push({ic:'🔻',bg:'rgba(232,109,178,.1)',title:`직접 보유 암호화폐 ${Math.round(cryptoUSD/tot*100)}%`,desc:'변동성 리스크가 큽니다. 수익 실현 후 안정 자산으로 전환을 고려해 보세요.'});
-  if(Math.abs(usT-krT)/tot>0.4)recs.push({ic:'⚖️',bg:'rgba(75,158,255,.1)',title:'미국/한국 자산 불균형',desc:`미국 ${Math.round(usT/tot*100)}% vs 한국 ${Math.round(krT/tot*100)}%. 환율 리스크를 고려해 균형 조정을 검토해 보세요.`});
-  recs.push({ic:'📋',bg:'rgba(155,126,255,.1)',title:'미국 세금 플래닝',desc:'401k/Roth IRA/HSA 한도 활용 및 한국 자산 FBAR·FATCA 신고 여부를 확인하세요.'});
-  recs.push({ic:'📸',bg:'rgba(245,166,35,.1)',title:'스냅샷 정기 저장 권장',desc:`현재 ${snapshots.length}개 기록됨. 매월 초에 시세 업데이트 후 스냅샷 저장을 권장해요.`});
-  document.getElementById('rec-list').innerHTML=recs.map(r=>`<div class="rec"><div class="rec-ic">${r.ic}</div><div><div class="rec-title">${r.title}</div><div class="rec-desc">${r.desc}</div></div></div>`).join('');
+  if(ex.sets!==undefined){
+    // Strength exercise
+    const setsEl=document.getElementById('cfg-sets-'+eid);
+    const repsEl=document.getElementById('cfg-reps-'+eid);
+    const kgEl=document.getElementById('cfg-kg-'+eid);
+    w.sets=parseInt(setsEl?.value)||ex.sets;
+    w.reps=parseInt(repsEl?.value)||ex.reps;
+    w.dur=ex.dur||5;
+    const kg=parseFloat(kgEl?.value);
+    if(!isNaN(kg)&&kg>0)w.kg=kg;
+    w.setsCompleted=Array(w.sets).fill(false);
+    if(ex.how)w.how=ex.how;
+  } else {
+    // Cardio/stretching/etc
+    const durEl=document.getElementById('cfg-dur-'+eid);
+    w.dur=parseInt(durEl?.value)||ex.dur;
+  }
+
+  wk[selDay].push(w);
+  save();renderPlan();
+  showToast(`${ex.name} 추가됨`);
+  expandedEid=null;
+  renderPickerBody();
 }
 
-// ── MODAL ──
-function openModal(){
-  ['cash','realty','crypto','retire'].forEach(k=>{document.getElementById('us-'+k).value=usAssets[k].value;document.getElementById('kr-'+k).value=krAssets[k].value;});
-  document.getElementById('fx-input').value=FX;
-  const sf=document.getElementById('stock-fields');sf.innerHTML='';
-  stocks.forEach((_,i)=>addStockField(i));
-  document.getElementById('ov').classList.add('open');
-}
-function closeModal(){document.getElementById('ov').classList.remove('open');}
-function addStockField(idx){
-  const sf=document.getElementById('stock-fields');
-  const s=typeof idx==='number'?stocks[idx]:{name:'',ticker:'',cat:CATS[0],currency:'USD',buyPrice:'',qty:''};
-  const div=document.createElement('div');div.className='sfrow';
-  div.innerHTML=`
-    <div class="field" style="min-width:0;"><input type="text" class="sn" value="${s.name}" placeholder="예: VOO, 삼성전자"/></div>
-    <div class="field"><select class="sc">${CATS.map(c=>`<option value="${c}"${c===s.cat?' selected':''}>${c}</option>`).join('')}</select></div>
-    <div class="field"><select class="scu"><option value="USD"${s.currency==='USD'?' selected':''}>USD</option><option value="KRW"${s.currency==='KRW'?' selected':''}>KRW</option></select></div>
-    <div class="field"><input type="text" class="stk" value="${s.ticker}" placeholder="티커 (예: VOO)"/></div>
-    <div class="field"><input type="number" class="sbuy" value="${s.buyPrice}" min="0" placeholder="매수가"/></div>
-    <div class="field"><input type="number" class="sqty" value="${s.qty}" min="0" placeholder="수량"/></div>
-    <button class="del" onclick="this.parentNode.remove()">×</button>
-  `;
-  sf.appendChild(div);
-}
-function saveModal(){
-  ['cash','realty','crypto','retire'].forEach(k=>{usAssets[k].value=parseFloat(document.getElementById('us-'+k).value)||0;krAssets[k].value=parseFloat(document.getElementById('kr-'+k).value)||0;});
-  FX=parseFloat(document.getElementById('fx-input').value)||1340;
-  document.getElementById('fx-rate').textContent=FX.toLocaleString();
-  stocks=[];
-  document.querySelectorAll('.sfrow').forEach(row=>{
-    const n=row.querySelector('.sn').value.trim(),c=row.querySelector('.sc').value,cu=row.querySelector('.scu').value;
-    const tk=row.querySelector('.stk').value.trim(),buy=parseFloat(row.querySelector('.sbuy').value)||0,qty=parseFloat(row.querySelector('.sqty').value)||0;
-    if(n&&buy>0&&qty>0)stocks.push({name:n,ticker:tk.toUpperCase(),cat:c,currency:cu,buyPrice:buy,qty});
+/* ══ Drag & Drop ══ */
+let dragItem=null,dragStartY=0;
+function initDragDrop(){
+  document.querySelectorAll('.wc-drag-handle').forEach(h=>{
+    h.addEventListener('touchstart',onDragStart,{passive:false});
+    h.addEventListener('mousedown',onDragStartMouse);
   });
-  saveData();closeModal();
-  liveQuotes={};setQuoteStatus('idle');
-  renderOverview();renderBudget();
-  fetchQuotes();
+}
+function onDragStart(e){e.preventDefault();const c=e.target.closest('.wcard');if(!c)return;dragItem=c;dragStartY=e.touches[0].clientY;c.classList.add('dragging');document.addEventListener('touchmove',onDragMove,{passive:false});document.addEventListener('touchend',onDragEnd)}
+function onDragStartMouse(e){const c=e.target.closest('.wcard');if(!c)return;dragItem=c;dragStartY=e.clientY;c.classList.add('dragging');document.addEventListener('mousemove',onDragMoveMouse);document.addEventListener('mouseup',onDragEndMouse)}
+function onDragMove(e){e.preventDefault();if(!dragItem)return;dragItem.style.transform=`translateY(${e.touches[0].clientY-dragStartY}px) scale(.97)`;updateDragOver(e.touches[0].clientY)}
+function onDragMoveMouse(e){if(!dragItem)return;dragItem.style.transform=`translateY(${e.clientY-dragStartY}px) scale(.97)`;updateDragOver(e.clientY)}
+function updateDragOver(y){document.querySelectorAll('.wcard').forEach(c=>c.classList.remove('drag-over'));[...document.querySelectorAll('.wcard')].filter(c=>c!==dragItem).forEach(c=>{const r=c.getBoundingClientRect();if(y>r.top&&y<r.bottom)c.classList.add('drag-over')})}
+function onDragEnd(e){document.removeEventListener('touchmove',onDragMove);document.removeEventListener('touchend',onDragEnd);finishDrag(e.changedTouches[0].clientY)}
+function onDragEndMouse(e){document.removeEventListener('mousemove',onDragMoveMouse);document.removeEventListener('mouseup',onDragEndMouse);finishDrag(e.clientY)}
+function finishDrag(y){
+  if(!dragItem)return;
+  const fromIdx=parseInt(dragItem.dataset.idx),wk=getWeekWorkouts(),ws=wk[selDay]||[];
+  let toIdx=fromIdx;
+  [...document.querySelectorAll('.wcard')].filter(c=>c!==dragItem).forEach(c=>{const r=c.getBoundingClientRect();if(y>r.top&&y<r.bottom)toIdx=parseInt(c.dataset.idx)});
+  if(fromIdx!==toIdx&&fromIdx>=0&&toIdx>=0&&fromIdx<ws.length&&toIdx<ws.length){const item=ws.splice(fromIdx,1)[0];ws.splice(toIdx,0,item);save()}
+  dragItem.classList.remove('dragging');dragItem.style.transform='';document.querySelectorAll('.wcard').forEach(c=>c.classList.remove('drag-over'));dragItem=null;renderPlan();
 }
 
-// ── INIT ──
-loadData();
-document.getElementById('today-lbl'||(document.getElementById('today-lbl')||{}).id='today-lbl');
-document.getElementById('fx-rate').textContent=FX.toLocaleString();
-renderOverview();renderBudget();
-// Auto-fetch on load
-fetchQuotes();
+/* ══ Routine Picker ══ */
+function updateStepDots(n){document.querySelectorAll('.sdot').forEach((d,i)=>{d.className='sdot'+(i===n?' active':i<n?' done':'')})}
+function goSt(n){document.querySelectorAll('.step-wrap').forEach((s,i)=>s.classList.toggle('active',i===n));updateStepDots(n);if(n===2)renderDurConfig();if(n===3)renderRoutineList();if(n===4)renderWeekPreview()}
+
+function renderDurConfig(){
+  const area=document.getElementById('dur-config-area');
+  const cardioTypes=RS.types.filter(t=>t!=='strength');
+  if(!cardioTypes.length){area.innerHTML='';return;}
+  // Init defaults
+  cardioTypes.forEach(t=>{if(!RS.durConfig[t])RS.durConfig[t]=DUR_DEFAULTS[t]||30});
+  area.innerHTML=`<div class="dur-config"><div class="dur-config-title">종목별 시간 설정</div>${
+    cardioTypes.map(t=>`<div class="dur-row">
+      <span class="dur-icon">${TYPE_ICON[t]}</span>
+      <span class="dur-label">${TYPE_NAME[t]}</span>
+      <input type="range" min="10" max="120" step="5" value="${RS.durConfig[t]}" oninput="updDur('${t}',this.value)">
+      <span class="dur-val" id="durv-${t}">${RS.durConfig[t]}분</span>
+    </div>`).join('')
+  }</div>`;
+}
+function updDur(t,v){RS.durConfig[t]=parseInt(v);document.getElementById('durv-'+t).textContent=v+'분'}
+function selGoal(el,g){document.querySelectorAll('.goal-card').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');RS.goal=g;document.getElementById('snext0').disabled=false}
+function togType(el,t){
+  el.classList.toggle('sel');
+  if(el.classList.contains('sel')){if(!RS.types.includes(t))RS.types.push(t)}
+  else{RS.types=RS.types.filter(x=>x!==t)}
+  document.getElementById('snext1').disabled=RS.types.length===0;
+}
+function togDsel(el,d){el.classList.toggle('sel');if(el.classList.contains('sel')){if(!RS.days.includes(d))RS.days.push(d)}else{RS.days=RS.days.filter(x=>x!==d)};chkSt2()}
+function selLevel(el,l){document.querySelectorAll('.lbtn').forEach(b=>b.classList.remove('sel'));el.classList.add('sel');RS.level=l;chkSt2()}
+function chkSt2(){document.getElementById('snext2').disabled=!(RS.days.length>=2&&RS.level)}
+function levelText(l){return{beginner:'입문',intermediate:'중급',advanced:'고급'}[l]||'입문'}
+function levelPill(l){return{beginner:'pill-green',intermediate:'pill-amber',advanced:'pill-pink'}[l]||'pill-green'}
+
+function renderRoutineList(){
+  RS.generated=generateRoutines();
+  const list=document.getElementById('routine-list');
+  const rs=RS.generated;
+  const typeNames=RS.types.map(t=>TYPE_NAME[t]).join('·');
+  document.getElementById('r-sub').textContent=`${typeNames} · 주 ${RS.days.length}일 · 맞춤 생성`;
+  list.innerHTML=rs.map(r=>`
+    <div class="routine-card" id="rc${r.id}" onclick="selRoutine('${r.id}')">
+      <div style="margin-bottom:6px"><span class="pill ${levelPill(r.level)}">${levelText(r.level)}</span>${r.popular?`<span class="pill pill-purple" style="margin-left:4px">추천</span>`:''}</div>
+      <div class="rc-name">${r.name}</div>
+      <div class="rc-desc">${r.desc}</div>
+      <div class="rc-tags">${r.tags.map(t=>`<span class="pill pill-gray">${t}</span>`).join('')}</div>
+      <div class="rc-days-badge">주 ${Object.keys(r.sched).length}회</div>
+      <div class="rc-check-mark">✓</div>
+    </div>`).join('');
+}
+function selRoutine(id){
+  document.querySelectorAll('.routine-card').forEach(c=>c.classList.remove('sel'));
+  document.getElementById('rc'+id).classList.add('sel');
+  RS.routine=(RS.generated||[]).find(r=>r.id===id);
+  document.getElementById('snext3').disabled=false;
+}
+
+/* ── Drag & Drop for routine preview ── */
+let dragSrcDay=null, dragSrcIdx=null, dragGhost=null, dragTouchId=null;
+
+function renderWeekPreview(){
+  if(!RS.routine)return;
+  const r=RS.routine;
+  document.getElementById('cb-title').textContent=r.name;
+  document.getElementById('cb-sub').textContent=`주 ${Object.keys(r.sched).length}회 · ${levelText(r.level)} 강도`;
+  document.getElementById('plan-sub').textContent=r.name;
+
+  const container=document.getElementById('week-plan-preview');
+  container.innerHTML=`<div class="plan-edit-hint">💡 운동을 길게 눌러 다른 요일로 드래그하세요</div>`+Array.from({length:7},(_,i)=>{
+    const items=r.sched[i];
+    if(!items||!items.length) return `<div class="plan-row" data-day="${i}"><div class="plan-daybadge rest">${DAYS[i]}</div><div class="plan-body"><div class="plan-dayname">${DAYS_FULL[i]}</div><div class="plan-rest">휴식 😴</div></div></div>`;
+    const resolved=items.map((item,idx)=>{
+      const ex=findExercise(item.e);if(!ex)return null;
+      const isStr=ex.sets!==undefined;
+      const label=isStr?`${ex.name} ${item.s||ex.sets}×${item.r||ex.reps}`:`${ex.name} ${item.d||ex.dur}분`;
+      const pill=TYPE_PILL[ex.exType];
+      return{label,pill,idx};
+    }).filter(Boolean);
+    const totalMin=items.reduce((s,item)=>{const ex=findExercise(item.e);return s+(item.d||ex?.dur||0)},0);
+    return `<div class="plan-row" data-day="${i}"><div class="plan-daybadge workout">${DAYS[i]}</div><div class="plan-body"><div class="plan-dayname">${DAYS_FULL[i]}</div><div class="plan-items">${resolved.map(r=>`<span class="pill ${r.pill} plan-item-drag" draggable="true" data-day="${i}" data-idx="${r.idx}">${r.label}</span>`).join('')}</div><div class="plan-dur">약 ${totalMin}분</div></div></div>`;
+  }).join('');
+
+  /* Desktop drag events */
+  container.querySelectorAll('.plan-item-drag').forEach(el=>{
+    el.addEventListener('dragstart',e=>{
+      dragSrcDay=+el.dataset.day; dragSrcIdx=+el.dataset.idx;
+      el.classList.add('dragging-pill');
+      e.dataTransfer.effectAllowed='move';
+      e.dataTransfer.setData('text/plain','');
+    });
+    el.addEventListener('dragend',()=>{ el.classList.remove('dragging-pill'); cleanDragOver(); });
+  });
+  container.querySelectorAll('.plan-row').forEach(row=>{
+    row.addEventListener('dragover',e=>{ e.preventDefault(); e.dataTransfer.dropEffect='move'; row.classList.add('drag-over-day'); });
+    row.addEventListener('dragleave',()=>row.classList.remove('drag-over-day'));
+    row.addEventListener('drop',e=>{ e.preventDefault(); row.classList.remove('drag-over-day'); dropExercise(+row.dataset.day); });
+  });
+
+  /* Touch drag events (mobile) */
+  container.querySelectorAll('.plan-item-drag').forEach(el=>{
+    let longPress=null, isDragging=false;
+    el.addEventListener('touchstart',e=>{
+      const t=e.touches[0]; dragTouchId=t.identifier;
+      longPress=setTimeout(()=>{
+        isDragging=true;
+        dragSrcDay=+el.dataset.day; dragSrcIdx=+el.dataset.idx;
+        el.classList.add('dragging-pill');
+        dragGhost=document.createElement('div');
+        dragGhost.textContent=el.textContent;
+        dragGhost.style.cssText='position:fixed;z-index:9999;padding:4px 10px;border-radius:12px;background:var(--primary);color:#fff;font-size:12px;pointer-events:none;opacity:.85;white-space:nowrap;';
+        dragGhost.style.left=(t.clientX-30)+'px'; dragGhost.style.top=(t.clientY-20)+'px';
+        document.body.appendChild(dragGhost);
+        navigator.vibrate&&navigator.vibrate(30);
+      },300);
+    },{passive:true});
+    el.addEventListener('touchmove',e=>{
+      if(!isDragging){clearTimeout(longPress);return;}
+      e.preventDefault();
+      const t=[...e.changedTouches].find(tt=>tt.identifier===dragTouchId); if(!t)return;
+      if(dragGhost){dragGhost.style.left=(t.clientX-30)+'px';dragGhost.style.top=(t.clientY-20)+'px';}
+      cleanDragOver();
+      const rowEl=document.elementFromPoint(t.clientX,t.clientY)?.closest('.plan-row');
+      if(rowEl)rowEl.classList.add('drag-over-day');
+    },{passive:false});
+    el.addEventListener('touchend',e=>{
+      clearTimeout(longPress);
+      if(!isDragging)return; isDragging=false;
+      el.classList.remove('dragging-pill');
+      if(dragGhost){dragGhost.remove();dragGhost=null;}
+      const t=e.changedTouches[0];
+      const rowEl=document.elementFromPoint(t.clientX,t.clientY)?.closest('.plan-row');
+      cleanDragOver();
+      if(rowEl)dropExercise(+rowEl.dataset.day);
+    },{passive:true});
+    el.addEventListener('touchcancel',()=>{
+      clearTimeout(longPress); isDragging=false;
+      el.classList.remove('dragging-pill');
+      if(dragGhost){dragGhost.remove();dragGhost=null;}
+      cleanDragOver();
+    });
+  });
+}
+
+function cleanDragOver(){document.querySelectorAll('.plan-row.drag-over-day').forEach(r=>r.classList.remove('drag-over-day'));}
+
+function dropExercise(targetDay){
+  if(dragSrcDay===null||dragSrcIdx===null)return;
+  if(dragSrcDay===targetDay){dragSrcDay=null;dragSrcIdx=null;return;}
+  const r=RS.routine;
+  const srcItems=r.sched[dragSrcDay];
+  if(!srcItems||!srcItems[dragSrcIdx]){dragSrcDay=null;dragSrcIdx=null;return;}
+  const moved=srcItems.splice(dragSrcIdx,1)[0];
+  if(!srcItems.length)delete r.sched[dragSrcDay];
+  if(!r.sched[targetDay])r.sched[targetDay]=[];
+  r.sched[targetDay].push(moved);
+  dragSrcDay=null;dragSrcIdx=null;
+  renderWeekPreview();
+  showToast(`${DAYS_FULL[targetDay]}로 이동 완료!`);
+}
+
+function applyRoutine(){
+  if(!RS.routine)return;
+  const r=RS.routine, wk=getWeekWorkouts();
+  for(let d=0;d<7;d++)wk[d]=[];
+
+  for(let d in r.sched){
+    r.sched[d].forEach(item=>{
+      const ex=findExercise(item.e);if(!ex)return;
+      const w={id:S.nextId++, type:ex.exType, name:ex.name, done:false};
+      if(ex.sets!==undefined){
+        w.sets=item.s||ex.sets;
+        w.reps=item.r||ex.reps;
+        w.dur=ex.dur||5;
+        w.setsCompleted=Array(w.sets).fill(false);
+        if(ex.how)w.how=ex.how;
+      } else {
+        w.dur=item.d||ex.dur;
+      }
+      wk[d].push(w);
+    });
+  }
+  save();switchScreen('plan');selDay=todayIdx();renderPlan();
+  showToast(`"${r.name}" 적용 완료!`);
+}
+
+/* ══ Calendar ══ */
+function initCalendar(){const now=new Date();calYear=now.getFullYear();calMonth=now.getMonth()}
+function calMove(d){calMonth+=d;if(calMonth>11){calMonth=0;calYear++}if(calMonth<0){calMonth=11;calYear--}calSelectedDate=null;renderCalendar()}
+function getWeekKeyForDate(date){const d=new Date(date),dow=d.getDay(),mon=new Date(d);mon.setDate(d.getDate()-(dow===0?6:dow-1));return mon.toISOString().slice(0,10)}
+function getDayIdxForDate(date){const dow=date.getDay();return dow===0?6:dow-1}
+function getWorkoutsForDate(date){const wKey=getWeekKeyForDate(date),dayIdx=getDayIdxForDate(date),week=S.weeks[wKey];return week?week[dayIdx]||[]:[]}
+
+function renderCalendar(){
+  document.getElementById('cal-month').textContent=`${calYear}년 ${calMonth+1}월`;
+  const grid=document.getElementById('cal-grid'),today=new Date();today.setHours(0,0,0,0);
+  let html=DAYS.map(d=>`<div class="cal-head">${d}</div>`).join('');
+  const firstDay=new Date(calYear,calMonth,1),lastDay=new Date(calYear,calMonth+1,0);
+  let startDow=firstDay.getDay();startDow=startDow===0?6:startDow-1;
+  for(let i=startDow-1;i>=0;i--){const d=new Date(calYear,calMonth,-i);html+=renderCalCell(d,getWorkoutsForDate(d),true,today)}
+  for(let day=1;day<=lastDay.getDate();day++){const d=new Date(calYear,calMonth,day);html+=renderCalCell(d,getWorkoutsForDate(d),false,today)}
+  const total=startDow+lastDay.getDate(),rem=(7-total%7)%7;
+  for(let i=1;i<=rem;i++){const d=new Date(calYear,calMonth+1,i);html+=renderCalCell(d,getWorkoutsForDate(d),true,today)}
+  grid.innerHTML=html;
+
+  let totalW=0,totalD=0,activeDays=0;
+  for(let day=1;day<=lastDay.getDate();day++){const d=new Date(calYear,calMonth,day),ws=getWorkoutsForDate(d);if(ws.length)activeDays++;totalW+=ws.length;totalD+=ws.filter(w=>w.done).length}
+  document.getElementById('cal-summary').innerHTML=`
+    <div class="cal-stat"><div class="cal-stat-val">${activeDays}</div><div class="cal-stat-lbl">운동한 날</div></div>
+    <div class="cal-stat"><div class="cal-stat-val">${totalW}</div><div class="cal-stat-lbl">총 운동</div></div>
+    <div class="cal-stat"><div class="cal-stat-val">${totalW?Math.round(totalD/totalW*100):0}%</div><div class="cal-stat-lbl">완료율</div></div>`;
+
+  if(calSelectedDate)renderCalDetail(calSelectedDate);
+  else document.getElementById('cal-detail-wrap').innerHTML='';
+}
+
+function renderCalCell(date,workouts,isOther,today){
+  const isToday=date.getTime()===today.getTime(),isSel=calSelectedDate&&date.getTime()===calSelectedDate.getTime();
+  let cls='cal-cell';if(isOther)cls+=' other-month';if(isToday)cls+=' today';if(isSel)cls+=' selected';
+  let dots='';
+  if(workouts.length>0){const dc=workouts.filter(w=>w.done).length,pc=workouts.length-dc;
+    dots='<div class="cal-dots">';for(let i=0;i<Math.min(dc,3);i++)dots+='<span class="dot-done"></span>';for(let i=0;i<Math.min(pc,3-Math.min(dc,3));i++)dots+='<span class="dot-pending"></span>';dots+='</div>';}
+  return `<div class="${cls}" onclick="calSelectDate('${date.toISOString().slice(0,10)}')">${date.getDate()}${dots}</div>`;
+}
+function calSelectDate(ds){calSelectedDate=new Date(ds+'T00:00:00');renderCalendar()}
+function renderCalDetail(date){
+  const ws=getWorkoutsForDate(date),wrap=document.getElementById('cal-detail-wrap');
+  const lbl=`${date.getMonth()+1}월 ${date.getDate()}일 ${DAYS_FULL[getDayIdxForDate(date)]}`;
+  if(!ws.length){wrap.innerHTML=`<div class="cal-detail"><div class="cal-detail-title">${lbl}</div><div class="cal-detail-empty">운동 없음 · 휴식일 😴</div></div>`;return}
+  wrap.innerHTML=`<div class="cal-detail"><div class="cal-detail-title">${lbl} · ${ws.length}개 운동</div>
+    ${ws.map(w=>{
+      const meta=w.setsCompleted?`${w.sets}세트×${w.reps}회${w.kg?' · '+w.kg+'kg':''} (${w.setsCompleted.filter(Boolean).length}/${w.sets})`:`${w.dur}분`;
+      return `<div class="cal-detail-item"><span style="font-size:16px">${TYPE_ICON[w.type]}</span><span style="flex:1;${w.done?'text-decoration:line-through;color:var(--text-muted)':''}">${w.name}</span><span style="font-size:11px;color:var(--text-muted)">${meta}</span><span style="font-size:12px">${w.done?'✅':'⬜'}</span></div>`
+    }).join('')}</div>`;
+}
+
+/* ══ Stats ══ */
+function renderStats(){
+  const wk=getWeekWorkouts();let total=0,done=0,typeCounts={};
+  for(let d in wk)(wk[d]||[]).forEach(w=>{total++;if(w.done)done++;typeCounts[w.type]=(typeCounts[w.type]||0)+1});
+  document.getElementById('st-total').textContent=total;
+  document.getElementById('st-done').textContent=done;
+  let streak=0;for(let i=selDay;i>=0;i--){if((wk[i]||[]).some(w=>w.done))streak++;else break}
+  document.getElementById('st-streak').textContent=streak;
+  const maxW=Math.max(...Object.values(wk).map(w=>(w||[]).length),1);
+  document.getElementById('bar-chart').innerHTML=Array.from({length:7},(_,d)=>{
+    const ws=wk[d]||[],h=ws.length?Math.round(ws.length/maxW*68):0,dh=ws.length?Math.round(ws.filter(x=>x.done).length/ws.length*h):0,isT=d===todayIdx();
+    return `<div class="bar-col"><div style="flex:1;display:flex;align-items:flex-end;width:100%"><div style="width:100%;height:${h}px;border-radius:3px 3px 0 0;background:${isT?'#1D9E75':'#9FE1CB'};position:relative;overflow:hidden"><div style="position:absolute;bottom:0;width:100%;height:${dh}px;background:${isT?'#085041':'#1D9E75'}"></div></div></div><div class="bar-day">${DAYS[d]}</div></div>`}).join('');
+  const weekKey=getWeekKey(S.weekOffset||0);
+  const wEntries=Array.from({length:7},(_,i)=>({day:i,val:S.weights[`w_${weekKey}_${i}`]})).filter(e=>e.val);
+  const wh=document.getElementById('weight-history');
+  if(!wEntries.length)wh.innerHTML='<div style="padding:12px 16px;font-size:13px;color:var(--text-muted)">아직 몸무게 기록이 없어요</div>';
+  else wh.innerHTML=wEntries.map((e,i)=>{const prev=wEntries[i-1],diff=prev?((prev.val-e.val)).toFixed(1):null,chg=diff===null?'':(diff>0?`<span style="color:var(--green)">▼${diff}</span>`:(diff<0?`<span style="color:#E24B4A">▲${Math.abs(diff)}</span>`:'±0'));return `<div class="wh-row"><span style="color:var(--text-muted)">${DAYS_FULL[e.day]}</span><span style="font-weight:500">${parseFloat(e.val).toFixed(1)} kg</span><span style="font-size:12px">${chg}</span></div>`}).join('');
+  const top=Object.entries(typeCounts).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('summary-rows').innerHTML=`
+    <div class="sum-row"><span class="sum-key">운동 유형</span><span class="sum-val">${Object.keys(typeCounts).map(t=>TYPE_NAME[t]).join(', ')||'-'}</span></div>
+    <div class="sum-row"><span class="sum-key">가장 많이 한 운동</span><span class="sum-val">${top?TYPE_NAME[top[0]]:'-'}</span></div>
+    <div class="sum-row"><span class="sum-key">이번 주 완료율</span><span class="sum-val">${total?Math.round(done/total*100):0}%</span></div>
+    <div class="sum-row"><span class="sum-key">주간 목표 (5일)</span><span class="sum-val">${total>=5?'달성 ✓':total+'/5'}</span></div>`;
+}
+
+/* ══ PWA ══ */
+if('serviceWorker' in navigator){
+  const sw=`const CACHE='wapp-v3';const URLS=['./','./index.html','./manifest.json'];self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(URLS))));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));`;
+  navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'}))).catch(()=>{});
+}
+
+/* ══ Init ══ */
+initCalendar();
+aiIdx=Math.floor(Math.random()*AI_TIPS.length);
+document.getElementById('ai-msg').textContent=AI_TIPS[aiIdx];
+renderPlan();
+
+/* ══ Meal Planner ══ */
+
+const INGREDIENTS = {
+  protein: {name:'🥩 단백질', items:['닭가슴살','닭다리살','소고기','돼지고기','연어','고등어','참치','새우','오징어','두부','계란','그릭요거트','치즈','단백질쉐이크','닭안심','목살']},
+  dairy: {name:'🥛 유제품·음료', items:['두유','우유','아몬드밀크','오트밀크','그릭요거트','프로틴쉐이크']},
+  veg: {name:'🥬 채소', items:['브로콜리','시금치','양배추','파프리카','오이','토마토','양파','버섯','애호박','아스파라거스','케일','콩나물','상추','당근','가지','무','셀러리','청경채','깻잎','부추','미나리','고추']},
+  carb: {name:'🍚 탄수화물(저GI)', items:['현미','고구마','퀴노아','통밀빵','오트밀','귀리','렌틸콩','병아리콩','메밀면','단호박','잡곡밥','바나나','블루베리','사과']},
+  fat: {name:'🥑 건강한 지방', items:['아보카도','올리브오일','아몬드','호두','캐슈넛','들기름','참기름','코코넛오일','치아씨드','땅콩버터','피칸','마카다미아','들깨']},
+  etc: {name:'🧂 기타·양념', items:['김치','미역','다시마','레몬','생강','마늘','고추장','된장','간장','식초','카레가루','후추','꿀','시나몬','바질','파슬리']}
+};
+
+let selectedIngs = [];
+let mealPlanData = null; // [{day, slots:[{slot, options:[{name,desc,kcal}], picked, eaten}]}]
+
+function renderMealScreen(){
+  const saved = JSON.parse(localStorage.getItem('wapp')||'{}');
+  // Restore custom ingredients
+  if(saved.customIngs&&saved.customIngs.length){
+    if(!INGREDIENTS.custom) INGREDIENTS.custom={name:'✏️ 직접 추가',items:[]};
+    saved.customIngs.forEach(n=>{if(!INGREDIENTS.custom.items.includes(n))INGREDIENTS.custom.items.push(n)});
+  }
+  renderIngredients();
+  if(saved.mealIngs) { selectedIngs = saved.mealIngs; updateIngChips(); }
+  if(saved.mealPlan) { mealPlanData = saved.mealPlan; }
+  if(mealPlanData) renderMealWeek();
+}
+
+function renderIngredients(){
+  const el = document.getElementById('ing-list');
+  el.innerHTML = Object.entries(INGREDIENTS).map(([k,cat])=>
+    `<div class="ing-section">
+      <div class="ing-title">${cat.name}</div>
+      <div class="ing-grid">${cat.items.map(item=>
+        `<button class="ing-chip ${selectedIngs.includes(item)?'sel':''}" onclick="togIng(this,'${item}')">${item}</button>`
+      ).join('')}</div>
+    </div>`
+  ).join('');
+}
+
+function togIng(el, item){
+  el.classList.toggle('sel');
+  if(selectedIngs.includes(item)) selectedIngs = selectedIngs.filter(x=>x!==item);
+  else selectedIngs.push(item);
+  document.getElementById('gen-meal-btn').disabled = selectedIngs.length < 3;
+  const s = JSON.parse(localStorage.getItem('wapp')||'{}');
+  s.mealIngs = selectedIngs;
+  localStorage.setItem('wapp', JSON.stringify(s));
+}
+
+function updateIngChips(){
+  document.querySelectorAll('.ing-chip').forEach(c=>{
+    c.classList.toggle('sel', selectedIngs.includes(c.textContent));
+  });
+  document.getElementById('gen-meal-btn').disabled = selectedIngs.length < 3;
+}
+
+function addCustomIng(){
+  const input=document.getElementById('ing-add-input');
+  const name=input.value.trim();
+  if(!name) return;
+  if(selectedIngs.includes(name)){input.value='';return;}
+  // Add to custom category and select it
+  if(!INGREDIENTS.custom) INGREDIENTS.custom={name:'✏️ 직접 추가',items:[]};
+  if(!INGREDIENTS.custom.items.includes(name)) INGREDIENTS.custom.items.push(name);
+  selectedIngs.push(name);
+  const s=JSON.parse(localStorage.getItem('wapp')||'{}');
+  s.mealIngs=selectedIngs;
+  if(!s.customIngs) s.customIngs=[];
+  if(!s.customIngs.includes(name)) s.customIngs.push(name);
+  localStorage.setItem('wapp',JSON.stringify(s));
+  input.value='';
+  renderIngredients();
+  updateIngChips();
+}
+
+function mealTab(tab){
+  document.querySelectorAll('.meal-tab').forEach(t=>t.classList.remove('active'));
+  if(tab==='input'){
+    document.querySelectorAll('.meal-tab')[0].classList.add('active');
+    document.getElementById('meal-input-view').style.display='';
+    document.getElementById('meal-plan-view').style.display='none';
+  } else {
+    document.querySelectorAll('.meal-tab')[1].classList.add('active');
+    document.getElementById('meal-input-view').style.display='none';
+    document.getElementById('meal-plan-view').style.display='';
+    if(mealPlanData) renderMealWeek();
+  }
+}
+
+// 실제 레시피 DB — 재료 매칭 + 간단 레시피
+const RECIPES = {
+  breakfast:[
+    {name:'계란 스크램블 + 통밀빵',desc:'시금치 곁들임 · 고단백 아침',kcal:380,need:['계란','통밀빵'],
+     recipe:['계란 2개 풀어 소금·후추 간','팬에 올리브오일 두르고 중불에 저으며 익히기','시금치 한 줌 같이 볶기','통밀빵 토스트와 함께']},
+    {name:'계란 프라이 + 아보카도 토스트',desc:'통밀빵 · 건강한 지방',kcal:370,need:['계란','아보카도','통밀빵'],
+     recipe:['통밀빵 토스트','아보카도 반개 으깨서 빵 위에 펴 바르기','계란 프라이 올리기','소금·후추·레몬즙 뿌리기']},
+    {name:'오트밀 볼 + 두유',desc:'아몬드 토핑 · 혈당 안정',kcal:320,need:['오트밀','두유'],
+     recipe:['오트밀 40g에 두유 200ml 붓기','전자레인지 2분 또는 냄비에 끓이기','아몬드·블루베리 토핑','꿀 약간 (선택)']},
+    {name:'두유 + 삶은 계란 2개',desc:'간편 고단백 · 아침 루틴',kcal:300,need:['두유','계란'],
+     recipe:['계란 냄비에 넣고 물 잠길 때까지','끓으면 중불 8분 삶기','찬물에 식혀 껍질 벗기기','두유 한 잔과 함께']},
+    {name:'그릭요거트 + 블루베리 + 아몬드',desc:'치아씨드 토핑 · 항산화',kcal:280,need:['그릭요거트','블루베리'],
+     recipe:['그릭요거트 150g 그릇에 담기','블루베리 한 줌 올리기','아몬드 슬라이스 뿌리기','치아씨드 1스푼 토핑']},
+    {name:'그릭요거트 + 바나나 + 호두',desc:'포만감 · 혈당 안정',kcal:300,need:['그릭요거트','바나나'],
+     recipe:['그릭요거트 150g 그릇에 담기','바나나 1개 슬라이스','호두 5~6개 부숴서 올리기','꿀 약간 (선택)']},
+    {name:'고구마 + 계란 반숙 + 두유',desc:'든든한 아침 · 저GI',kcal:340,need:['고구마','계란'],
+     recipe:['고구마 1개 씻어서 전자레인지 5분','계란 끓는 물에 6분 반숙','고구마 반 갈라 버터 약간','두유 한 잔과 함께']},
+    {name:'프로틴 스무디',desc:'두유 + 바나나 + 땅콩버터',kcal:330,need:['두유','바나나','땅콩버터'],
+     recipe:['두유 200ml + 바나나 1개 믹서에','땅콩버터 1스푼 넣기','얼음 3~4개 넣고 갈기','컵에 따라 바로 마시기']},
+    {name:'오트밀 죽 (두유 베이스)',desc:'시나몬 · 혈당 안정',kcal:290,need:['오트밀','두유'],
+     recipe:['냄비에 두유 250ml + 오트밀 40g','약불에 저으며 5분 끓이기','시나몬 파우더 톡톡','견과류 토핑 후 완성']},
+    {name:'두부 시금치 볶음밥',desc:'현미 반공기 · 저탄수',kcal:350,need:['두부','시금치','현미'],
+     recipe:['두부 으깨기, 시금치 잘게 썰기','팬에 참기름 두르고 두부 볶기','시금치·현미밥 넣고 같이 볶기','간장 1스푼으로 간']},
+    {name:'계란말이 + 현미밥',desc:'김치 곁들임 · 한식 아침',kcal:360,need:['계란','현미'],
+     recipe:['계란 2개 + 당근·파 다져서 섞기','팬에 기름 얇게, 계란물 조금씩 붓기','말아가며 익히기 반복','현미밥 + 김치와 함께']},
+    {name:'통밀빵 + 치즈 + 토마토',desc:'간편 오픈 샌드위치',kcal:310,need:['통밀빵','치즈','토마토'],
+     recipe:['통밀빵 토스트','치즈 1장 올리기','토마토 슬라이스 2~3장','올리브오일·바질 뿌리기']},
+    {name:'단호박 스프 + 계란',desc:'두유 베이스 · 부드러운 아침',kcal:300,need:['단호박','계란'],
+     recipe:['단호박 전자레인지 5분 익히기','속 파내서 두유와 믹서에 갈기','냄비에 데우며 소금 간','삶은 계란 곁들이기']},
+    {name:'오트밀 + 사과 + 시나몬',desc:'식이섬유 · 혈당↓',kcal:280,need:['오트밀','사과'],
+     recipe:['오트밀 40g에 물 또는 우유 붓기','전자레인지 2분','사과 깍둑썰기 올리기','시나몬 + 꿀 약간']},
+    {name:'닭가슴살 샐러드 랩',desc:'통밀 또띠야 · 고단백',kcal:350,need:['닭가슴살','상추'],
+     recipe:['닭가슴살 삶거나 구워서 찢기','상추·토마토·오이 썰기','또띠야에 채소 + 닭가슴살','말아서 반 자르기']},
+  ],
+  lunch:[
+    {name:'닭가슴살 샐러드 + 퀴노아',desc:'올리브오일 드레싱 · 고단백',kcal:450,need:['닭가슴살','퀴노아'],
+     recipe:['퀴노아 물 2배 넣고 15분 삶기','닭가슴살 소금·후추 간 후 굽기','한입 크기로 썰어 채소 위에','올리브오일+레몬즙 드레싱']},
+    {name:'닭가슴살 브로콜리 볶음 + 현미',desc:'간장 양념 · 든든한 점심',kcal:460,need:['닭가슴살','브로콜리','현미'],
+     recipe:['닭가슴살 한입 크기로 썰기','팬에 기름 두르고 닭 먼저 볶기','브로콜리 넣고 같이 볶기','간장 1.5스푼 + 마늘 넣고 볶아 현미밥과']},
+    {name:'연어 포케 볼',desc:'현미 반공기 + 아보카도 · 오메가3',kcal:480,need:['연어','현미','아보카도'],
+     recipe:['연어회 깍둑썰기','간장 1스푼 + 참기름 + 와사비 소스','현미밥 반공기 그릇에','연어·아보카도·오이 올리기']},
+    {name:'연어 구이 + 아스파라거스',desc:'올리브오일 · 오메가3 풍부',kcal:440,need:['연어','아스파라거스'],
+     recipe:['연어 소금·후추 간','팬에 올리브오일, 껍질 면 먼저 4분','뒤집어서 3분 더','아스파라거스 같은 팬에 구워 곁들이기']},
+    {name:'소고기 브로콜리 볶음 + 잡곡밥',desc:'철분 보충 · 든든',kcal:500,need:['소고기','브로콜리'],
+     recipe:['소고기 얇게 썰어 간장·참기름 밑간 10분','팬에 센불로 소고기 볶기','브로콜리 데쳐서 넣고 볶기','굴소스 1스푼 넣고 잡곡밥과']},
+    {name:'소고기 미역국 + 현미밥',desc:'철분+요오드 · 보양식',kcal:430,need:['소고기','미역','현미'],
+     recipe:['미역 물에 불리기 (20분)','소고기 참기름에 볶다 물 붓기','미역 넣고 중불 20분 끓이기','국간장으로 간, 현미밥과']},
+    {name:'두부 버섯 된장찌개 + 현미',desc:'김치 곁들임 · 한식 정식',kcal:420,need:['두부','버섯','된장'],
+     recipe:['냄비에 멸치육수 끓이기','된장 1.5스푼 풀기','두부·버섯·양파·호박 넣기','10분 끓이고 현미밥과']},
+    {name:'두부 김치찌개 + 현미밥',desc:'발효 식품 · 장건강',kcal:410,need:['두부','김치','현미'],
+     recipe:['김치 송송 썰어 참기름에 볶기','물 400ml 붓고 끓이기','두부 넣고 5분 더','고춧가루 약간, 현미밥과']},
+    {name:'새우 파프리카 볶음 + 메밀면',desc:'가벼운 점심 · 저칼로리',kcal:400,need:['새우','파프리카','메밀면'],
+     recipe:['메밀면 삶아 찬물에 헹구기','새우 껍질 벗겨 올리브오일에 볶기','파프리카 채 썰어 같이 볶기','간장 소스 만들어 면 위에']},
+    {name:'새우 애호박 볶음밥',desc:'현미 · 고단백 저탄수',kcal:420,need:['새우','애호박','현미'],
+     recipe:['새우·애호박 깍둑 썰기','팬에 기름, 새우 먼저 볶기','애호박·현미밥 넣고 볶기','간장 1스푼 + 참기름 마무리']},
+    {name:'닭다리살 카레 + 현미밥',desc:'양파 듬뿍 · 항염 향신료',kcal:460,need:['닭다리살','카레가루','현미'],
+     recipe:['닭다리살·양파·당근 한입 크기','팬에 닭 먼저 노릇하게','채소 넣고 물 400ml 붓기','카레가루 넣고 걸쭉해질 때까지']},
+    {name:'고등어 구이 정식',desc:'시금치 나물 + 김치',kcal:440,need:['고등어','시금치'],
+     recipe:['고등어 소금 뿌려 10분','에어프라이어 180°C 15분 또는 팬 구이','시금치 데쳐 참기름·간장·깨','현미밥·김치와 정식으로']},
+    {name:'참치 상추 쌈밥',desc:'잡곡밥 반공기 · 된장',kcal:430,need:['참치','상추','된장'],
+     recipe:['참치캔 기름 빼기','상추 씻어 물기 제거','쌈장(된장+고추장+참기름)','상추에 밥+참치+쌈장 싸먹기']},
+    {name:'돼지고기 김치찌개 + 현미',desc:'한식 대표 · 발효식품',kcal:450,need:['돼지고기','김치','현미'],
+     recipe:['돼지고기·김치 참기름에 볶기','물 500ml 붓고 끓이기','두부 넣고 10분 더','현미밥과 함께']},
+    {name:'목살 상추쌈 + 된장',desc:'쌈채소 듬뿍 · 고단백',kcal:470,need:['목살','상추','된장'],
+     recipe:['목살 1cm 두께로 썰기','팬에 앞뒤 노릇하게 굽기','상추·깻잎 씻기','쌈장과 마늘 곁들여 싸먹기']},
+    {name:'렌틸콩 토마토 수프 + 통밀빵',desc:'식물성 단백질 · 식이섬유',kcal:380,need:['렌틸콩','토마토','통밀빵'],
+     recipe:['양파 다져 올리브오일에 볶기','렌틸콩·토마토캔·물 넣기','중불 20분 끓이기','소금·후추 간, 통밀빵과']},
+    {name:'병아리콩 샐러드',desc:'올리브오일 + 파프리카 · 지중해식',kcal:360,need:['병아리콩','파프리카','올리브오일'],
+     recipe:['병아리콩 삶거나 캔 헹구기','파프리카·오이·양파 깍둑 썰기','올리브오일+레몬즙+소금 드레싱','모두 섞어 완성']},
+  ],
+  dinner:[
+    {name:'닭가슴살 채소 수프',desc:'저탄수 · 가볍게 · 올리브오일',kcal:350,need:['닭가슴살','양파'],
+     recipe:['닭가슴살 삶아서 찢기','양파·당근·셀러리 깍둑 썰기','육수에 채소 넣고 15분 끓이기','닭 넣고 소금·후추 간']},
+    {name:'닭가슴살 샐러드',desc:'아몬드 토핑 · 저녁 가볍게',kcal:300,need:['닭가슴살','상추'],
+     recipe:['닭가슴살 소금·후추 간 후 굽기','식혀서 슬라이스','상추·토마토·오이 접시에','아몬드 뿌리고 드레싱']},
+    {name:'연어 아스파라거스 구이',desc:'올리브오일 · 오메가3 풍부',kcal:400,need:['연어','아스파라거스'],
+     recipe:['연어·아스파라거스 올리브오일 뿌리기','소금·후추 간','오븐 200°C 12분 또는 팬 굽기','레몬즙 뿌려 완성']},
+    {name:'두부 채소 찜',desc:'간장 소스 · 가벼운 저녁',kcal:320,need:['두부','애호박','간장'],
+     recipe:['두부 2cm 두께로 썰기','애호박·당근 채 썰기','접시에 담고 전자레인지 5분','간장+참기름+깨 소스 뿌리기']},
+    {name:'두부 스테이크 + 버섯소스',desc:'양파 · 고단백 저칼로리',kcal:330,need:['두부','버섯','양파'],
+     recipe:['두부 물기 빼고 두껍게 썰기','팬에 노릇하게 양면 굽기','버섯·양파 볶아 간장소스 만들기','두부 위에 소스 끼얹기']},
+    {name:'소고기 버섯 전골',desc:'고단백 · 따뜻하게',kcal:420,need:['소고기','버섯'],
+     recipe:['소고기 얇게 썰기','버섯·두부·배추·대파 준비','냄비에 육수 끓이기','재료 돌려담고 끓이며 먹기']},
+    {name:'소고기 무국',desc:'깔끔한 국물 · 소화 좋은 저녁',kcal:350,need:['소고기','무'],
+     recipe:['소고기 참기름에 볶기','무 나박썰기 넣고 같이 볶기','물 600ml 붓고 끓이기','국간장으로 간, 15분 더']},
+    {name:'새우 애호박 볶음',desc:'마늘 · 들기름 · 저칼로리',kcal:340,need:['새우','애호박','마늘'],
+     recipe:['새우 손질, 애호박 반달 썰기','팬에 들기름 + 마늘 볶기','새우 넣고 색 변할 때까지','애호박 넣고 소금 간']},
+    {name:'고등어 무조림',desc:'생강 · 항염 · 오메가3',kcal:380,need:['고등어','무','생강'],
+     recipe:['무 1cm 두께 깔기','고등어 올리기','간장+고춧가루+생강+물 양념장','뚜껑 덮고 중불 20분 조리기']},
+    {name:'오징어 부추 볶음',desc:'고추장 양념 · 타우린 풍부',kcal:360,need:['오징어','부추','고추장'],
+     recipe:['오징어 칼집 내서 한입 크기','고추장+간장+고춧가루+설탕 양념','팬에 오징어 센불로 볶기','부추 마지막에 넣고 살짝']},
+    {name:'양배추 돼지고기 쌈',desc:'된장 소스 · 식이섬유',kcal:370,need:['돼지고기','양배추','된장'],
+     recipe:['양배추 잎 데치기 (1분)','돼지고기 앞뒤 구워 썰기','양배추에 고기+밥 올리기','된장소스 곁들여 싸먹기']},
+    {name:'계란찜 + 미역국',desc:'부드러운 저녁 · 요오드 보충',kcal:280,need:['계란','미역'],
+     recipe:['미역 불려서 참기름에 볶고 물 붓기','15분 끓이고 국간장 간','계란 3개+물 섞어 뚝배기에','약불 뚜껑 덮고 15분 찜']},
+    {name:'토마토 계란 볶음',desc:'올리브오일 · 리코펜+단백질',kcal:300,need:['토마토','계란','올리브오일'],
+     recipe:['토마토 깍둑 썰기','올리브오일에 토마토 볶기 (3분)','계란 2개 풀어 넣기','저으며 익히고 소금·파 마무리']},
+    {name:'시금치 된장국 + 두부',desc:'철분 · 가벼운 한식 저녁',kcal:290,need:['시금치','된장','두부'],
+     recipe:['멸치육수 끓이기','된장 1스푼 풀기','두부 깍둑 넣고 5분','시금치 마지막에 넣고 한소끔']},
+    {name:'닭다리살 케일 샐러드',desc:'발사믹 드레싱 · 비타민 풍부',kcal:380,need:['닭다리살','케일'],
+     recipe:['닭다리살 소금·후추 간 후 굽기','식혀서 슬라이스','케일 손으로 찢어 올리브오일 마사지','닭+견과류 올리고 발사믹 뿌리기']},
+    {name:'참치 김치찌개',desc:'고단백 · 매콤한 저녁',kcal:370,need:['참치','김치'],
+     recipe:['김치 송송 썰어 참기름에 볶기','물 400ml 붓고 끓이기','참치캔 (기름 빼고) 넣기','두부 넣고 5분 더 끓이기']},
+  ],
+  snack:[
+    {name:'아몬드 한 줌 + 두유',desc:'단백질 간식 · 혈당 안정',kcal:180,need:['아몬드','두유'],
+     recipe:['아몬드 15~20알 준비','두유 한 잔 따르기','그대로 먹기!']},
+    {name:'삶은 계란 2개',desc:'간편 단백질 보충',kcal:140,need:['계란'],
+     recipe:['계란 냄비에 넣고 물 붓기','끓으면 중불 8분','찬물에 식혀 껍질 벗기기']},
+    {name:'땅콩버터 + 사과 슬라이스',desc:'건강한 지방 · 식이섬유',kcal:180,need:['땅콩버터','사과'],
+     recipe:['사과 씻어 8등분 슬라이스','땅콩버터 1스푼 곁들이기','찍어 먹기!']},
+    {name:'그릭요거트 + 호두',desc:'포만감 · PCOS 추천 간식',kcal:170,need:['그릭요거트','호두'],
+     recipe:['그릭요거트 100g 담기','호두 5~6개 부숴서 올리기','꿀 약간 (선택)']},
+    {name:'그릭요거트 + 블루베리',desc:'항산화 · 단백질 보충',kcal:160,need:['그릭요거트','블루베리'],
+     recipe:['그릭요거트 100g 담기','블루베리 한 줌 올리기','바로 먹기!']},
+    {name:'두유 한 잔 + 프로틴바',desc:'운동 후 회복 간식',kcal:200,need:['두유'],
+     recipe:['두유 한 잔 준비','프로틴바 1개와 함께','운동 후 30분 내 섭취 추천']},
+    {name:'고구마 반개',desc:'저GI 탄수 보충 · 포만감',kcal:120,need:['고구마'],
+     recipe:['고구마 씻기','전자레인지 5분 돌리기','반 갈라서 먹기']},
+    {name:'블루베리 + 캐슈넛',desc:'항산화 · 건강한 지방',kcal:160,need:['블루베리','캐슈넛'],
+     recipe:['블루베리 한 줌 씻기','캐슈넛 10알 준비','섞어서 먹기!']},
+    {name:'바나나 + 땅콩버터',desc:'에너지 보충 · 운동 전 간식',kcal:200,need:['바나나','땅콩버터'],
+     recipe:['바나나 슬라이스','땅콩버터 1스푼 곁들이기','찍어 먹기!']},
+    {name:'치즈 + 당근 스틱',desc:'단백질+식이섬유',kcal:150,need:['치즈','당근'],
+     recipe:['당근 스틱 모양으로 썰기','치즈 한 장과 함께','바로 먹기!']},
+    {name:'호두 + 다크초콜릿',desc:'항산화 · 마그네슘 보충',kcal:180,need:['호두'],
+     recipe:['호두 7~8개 준비','다크초콜릿 2~3조각','번갈아 먹기']},
+    {name:'오이 + 두부 딥',desc:'저칼로리 · 단백질',kcal:100,need:['오이','두부'],
+     recipe:['두부 으깨서 간장+참기름+깨 섞기','오이 스틱 모양으로 썰기','찍어 먹기!']},
+    {name:'사과 + 아몬드',desc:'식이섬유 + 건강한 지방',kcal:170,need:['사과','아몬드'],
+     recipe:['사과 슬라이스','아몬드 15알 준비','함께 먹기!']},
+  ]
+};
+
+let mealViewDay = 0; // 0=오늘, 1=내일
+
+function generateMealPlan(){
+  const shuffle = arr => [...arr].sort(()=>Math.random()-.5);
+  function scoreRecipes(pool){
+    return pool.map(r=>{
+      const matched = r.need.filter(n=>selectedIngs.includes(n)).length;
+      const missing = r.need.filter(n=>!selectedIngs.includes(n));
+      return {...r, score: matched/r.need.length, missing};
+    }).filter(r=>r.score>0)
+      .sort((a,b)=>b.score-a.score||(a.missing.length-b.missing.length)||Math.random()-.5);
+  }
+  const bfScored=scoreRecipes(RECIPES.breakfast);
+  const luScored=scoreRecipes(RECIPES.lunch);
+  const diScored=scoreRecipes(RECIPES.dinner);
+  const snScored=scoreRecipes(RECIPES.snack);
+
+  function pick3(scored,dayIdx){
+    if(!scored.length) return [{name:'재료를 더 선택해 주세요',desc:'매칭 레시피 없음',kcal:0,recipe:[]}];
+    const start=(dayIdx*3)%scored.length;
+    const opts=[];
+    for(let i=0;opts.length<3&&i<scored.length;i++) opts.push(scored[(start+i)%scored.length]);
+    return shuffle(opts);
+  }
+
+  // Generate only 2 days (today + tomorrow)
+  const now=new Date();
+  const todayDow=now.getDay(); // 0=Sun
+  const dayNames=['일','월','화','수','목','금','토'];
+  const plan=[0,1].map(offset=>{
+    const dow=(todayDow+offset)%7;
+    const dt=new Date(now); dt.setDate(dt.getDate()+offset);
+    const label=offset===0?'오늘':'내일';
+    const dateStr=`${dt.getMonth()+1}/${dt.getDate()} ${dayNames[dow]}`;
+    return {
+      day:label, dateStr,
+      slots:[
+        {slot:'아침 🌅',options:pick3(bfScored,offset),picked:0,eaten:false},
+        {slot:'점심 🍱',options:pick3(luScored,offset),picked:0,eaten:false},
+        {slot:'저녁 🌙',options:pick3(diScored,offset),picked:0,eaten:false},
+        {slot:'간식 🍎',options:pick3(snScored,offset),picked:0,eaten:false}
+      ]
+    };
+  });
+
+  mealPlanData = plan;
+  mealViewDay = 0;
+  saveMealPlan();
+  mealTab('plan');
+}
+
+function saveMealPlan(){
+  const s = JSON.parse(localStorage.getItem('wapp')||'{}');
+  s.mealPlan = mealPlanData;
+  localStorage.setItem('wapp', JSON.stringify(s));
+}
+
+function pickMealOpt(dayIdx,slotIdx,optIdx){
+  if(!mealPlanData) return;
+  mealPlanData[dayIdx].slots[slotIdx].picked = optIdx;
+  saveMealPlan();
+  renderMealWeek();
+}
+
+function toggleEaten(dayIdx,slotIdx){
+  if(!mealPlanData) return;
+  mealPlanData[dayIdx].slots[slotIdx].eaten = !mealPlanData[dayIdx].slots[slotIdx].eaten;
+  saveMealPlan();
+  renderMealWeek();
+}
+
+function toggleRecipe(id){
+  const el=document.getElementById(id);
+  if(el) el.style.display=el.style.display==='none'?'block':'none';
+}
+
+function mealNavDay(dir){
+  mealViewDay=Math.max(0,Math.min(mealPlanData.length-1,mealViewDay+dir));
+  renderMealWeek();
+}
+
+function renderMealSummary(){
+  if(!mealPlanData) return;
+  // Summary for currently viewed day only
+  const d=mealPlanData[mealViewDay];
+  if(!d) return;
+  let total=0,eaten=0,kcal=0;
+  d.slots.forEach(sl=>{
+    total++;
+    const meal=sl.options[sl.picked||0];
+    if(sl.eaten){eaten++;kcal+=meal.kcal;}
+  });
+  document.getElementById('meal-summary').innerHTML=`
+    <div class="meal-sum-box"><div class="meal-sum-val">${eaten}/${total}</div><div class="meal-sum-lbl">식사 완료</div></div>
+    <div class="meal-sum-box"><div class="meal-sum-val">${kcal}</div><div class="meal-sum-lbl">섭취 kcal</div></div>
+    <div class="meal-sum-box"><div class="meal-sum-val">${Math.round(eaten/total*100)}%</div><div class="meal-sum-lbl">달성률</div></div>
+  `;
+}
+
+function renderMealWeek(){
+  if(!mealPlanData) return;
+  renderMealSummary();
+  const el = document.getElementById('meal-week-content');
+  const d = mealPlanData[mealViewDay];
+  if(!d){el.innerHTML='';return;}
+  const di = mealViewDay;
+  const pickedKcal = d.slots.reduce((sum,sl)=>sum+(sl.options[sl.picked||0]||{kcal:0}).kcal,0);
+
+  el.innerHTML = `
+    <div class="meal-day-nav">
+      <button class="meal-day-nav-btn" onclick="mealNavDay(-1)" ${di===0?'disabled':''}>‹</button>
+      <span class="meal-day-nav-title">${d.day}</span>
+      <button class="meal-day-nav-btn" onclick="mealNavDay(1)" ${di>=mealPlanData.length-1?'disabled':''}>›</button>
+    </div>
+    <div class="meal-day-nav-sub">${d.dateStr} · 약 ${pickedKcal}kcal</div>
+    <div class="meal-week"><div class="meal-day-card">
+      ${d.slots.map((sl,si)=>{
+        const pickedOpt=sl.options[sl.picked||0];
+        const recipeId=`recipe-${di}-${si}`;
+        return `<div class="meal-slot">
+        <div class="meal-slot-header">
+          <span class="meal-slot-label">${sl.slot}</span>
+          <button class="meal-custom-btn" onclick="event.stopPropagation();openCustomMeal(${di},${si})">직접입력</button>
+          <button class="meal-slot-check ${sl.eaten?'eaten':''}" onclick="toggleEaten(${di},${si})">✓</button>
+        </div>
+        <div class="meal-opts">${sl.options.map((opt,oi)=>
+          `<div class="meal-opt ${(sl.picked||0)===oi?'picked':''}" onclick="pickMealOpt(${di},${si},${oi})">
+            <div class="meal-opt-pick">✓</div>
+            <div class="meal-opt-info">
+              <div class="meal-opt-name">${opt.name}</div>
+              <div class="meal-opt-desc">${opt.desc}</div>
+              ${opt.missing&&opt.missing.length?`<div class="meal-opt-missing">🛒 ${opt.missing.join(', ')}</div>`:''}
+              ${(sl.picked||0)===oi&&opt.recipe?`<button class="meal-recipe-btn" onclick="event.stopPropagation();toggleRecipe('${recipeId}')">📖 레시피 보기</button>`:''}
+            </div>
+            <div class="meal-opt-kcal">${opt.kcal}kcal</div>
+          </div>`
+        ).join('')}</div>
+        ${pickedOpt&&pickedOpt.recipe?`<div class="meal-recipe" id="${recipeId}" style="display:none"><ol>${pickedOpt.recipe.map(s=>`<li>${s}</li>`).join('')}</ol></div>`:''}
+      </div>`;}).join('')}
+    </div></div>`;
+}
+
+/* ══ Food Calorie DB + Custom Meal ══ */
+const FOOD_DB = [
+  // 배달/외식
+  {name:'후라이드치킨 (1인분)',kcal:550,cat:'배달'},{name:'양념치킨 (1인분)',kcal:600,cat:'배달'},
+  {name:'간장치킨 (1인분)',kcal:570,cat:'배달'},{name:'치킨 반마리',kcal:450,cat:'배달'},
+  {name:'치킨 한마리',kcal:900,cat:'배달'},{name:'피자 1조각',kcal:270,cat:'배달'},
+  {name:'피자 (미디움 1판)',kcal:1600,cat:'배달'},{name:'페퍼로니 피자 1조각',kcal:300,cat:'배달'},
+  {name:'짜장면',kcal:650,cat:'중식'},{name:'짬뽕',kcal:700,cat:'중식'},
+  {name:'탕수육 (소)',kcal:800,cat:'중식'},{name:'볶음밥',kcal:550,cat:'중식'},
+  {name:'마라탕 (1인분)',kcal:600,cat:'중식'},{name:'마라샹궈 (1인분)',kcal:700,cat:'중식'},
+  {name:'떡볶이 (1인분)',kcal:450,cat:'분식'},{name:'순대 (1인분)',kcal:350,cat:'분식'},
+  {name:'김밥 1줄',kcal:380,cat:'분식'},{name:'참치김밥 1줄',kcal:400,cat:'분식'},
+  {name:'라면',kcal:500,cat:'분식'},{name:'쫄면',kcal:480,cat:'분식'},
+  {name:'튀김 (모듬 1인분)',kcal:400,cat:'분식'},{name:'어묵탕 (1인분)',kcal:250,cat:'분식'},
+  {name:'돈까스',kcal:650,cat:'일식'},{name:'카레라이스',kcal:550,cat:'일식'},
+  {name:'초밥 (8피스)',kcal:400,cat:'일식'},{name:'우동',kcal:420,cat:'일식'},
+  {name:'라멘',kcal:550,cat:'일식'},{name:'소바',kcal:350,cat:'일식'},
+  {name:'햄버거 (단품)',kcal:500,cat:'패스트푸드'},{name:'치즈버거',kcal:550,cat:'패스트푸드'},
+  {name:'감자튀김 (미디움)',kcal:380,cat:'패스트푸드'},{name:'너겟 6조각',kcal:280,cat:'패스트푸드'},
+  {name:'아메리카노',kcal:5,cat:'음료'},{name:'카페라떼',kcal:180,cat:'음료'},
+  {name:'바닐라라떼',kcal:250,cat:'음료'},{name:'카라멜마끼아또',kcal:280,cat:'음료'},
+  {name:'아이스티',kcal:100,cat:'음료'},{name:'스무디',kcal:300,cat:'음료'},
+  {name:'콜라 (캔)',kcal:140,cat:'음료'},{name:'맥주 (500ml)',kcal:220,cat:'음료'},
+  {name:'소주 1잔',kcal:60,cat:'음료'},{name:'와인 1잔',kcal:120,cat:'음료'},
+  // 한식
+  {name:'김치찌개 + 밥',kcal:450,cat:'한식'},{name:'된장찌개 + 밥',kcal:400,cat:'한식'},
+  {name:'순두부찌개 + 밥',kcal:420,cat:'한식'},{name:'부대찌개 (1인분)',kcal:550,cat:'한식'},
+  {name:'비빔밥',kcal:550,cat:'한식'},{name:'돌솥비빔밥',kcal:580,cat:'한식'},
+  {name:'불고기 (1인분)',kcal:400,cat:'한식'},{name:'제육볶음 + 밥',kcal:550,cat:'한식'},
+  {name:'삼겹살 (1인분 200g)',kcal:600,cat:'한식'},{name:'목살 구이 (1인분)',kcal:450,cat:'한식'},
+  {name:'갈비탕',kcal:500,cat:'한식'},{name:'설렁탕',kcal:430,cat:'한식'},
+  {name:'삼계탕',kcal:600,cat:'한식'},{name:'냉면',kcal:450,cat:'한식'},
+  {name:'비빔냉면',kcal:480,cat:'한식'},{name:'칼국수',kcal:450,cat:'한식'},
+  {name:'수제비',kcal:400,cat:'한식'},{name:'잔치국수',kcal:420,cat:'한식'},
+  {name:'감자탕 (1인분)',kcal:500,cat:'한식'},{name:'닭갈비 (1인분)',kcal:480,cat:'한식'},
+  {name:'찜닭 (1인분)',kcal:500,cat:'한식'},{name:'닭볶음탕 (1인분)',kcal:450,cat:'한식'},
+  {name:'해물파전',kcal:350,cat:'한식'},{name:'김치전',kcal:300,cat:'한식'},
+  {name:'잡채',kcal:350,cat:'한식'},{name:'떡갈비',kcal:400,cat:'한식'},
+  {name:'육회 (1인분)',kcal:250,cat:'한식'},{name:'곱창 (1인분)',kcal:350,cat:'한식'},
+  // 간식/디저트
+  {name:'붕어빵 1개',kcal:150,cat:'간식'},{name:'호떡 1개',kcal:250,cat:'간식'},
+  {name:'케이크 1조각',kcal:350,cat:'디저트'},{name:'마카롱 1개',kcal:100,cat:'디저트'},
+  {name:'크로와상',kcal:230,cat:'디저트'},{name:'도넛 1개',kcal:280,cat:'디저트'},
+  {name:'아이스크림 (1스쿱)',kcal:200,cat:'디저트'},{name:'초콜릿 (1줄)',kcal:250,cat:'간식'},
+  {name:'과자 (1봉)',kcal:300,cat:'간식'},{name:'떡 (1인분)',kcal:250,cat:'간식'},
+  // 편의점
+  {name:'삼각김밥',kcal:200,cat:'편의점'},{name:'컵라면',kcal:400,cat:'편의점'},
+  {name:'도시락 (편의점)',kcal:600,cat:'편의점'},{name:'샌드위치 (편의점)',kcal:350,cat:'편의점'},
+  {name:'프로틴바',kcal:200,cat:'편의점'},{name:'바나나우유',kcal:220,cat:'편의점'},
+  // 간편식
+  {name:'시리얼 + 우유',kcal:300,cat:'간편'},{name:'토스트 (잼)',kcal:250,cat:'간편'},
+  {name:'계란후라이 1개',kcal:90,cat:'간편'},{name:'삶은 계란 1개',kcal:70,cat:'간편'},
+  {name:'흰밥 1공기',kcal:300,cat:'간편'},{name:'현미밥 1공기',kcal:280,cat:'간편'},
+  {name:'샐러드 (드레싱 포함)',kcal:200,cat:'간편'},{name:'두유 1팩',kcal:130,cat:'간편'},
+  // 양식
+  {name:'파스타 (토마토)',kcal:550,cat:'양식'},{name:'파스타 (크림)',kcal:700,cat:'양식'},
+  {name:'파스타 (오일)',kcal:500,cat:'양식'},{name:'리조또',kcal:600,cat:'양식'},
+  {name:'스테이크 (200g)',kcal:500,cat:'양식'},{name:'샐러드 + 스테이크',kcal:550,cat:'양식'},
+  {name:'연어 스테이크',kcal:400,cat:'양식'},{name:'그라탕',kcal:550,cat:'양식'},
+  // 동남아/기타
+  {name:'쌀국수 (포)',kcal:450,cat:'아시안'},{name:'팟타이',kcal:500,cat:'아시안'},
+  {name:'똠양꿍',kcal:350,cat:'아시안'},{name:'카오팟 (볶음밥)',kcal:550,cat:'아시안'},
+  {name:'타코 (1개)',kcal:200,cat:'기타'},{name:'부리또',kcal:600,cat:'기타'},
+  {name:'케밥',kcal:500,cat:'기타'},{name:'난+커리 (1인분)',kcal:550,cat:'기타'},
+];
+
+let customMealTarget = {di:0, si:0};
+let customMealPicked = null;
+
+function openCustomMeal(di,si){
+  customMealTarget = {di,si};
+  customMealPicked = null;
+  document.getElementById('meal-search').value = '';
+  document.getElementById('meal-ac').classList.remove('show');
+  document.getElementById('meal-cp').classList.remove('show');
+  document.getElementById('meal-cp-save').style.display = 'none';
+  document.getElementById('meal-cp-qty').value = 1;
+  document.getElementById('custom-meal-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('meal-search').focus(),100);
+}
+
+function closeCustomMeal(){
+  document.getElementById('custom-meal-modal').classList.remove('open');
+}
+
+function searchFood(q){
+  const ac = document.getElementById('meal-ac');
+  if(!q||q.length<1){ac.classList.remove('show');return;}
+  const results = FOOD_DB.filter(f=>f.name.toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  if(!results.length){ac.innerHTML='<div class="meal-ac-item" style="color:var(--text-hint)">결과 없음 — 직접 칼로리 입력</div>';ac.classList.add('show');return;}
+  ac.innerHTML = results.map((f,i)=>
+    `<div class="meal-ac-item" onclick="pickCustomFood(${i},'${q}')">
+      <span>${f.name} <span style="font-size:10px;color:var(--text-hint)">${f.cat}</span></span>
+      <span class="meal-ac-kcal">${f.kcal}kcal</span>
+    </div>`
+  ).join('');
+  ac.classList.add('show');
+  // Store current results for picking
+  ac._results = results;
+}
+
+function pickCustomFood(idx,q){
+  const ac = document.getElementById('meal-ac');
+  const food = ac._results[idx];
+  if(!food) return;
+  customMealPicked = {...food};
+  document.getElementById('meal-search').value = food.name;
+  ac.classList.remove('show');
+  document.getElementById('meal-cp-name').textContent = food.name;
+  document.getElementById('meal-cp-kcal').textContent = `1인분 ${food.kcal}kcal`;
+  document.getElementById('meal-cp-qty').value = 1;
+  document.getElementById('meal-cp-total').textContent = `= ${food.kcal}kcal`;
+  document.getElementById('meal-cp').classList.add('show');
+  document.getElementById('meal-cp-save').style.display = '';
+}
+
+function updateCustomTotal(){
+  if(!customMealPicked) return;
+  const qty = parseFloat(document.getElementById('meal-cp-qty').value)||1;
+  const total = Math.round(customMealPicked.kcal * qty);
+  document.getElementById('meal-cp-total').textContent = `= ${total}kcal`;
+}
+
+function saveCustomMeal(){
+  if(!customMealPicked||!mealPlanData) return;
+  const {di,si} = customMealTarget;
+  const qty = parseFloat(document.getElementById('meal-cp-qty').value)||1;
+  const totalKcal = Math.round(customMealPicked.kcal * qty);
+  const qtyLabel = qty===1?'':`${qty}인분 · `;
+
+  // Replace the picked option with custom meal
+  const slot = mealPlanData[di].slots[si];
+  slot.options[slot.picked||0] = {
+    name: customMealPicked.name,
+    desc: `${qtyLabel}${customMealPicked.cat} · 직접 기록`,
+    kcal: totalKcal,
+    recipe: null,
+    missing: []
+  };
+  slot.eaten = true;
+  saveMealPlan();
+  closeCustomMeal();
+  renderMealWeek();
+}
+
 </script>
 </body>
 </html>
