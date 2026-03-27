@@ -165,15 +165,18 @@
   .week-plan{padding:0 16px}
   .plan-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border)}
   .plan-row:last-child{border-bottom:none}
-  .plan-row.drop-target{background:var(--green-light);border-radius:8px;outline:2px dashed var(--primary);outline-offset:-2px}
-  .plan-item-move{cursor:pointer;-webkit-tap-highlight-color:rgba(76,175,80,.3);transition:all .15s;position:relative;z-index:1}
-  .plan-item-move.selected-move{outline:2px solid var(--primary);outline-offset:2px;background:var(--primary)!important;color:#fff!important;animation:pulse-move .8s infinite}
-  @keyframes pulse-move{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
   .plan-edit-hint{font-size:11px;color:var(--text-hint);padding:4px 16px 0;text-align:center}
-  .plan-drop-btn{display:block;margin:6px 0;padding:10px 16px;border-radius:12px;border:2px dashed var(--primary);color:var(--primary);font-size:13px;font-weight:600;cursor:pointer;background:var(--green-light);transition:all .15s;text-align:center;-webkit-tap-highlight-color:rgba(76,175,80,.3)}
-  .plan-drop-btn:active{background:var(--primary);color:#fff}
-  .move-cancel-btn{display:block;margin:8px auto;padding:10px 24px;border-radius:16px;border:1.5px solid #e74c3c;color:#e74c3c;font-size:13px;font-weight:600;cursor:pointer;background:#fff;text-align:center;-webkit-tap-highlight-color:rgba(231,76,60,.3)}
-  .move-cancel-btn:active{background:#e74c3c;color:#fff}
+  .move-modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:flex-end;justify-content:center}
+  .move-modal{background:#fff;border-radius:20px 20px 0 0;padding:20px 16px 32px;width:100%;max-width:500px;animation:slideUp .25s ease}
+  @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  .move-modal-title{font-size:16px;font-weight:700;text-align:center;margin-bottom:4px}
+  .move-modal-sub{font-size:13px;color:var(--text-muted);text-align:center;margin-bottom:16px}
+  .move-day-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+  .move-day-btn{padding:12px 4px;border-radius:12px;border:1.5px solid var(--border);background:#fff;font-size:14px;font-weight:600;cursor:pointer;text-align:center;-webkit-tap-highlight-color:rgba(76,175,80,.3)}
+  .move-day-btn:active{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .move-day-btn.current{background:var(--surface);color:var(--text-muted);border-color:var(--border);pointer-events:none;opacity:.5}
+  .move-day-btn.rest-day{border-style:dashed;color:var(--text-muted)}
+  .move-cancel{display:block;width:100%;padding:14px;border-radius:12px;border:none;background:var(--surface);font-size:15px;font-weight:600;color:var(--text-muted);cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,.1)}
   .plan-daybadge{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;margin-top:2px}
   .plan-daybadge.workout{background:var(--green-light);color:var(--green-xdark)}
   .plan-daybadge.rest{background:var(--surface);color:var(--text-muted)}
@@ -1313,97 +1316,119 @@ function selRoutine(id){
   document.getElementById('snext3').disabled=false;
 }
 
-/* ── Tap-to-Move for routine preview ── */
-let moveSrcDay=null, moveSrcIdx=null;
+/* ── Move exercise modal for routine preview ── */
 
 function renderWeekPreview(){
   if(!RS.routine)return;
-  const r=RS.routine;
+  var r=RS.routine;
   document.getElementById('cb-title').textContent=r.name;
-  document.getElementById('cb-sub').textContent=`주 ${Object.keys(r.sched).length}회 · ${levelText(r.level)} 강도`;
+  document.getElementById('cb-sub').textContent='주 '+Object.keys(r.sched).length+'회 · '+levelText(r.level)+' 강도';
   document.getElementById('plan-sub').textContent=r.name;
 
-  const isMoving=moveSrcDay!==null;
-  const container=document.getElementById('week-plan-preview');
-  let hint=isMoving
-    ?`<div class="plan-edit-hint" style="color:var(--primary);font-weight:600">📍 이동할 요일을 선택하세요</div><div style="text-align:center"><button type="button" class="move-cancel-btn" data-action="cancel">✕ 취소</button></div>`
-    :`<div class="plan-edit-hint">💡 운동을 탭하면 다른 요일로 이동할 수 있어요</div>`;
+  var container=document.getElementById('week-plan-preview');
+  var html='<div class="plan-edit-hint">💡 운동을 탭하면 다른 요일로 이동할 수 있어요</div>';
 
-  container.innerHTML=hint+Array.from({length:7},(_,i)=>{
-    const items=r.sched[i];
-    const isSelected=isMoving&&moveSrcDay===i;
-    const showDropBtn=isMoving&&moveSrcDay!==i;
-
+  for(var i=0;i<7;i++){
+    var items=r.sched[i];
     if(!items||!items.length){
-      if(showDropBtn){
-        return `<div class="plan-row drop-target" data-day="${i}"><div class="plan-daybadge rest">${DAYS[i]}</div><div class="plan-body"><div class="plan-dayname">${DAYS_FULL[i]}</div><button type="button" class="plan-drop-btn" data-action="drop" data-target="${i}">➕ 여기로 이동</button></div></div>`;
-      }
-      return `<div class="plan-row" data-day="${i}"><div class="plan-daybadge rest">${DAYS[i]}</div><div class="plan-body"><div class="plan-dayname">${DAYS_FULL[i]}</div><div class="plan-rest">휴식 😴</div></div></div>`;
+      html+='<div class="plan-row"><div class="plan-daybadge rest">'+DAYS[i]+'</div><div class="plan-body"><div class="plan-dayname">'+DAYS_FULL[i]+'</div><div class="plan-rest">휴식 😴</div></div></div>';
+      continue;
     }
+    var pillsHtml='';
+    for(var j=0;j<items.length;j++){
+      var ex=findExercise(items[j].e);
+      if(!ex)continue;
+      var isStr=ex.sets!==undefined;
+      var label=isStr?ex.name+' '+(items[j].s||ex.sets)+'×'+(items[j].r||ex.reps):ex.name+' '+(items[j].d||ex.dur)+'분';
+      var pill=TYPE_PILL[ex.exType];
+      pillsHtml+='<span class="pill '+pill+'" style="cursor:pointer;-webkit-tap-highlight-color:rgba(76,175,80,.3)" data-mv-day="'+i+'" data-mv-idx="'+j+'">'+label+'</span>';
+    }
+    var totalMin=0;
+    for(var k=0;k<items.length;k++){var exx=findExercise(items[k].e);totalMin+=(items[k].d||(exx?exx.dur:0)||0);}
+    html+='<div class="plan-row"><div class="plan-daybadge workout">'+DAYS[i]+'</div><div class="plan-body"><div class="plan-dayname">'+DAYS_FULL[i]+'</div><div class="plan-items">'+pillsHtml+'</div><div class="plan-dur">약 '+totalMin+'분</div></div></div>';
+  }
+  container.innerHTML=html;
 
-    const resolved=items.map((item,idx)=>{
-      const ex=findExercise(item.e);if(!ex)return null;
-      const isStr=ex.sets!==undefined;
-      const label=isStr?`${ex.name} ${item.s||ex.sets}×${item.r||ex.reps}`:`${ex.name} ${item.d||ex.dur}분`;
-      const pill=TYPE_PILL[ex.exType];
-      const isSrc=isSelected&&idx===moveSrcIdx;
-      return{label,pill,idx,isSrc};
-    }).filter(Boolean);
-    const totalMin=items.reduce((s,item)=>{const ex=findExercise(item.e);return s+(item.d||ex?.dur||0)},0);
-
-    const pillsHtml=resolved.map(rv=>{
-      if(rv.isSrc){
-        return `<button type="button" class="pill ${rv.pill} plan-item-move selected-move">${rv.label}</button>`;
-      }
-      if(isMoving){
-        return `<button type="button" class="pill ${rv.pill} plan-item-move">${rv.label}</button>`;
-      }
-      return `<button type="button" class="pill ${rv.pill} plan-item-move" data-action="select" data-src-day="${i}" data-src-idx="${rv.idx}">${rv.label}</button>`;
-    }).join('');
-
-    const dropBtn=showDropBtn?`<button type="button" class="plan-drop-btn" data-action="drop" data-target="${i}">여기로 이동</button>`:'';
-
-    return `<div class="plan-row${showDropBtn?' drop-target':''}" data-day="${i}"><div class="plan-daybadge workout">${DAYS[i]}</div><div class="plan-body"><div class="plan-dayname">${DAYS_FULL[i]}</div><div class="plan-items">${pillsHtml}</div>${dropBtn}<div class="plan-dur">약 ${totalMin}분</div></div></div>`;
-  }).join('');
-
-  /* Event delegation — single listener, works on all mobile browsers */
-  container.querySelectorAll('[data-action]').forEach(btn=>{
-    btn.addEventListener('click',handleWeekAction);
-    btn.addEventListener('touchend',handleWeekAction);
+  /* Single event delegation on container */
+  container.addEventListener('click',function onContainerClick(e){
+    container.removeEventListener('click',onContainerClick);
+    var pill=e.target.closest('[data-mv-day]');
+    if(pill) openMoveModal(parseInt(pill.dataset.mvDay),parseInt(pill.dataset.mvIdx));
   });
 }
 
-let _lastAction=0;
-function handleWeekAction(e){
-  e.preventDefault();
-  const now=Date.now();if(now-_lastAction<300)return;_lastAction=now;
-  const btn=e.currentTarget;
-  const action=btn.dataset.action;
-  if(action==='select'){
-    moveSrcDay=+btn.dataset.srcDay;
-    moveSrcIdx=+btn.dataset.srcIdx;
-    renderWeekPreview();
-  } else if(action==='drop'){
-    moveExercise(+btn.dataset.target);
-  } else if(action==='cancel'){
-    moveSrcDay=null;moveSrcIdx=null;
-    renderWeekPreview();
+function openMoveModal(srcDay,srcIdx){
+  var r=RS.routine;
+  if(!r||!r.sched[srcDay]||!r.sched[srcDay][srcIdx])return;
+  var item=r.sched[srcDay][srcIdx];
+  var ex=findExercise(item.e);
+  if(!ex)return;
+  var exName=ex.name;
+
+  /* Remove old modal if exists */
+  var old=document.getElementById('move-modal');
+  if(old)old.remove();
+
+  var overlay=document.createElement('div');
+  overlay.id='move-modal';
+  overlay.className='move-modal-overlay';
+
+  var dayBtns='';
+  for(var d=0;d<7;d++){
+    var isCurrent=d===srcDay;
+    var hasItems=r.sched[d]&&r.sched[d].length>0;
+    var cls='move-day-btn';
+    if(isCurrent)cls+=' current';
+    else if(!hasItems)cls+=' rest-day';
+    dayBtns+='<div class="'+cls+'" data-move-to="'+d+'">'+DAYS_FULL[d]+(isCurrent?' ✓':'')+'</div>';
+  }
+
+  overlay.innerHTML='<div class="move-modal">'
+    +'<div class="move-modal-title">🔄 '+exName+'</div>'
+    +'<div class="move-modal-sub">'+DAYS_FULL[srcDay]+'에서 어디로 이동할까요?</div>'
+    +'<div class="move-day-grid">'+dayBtns+'</div>'
+    +'<div class="move-cancel" id="move-cancel-btn">취소</div>'
+    +'</div>';
+
+  document.body.appendChild(overlay);
+
+  /* Close on overlay tap */
+  overlay.addEventListener('click',function(e){
+    if(e.target===overlay)closeMoveModal();
+  });
+
+  /* Cancel button */
+  document.getElementById('move-cancel-btn').addEventListener('click',function(){
+    closeMoveModal();
+  });
+
+  /* Day buttons */
+  var btns=overlay.querySelectorAll('[data-move-to]');
+  for(var b=0;b<btns.length;b++){
+    btns[b].addEventListener('click',function(){
+      var targetDay=parseInt(this.dataset.moveTo);
+      if(targetDay===srcDay){closeMoveModal();return;}
+      doMoveExercise(srcDay,srcIdx,targetDay);
+    });
   }
 }
 
-function moveExercise(targetDay){
-  if(moveSrcDay===null||moveSrcIdx===null)return;
-  const r=RS.routine;
-  const srcItems=r.sched[moveSrcDay];
-  if(!srcItems||!srcItems[moveSrcIdx]){moveSrcDay=null;moveSrcIdx=null;renderWeekPreview();return;}
-  const moved=srcItems.splice(moveSrcIdx,1)[0];
-  if(!srcItems.length)delete r.sched[moveSrcDay];
+function closeMoveModal(){
+  var m=document.getElementById('move-modal');
+  if(m)m.remove();
+}
+
+function doMoveExercise(srcDay,srcIdx,targetDay){
+  var r=RS.routine;
+  var srcItems=r.sched[srcDay];
+  if(!srcItems||!srcItems[srcIdx]){closeMoveModal();return;}
+  var moved=srcItems.splice(srcIdx,1)[0];
+  if(!srcItems.length)delete r.sched[srcDay];
   if(!r.sched[targetDay])r.sched[targetDay]=[];
   r.sched[targetDay].push(moved);
-  const dayName=DAYS_FULL[targetDay];
-  moveSrcDay=null;moveSrcIdx=null;
+  closeMoveModal();
   renderWeekPreview();
-  showToast(`${dayName}로 이동 완료!`);
+  showToast(DAYS_FULL[targetDay]+'로 이동 완료!');
 }
 
 function applyRoutine(){
