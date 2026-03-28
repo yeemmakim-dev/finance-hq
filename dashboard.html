@@ -3720,7 +3720,7 @@ function renderSpendingAnalysis(catSpent){
     const txnCount = parsedTxns.filter(t=>t.category===cat).length;
 
     const subId = 'sp-cat-'+cat.replace(/[^a-zA-Z0-9가-힣]/g,'_');
-    const catTxns = parsedTxns.filter(t=>t.category===cat).sort((a,b)=>b.amount-a.amount);
+    const catTxns = parsedTxns.filter(t=>t.category===cat).sort((a,b)=>b.date.localeCompare(a.date));
     const txnListHtml = catTxns.map(t=>{
       const sym = t.currency==='KRW'?'₩':'$';
       return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0 6px 52px;font-size:12px;border-bottom:1px solid rgba(255,255,255,.03);">
@@ -3804,7 +3804,7 @@ function filterTxnByCat(cat){
 }
 
 function renderTxnList(){
-  const filtered = txnFilterCat ? parsedTxns.filter(t=>t.category===txnFilterCat) : parsedTxns;
+  const filtered = (txnFilterCat ? parsedTxns.filter(t=>t.category===txnFilterCat) : [...parsedTxns]).sort((a,b)=>b.date.localeCompare(a.date));
   const txnCount = filtered.length;
   const label = txnFilterCat ? `${BUDGET_ICONS[txnFilterCat]||'📦'} ${txnFilterCat} ${txnCount}건` : `총 ${parsedTxns.length}건`;
   const resetBtn = txnFilterCat ? ` <span onclick="filterTxnByCat('')" style="color:var(--blue);cursor:pointer;font-size:11px;margin-left:6px;">✕ 전체 보기</span>` : '';
