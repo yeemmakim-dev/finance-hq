@@ -3599,9 +3599,21 @@ function formatMonthLabel(m){
 }
 
 function renderMonthTabs(){
+  // Clean invalid months before rendering
+  const validMonth = /^\d{4}-(0[1-9]|1[0-2])$/;
+  const allKeys = Object.keys(spendingHistory);
+  const badKeys = allKeys.filter(k => !validMonth.test(k));
+  if(badKeys.length){
+    badKeys.forEach(k => delete spendingHistory[k]);
+    save();
+  }
+
   const months = Object.keys(spendingHistory).sort();
   const list = document.getElementById('month-tab-list');
   if(!months.length){ list.innerHTML=''; return; }
+
+  // Store months array globally for safe onclick access
+  window._monthKeys = months;
 
   const currentYear = getNowLA().getFullYear().toString();
 
@@ -3628,10 +3640,10 @@ function renderMonthTabs(){
         const data = spendingHistory[m];
         const [,mo] = m.split('-');
         const isActive = m === selectedMonth;
-        return `<div class="month-tab${isActive?' active':''}" onclick="switchMonth('${m}')">
+        return `<div class="month-tab${isActive?' active':''}" onclick="switchMonth(window._monthKeys[${months.indexOf(m)}])">
           <span>${parseInt(mo)}월</span>
           <span style="font-size:11px;opacity:.7;">$${Math.round(data.totalSpent).toLocaleString()}</span>
-          <span class="month-del" onclick="deleteMonth('${m}',event)" title="삭제">✕</span>
+          <span class="month-del" onclick="deleteMonth(window._monthKeys[${months.indexOf(m)}],event)" title="삭제">✕</span>
         </div>`;
       }).join('');
     } else {
@@ -3649,10 +3661,10 @@ function renderMonthTabs(){
         const data = spendingHistory[m];
         const [,mo] = m.split('-');
         const isActive = m === selectedMonth;
-        return `<div class="month-tab${isActive?' active':''}" onclick="switchMonth('${m}')" style="font-size:11px;padding:5px 10px;">
+        return `<div class="month-tab${isActive?' active':''}" onclick="switchMonth(window._monthKeys[${months.indexOf(m)}])" style="font-size:11px;padding:5px 10px;">
           <span>${parseInt(mo)}월</span>
           <span style="font-size:10px;opacity:.7;">$${Math.round(data.totalSpent).toLocaleString()}</span>
-          <span class="month-del" onclick="deleteMonth('${m}',event)" title="삭제">✕</span>
+          <span class="month-del" onclick="deleteMonth(window._monthKeys[${months.indexOf(m)}],event)" title="삭제">✕</span>
         </div>`;
       }).join('');
       html += '</div>';
