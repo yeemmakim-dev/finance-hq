@@ -1528,7 +1528,7 @@ function takeSnapshot(){
   snapshots.sort((a,b)=>a.date.localeCompare(b.date));
   save(); renderHistory();
 }
-function deleteSnapshot(idx){ if(idx>=0&&idx<snapshots.length){ snapshots.splice(idx,1); save(); renderHistory(); } }
+function deleteSnapshot(date){ snapshots = snapshots.filter(s => s.date !== date); save(); renderHistory(); }
 function clearSnapshots(){ if(!confirm('모든 기록을 삭제할까요?')) return; snapshots=[]; save(); renderHistory(); }
 // Auto-clean invalid snapshots (NaN dates, missing data)
 function cleanSnapshots(){
@@ -1644,8 +1644,7 @@ function renderHistory(){
   const listEl = document.getElementById('snap-list');
   if(!snapshots.length){ listEl.innerHTML='<div class="snap-empty">아직 저장된 기록이 없어요.<br>"📸 오늘 기록 저장"을 눌러 시작하세요.</div>'; return; }
   const rev = [...sorted].reverse();
-  listEl.innerHTML = rev.map(snap => {
-    const idx = snapshots.findIndex(s => s.date === snap.date);
+  listEl.innerHTML = rev.map((snap, ri) => {
     const usMan = snap.usUSD*FX/10000;
     const t = snap.totalMan||1;
     const prevI = sorted.indexOf(snap)-1;
@@ -1653,15 +1652,16 @@ function renderHistory(){
     const chg = prev?snap.totalMan-prev.totalMan:0;
     const chgPct = prev&&prev.totalMan?(chg/prev.totalMan*100):0;
     const chgH = prev?`<span class="${cls(chg)}">${fmtPct(chgPct)}</span>`:'<span class="neu">첫 기록</span>';
+    const safeDate = (snap.date||'').replace(/'/g,'');
     return `<div class="snap-row">
-      <div class="snap-date">${snap.date.slice(5)}</div>
+      <div class="snap-date">${snap.date?snap.date.slice(5):'???'}</div>
       <div class="snap-bars">
         <div class="snap-bar" style="width:${(usMan/t*100).toFixed(1)}%;background:#a78bfa"></div>
         <div class="snap-bar" style="width:${(snap.krMan/t*100).toFixed(1)}%;background:#34d399"></div>
       </div>
       <div class="snap-val">${fmtMan(snap.totalMan)}원</div>
       <div class="snap-chg">${chgH}</div>
-      <button class="snap-del" onclick="deleteSnapshot(${idx})">✕</button>
+      <button class="snap-del" onclick="deleteSnapshot('${safeDate}')">✕</button>
     </div>`;
   }).join('');
 
