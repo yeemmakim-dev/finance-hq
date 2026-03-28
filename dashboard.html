@@ -3030,51 +3030,49 @@ function parseCSV(text){
   const headers = parseLine(headerLine, delim).map(h=>h.toLowerCase().trim().replace(/"/g,''));
 
   // Detect column indices
+  // ── Step 1: Scan all headers ──
   let dateCol=-1, descCol=-1, amtCol=-1, debitCol=-1, creditCol=-1;
-
   let typeCol=-1, catCol=-1, statusCol=-1;
   headers.forEach((h,i)=>{
     if(dateCol<0 && /date|날짜|거래일|이용일|일시|transaction date|posting date/.test(h)) dateCol=i;
     if(descCol<0 && /desc|description|memo|메모|내용|이용처|가맹점|적요|상세/.test(h)) descCol=i;
     if(amtCol<0 && /^amount$|금액|이용금액|거래금액|결제금액/.test(h)) amtCol=i;
-    if(debitCol<0 && /debit|출금|지출/.test(h)) debitCol=i;
-    if(creditCol<0 && /credit|입금|수입/.test(h)) creditCol=i;
+    if(debitCol<0 && /^debit$|출금|지출/.test(h)) debitCol=i;
+    if(creditCol<0 && /^credit$|입금|수입/.test(h)) creditCol=i;
     if(typeCol<0 && /^type$/.test(h)) typeCol=i;
     if(catCol<0 && /^category$|카테고리|분류/.test(h)) catCol=i;
     if(statusCol<0 && /^status$/.test(h)) statusCol=i;
   });
 
-  // Fallback: guess by position (skip status column)
-  if(dateCol<0){
-    // If status column is at 0, date is likely at 1
-    dateCol = (statusCol===0) ? 1 : 0;
+  // ── Step 2: Detect bank format from headers ──
+  // Format A: "Amount" column (Chase, BofA, Wells Fargo) — negative = spending
+  // Format B: "Debit"/"Credit" split columns (Citi) — debit = spending (positive)
+  // Format C: Neither found — guess by position
+  let mode = 'guess'; // 'amount' | 'debit-credit' | 'guess'
+  if(amtCol>=0){
+    mode = 'amount';   // explicit Amount header found → trust it, ignore debit/credit
+  } else if(debitCol>=0 || creditCol>=0){
+    mode = 'debit-credit'; // explicit Debit/Credit found, no Amount → Citi style
   }
+
+  // ── Step 3: Fallback for date/desc if not detected ──
+  if(dateCol<0) dateCol = (statusCol===0) ? 1 : 0;
   if(descCol<0){
-    // First text column after date
     descCol = dateCol + 1;
     if(descCol >= headers.length) descCol = dateCol;
   }
-  if(amtCol<0 && debitCol<0){
-    // Find first numeric-looking column after desc
+
+  // For 'guess' mode: find a numeric column to use as amount
+  if(mode==='guess'){
     for(let i=descCol+1;i<headers.length;i++){
-      if(/amount|금액|price|total|debit|credit/.test(headers[i])||i>=2){ amtCol=i; break; }
+      if(i>=2){ amtCol=i; break; }
     }
     if(amtCol<0) amtCol = headers.length-1;
-  }
-
-  // PRIORITY: if we have explicit Debit/Credit columns, prefer them over guessed Amount
-  // This handles Citi-style CSVs (Status, Date, Description, Debit, Credit)
-  if(debitCol>=0 || creditCol>=0){
-    amtCol = -1;
-  }
-  // If we have an explicit "Amount" column header, use ONLY that
-  else if(amtCol>=0){
-    debitCol = -1;
-    creditCol = -1;
+    mode = 'amount';
   }
 
   console.log('[CSV Debug] Headers:', headers);
-  console.log('[CSV Debug] Columns → date:', dateCol, 'desc:', descCol, 'amount:', amtCol, 'debit:', debitCol, 'credit:', creditCol, 'type:', typeCol, 'status:', statusCol);
+  console.log('[CSV Debug] Mode:', mode, '| date:', dateCol, 'desc:', descCol, 'amount:', amtCol, 'debit:', debitCol, 'credit:', creditCol, 'type:', typeCol, 'status:', statusCol);
 
   const txns = [];
   for(let i=1; i<lines.length; i++){
@@ -3090,21 +3088,23 @@ function parseCSV(text){
       if(status==='pending') continue;
     }
 
-    // Read amount — two modes:
-    // 1) Amount column: negative = spending, positive = income
-    // 2) Debit/Credit columns: debit = spending (positive number), credit = income
+    // Read amount based on detected mode
     let amt = 0;
-    let usedDebitCol = false;
-    if(amtCol>=0){
+    let rawAmtColIdx = 0;
+    if(mode==='amount'){
+      // Amount column: negative = spending, positive = income/refund
       amt = parseAmount(cols[amtCol]||'0');
-    } else if(debitCol>=0 || creditCol>=0){
+      rawAmtColIdx = amtCol;
+    } else {
+      // Debit/Credit split: debit value = spending (positive number in CSV)
       const debitAmt = debitCol>=0 ? parseAmount(cols[debitCol]||'0') : 0;
       const creditAmt = creditCol>=0 ? parseAmount(cols[creditCol]||'0') : 0;
       if(debitAmt){
-        amt = -Math.abs(debitAmt); // debit = spending → make negative
-        usedDebitCol = true;
+        amt = -Math.abs(debitAmt); // debit → mark as negative (spending)
+        rawAmtColIdx = debitCol;
       } else if(creditAmt){
-        amt = Math.abs(creditAmt); // credit = income → positive
+        amt = Math.abs(creditAmt); // credit → positive (income)
+        rawAmtColIdx = creditCol;
       }
     }
 
@@ -3115,9 +3115,7 @@ function parseCSV(text){
     amt = -amt; // flip to positive for display
 
     // Detect currency — only mark as KRW if amounts are clearly KRW scale (>100,000)
-    // Chase/US bank CSVs are always USD. KRW transactions are typically 10,000+ won.
-    const rawAmtCol = amtCol>=0 ? amtCol : (usedDebitCol ? debitCol : creditCol);
-    const rawAmt = (cols[rawAmtCol>=0?rawAmtCol:0]||'').replace(/"/g,'');
+    const rawAmt = (cols[rawAmtColIdx]||'').replace(/"/g,'');
     const hasWonSign = rawAmt.includes('₩') || rawAmt.includes('원');
     const isKRW = hasWonSign || (amt>50000 && !rawAmt.includes('$'));
 
