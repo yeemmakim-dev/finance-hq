@@ -1528,8 +1528,14 @@ function takeSnapshot(){
   snapshots.sort((a,b)=>a.date.localeCompare(b.date));
   save(); renderHistory();
 }
-function deleteSnapshot(idx){ snapshots.splice(idx,1); save(); renderHistory(); }
+function deleteSnapshot(idx){ if(idx>=0&&idx<snapshots.length){ snapshots.splice(idx,1); save(); renderHistory(); } }
 function clearSnapshots(){ if(!confirm('모든 기록을 삭제할까요?')) return; snapshots=[]; save(); renderHistory(); }
+// Auto-clean invalid snapshots (NaN dates, missing data)
+function cleanSnapshots(){
+  const before = snapshots.length;
+  snapshots = snapshots.filter(s => s && s.date && /^\d{4}-\d{2}-\d{2}$/.test(s.date) && !isNaN(s.totalMan));
+  if(snapshots.length !== before){ save(); }
+}
 
 // ═══════════════════════════════════════
 // DEBT RENDERING
@@ -1639,7 +1645,7 @@ function renderHistory(){
   if(!snapshots.length){ listEl.innerHTML='<div class="snap-empty">아직 저장된 기록이 없어요.<br>"📸 오늘 기록 저장"을 눌러 시작하세요.</div>'; return; }
   const rev = [...sorted].reverse();
   listEl.innerHTML = rev.map(snap => {
-    const idx = snapshots.indexOf(snap);
+    const idx = snapshots.findIndex(s => s.date === snap.date);
     const usMan = snap.usUSD*FX/10000;
     const t = snap.totalMan||1;
     const prevI = sorted.indexOf(snap)-1;
@@ -4222,6 +4228,7 @@ function renderAIInsights(monthData, labels){
 // INIT
 // ═══════════════════════════════════════
 load();
+cleanSnapshots();
 // 기존 세부 섹터 → 큰 분류로 마이그레이션
 (function migrateSectors(){
   const OLD_TO_NEW = {
