@@ -3173,11 +3173,28 @@ function parseAmount(str){
 
 function parseDate(str){
   str = str.replace(/"/g,'').trim();
-  // Try various formats: YYYY-MM-DD, MM/DD/YYYY, YYYY.MM.DD, etc.
   let m;
-  if(m=str.match(/(\d{4})[-./](\d{1,2})[-./](\d{1,2})/)) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
-  if(m=str.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/)) return `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
-  if(m=str.match(/(\d{1,2})\/(\d{1,2})\/(\d{2})/)) return `20${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+  // YYYY-MM-DD or YYYY.MM.DD (ISO format — always Y-M-D)
+  if(m=str.match(/(\d{4})[-./](\d{1,2})[-./](\d{1,2})/)){
+    return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  }
+  // MM/DD/YYYY or DD/MM/YYYY — need to figure out which is month vs day
+  if(m=str.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/)){
+    let a=+m[1], b=+m[2], y=m[3];
+    // If first number > 12, it must be day (DD/MM/YYYY)
+    if(a>12 && b<=12) return `${y}-${String(b).padStart(2,'0')}-${String(a).padStart(2,'0')}`;
+    // If second number > 12, it must be day (MM/DD/YYYY)
+    if(b>12 && a<=12) return `${y}-${String(a).padStart(2,'0')}-${String(b).padStart(2,'0')}`;
+    // Both ≤ 12 — assume US format MM/DD/YYYY (Chase, Citi, BofA all use this)
+    return `${y}-${String(a).padStart(2,'0')}-${String(b).padStart(2,'0')}`;
+  }
+  // MM/DD/YY (2-digit year)
+  if(m=str.match(/(\d{1,2})\/(\d{1,2})\/(\d{2})/)){
+    let a=+m[1], b=+m[2], y='20'+m[3];
+    if(a>12 && b<=12) return `${y}-${String(b).padStart(2,'0')}-${String(a).padStart(2,'0')}`;
+    if(b>12 && a<=12) return `${y}-${String(a).padStart(2,'0')}-${String(b).padStart(2,'0')}`;
+    return `${y}-${String(a).padStart(2,'0')}-${String(b).padStart(2,'0')}`;
+  }
   return str.slice(0,10);
 }
 
