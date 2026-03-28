@@ -1528,12 +1528,30 @@ function takeSnapshot(){
   snapshots.sort((a,b)=>a.date.localeCompare(b.date));
   save(); renderHistory();
 }
-function deleteSnapshot(date){ snapshots = snapshots.filter(s => s.date !== date); save(); renderHistory(); }
+function deleteSnapshot(date, ri){
+  // date-based delete for normal snapshots; index-based fallback for broken ones
+  if(date){
+    snapshots = snapshots.filter(s => s.date !== date);
+  } else if(ri!=null && ri>=0 && ri<snapshots.length){
+    snapshots.splice(ri, 1);
+  }
+  save(); renderHistory();
+}
 function clearSnapshots(){ if(!confirm('모든 기록을 삭제할까요?')) return; snapshots=[]; save(); renderHistory(); }
 // Auto-clean invalid snapshots (NaN dates, missing data)
 function cleanSnapshots(){
   const before = snapshots.length;
-  snapshots = snapshots.filter(s => s && s.date && /^\d{4}-\d{2}-\d{2}$/.test(s.date) && !isNaN(s.totalMan));
+  snapshots = snapshots.filter(s => {
+    if(!s || !s.date) return false;
+    if(typeof s.date !== 'string') return false;
+    if(s.date === 'NaN' || s.date === 'undefined' || s.date === 'null') return false;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(s.date)) return false;
+    // Validate month 01-12, day 01-31
+    const [,mm,dd] = s.date.match(/\d{4}-(\d{2})-(\d{2})/);
+    if(+mm<1 || +mm>12 || +dd<1 || +dd>31) return false;
+    if(s.totalMan==null || isNaN(s.totalMan)) return false;
+    return true;
+  });
   if(snapshots.length !== before){ save(); }
 }
 
@@ -1661,7 +1679,7 @@ function renderHistory(){
       </div>
       <div class="snap-val">${fmtMan(snap.totalMan)}원</div>
       <div class="snap-chg">${chgH}</div>
-      <button class="snap-del" onclick="deleteSnapshot('${safeDate}')">✕</button>
+      <button class="snap-del" onclick="deleteSnapshot('${safeDate}',${snapshots.length - 1 - ri})">✕</button>
     </div>`;
   }).join('');
 
