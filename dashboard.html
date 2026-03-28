@@ -1554,6 +1554,18 @@ function cleanSnapshots(){
   });
   if(snapshots.length !== before){ save(); }
 }
+// Auto-clean invalid spending history months (from PDF uploads etc.)
+function cleanSpendingHistory(){
+  let cleaned = false;
+  Object.keys(spendingHistory).forEach(month => {
+    // Valid month format: YYYY-MM where MM is 01-12
+    if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)){
+      delete spendingHistory[month];
+      cleaned = true;
+    }
+  });
+  if(cleaned) save();
+}
 
 // ═══════════════════════════════════════
 // DEBT RENDERING
@@ -3021,10 +3033,21 @@ function saveBudgetModal(){
 // ═══════════════════════════════════════
 function handleCSV(file){
   if(!file) return;
+  // Block non-CSV files (PDF, images, etc.)
+  const name = file.name.toLowerCase();
+  if(name.endsWith('.pdf') || name.endsWith('.png') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.xlsx') || name.endsWith('.xls')){
+    alert('CSV 파일만 업로드 가능합니다.\n(.csv, .txt, .tsv)');
+    return;
+  }
   const reader = new FileReader();
   reader.onload = function(e){
     try{
       const text = e.target.result;
+      // Extra check: if content looks like binary/PDF, reject
+      if(text.startsWith('%PDF') || /[\x00-\x08\x0E-\x1F]/.test(text.slice(0,500))){
+        alert('이 파일은 CSV가 아닙니다. 텍스트 CSV 파일을 업로드해주세요.');
+        return;
+      }
       parsedTxns = parseCSV(text);
       if(!parsedTxns.length){ alert('파싱 가능한 거래를 찾지 못했습니다. CSV 형식을 확인하세요.'); return; }
       analyzeSpending();
@@ -4247,6 +4270,7 @@ function renderAIInsights(monthData, labels){
 // ═══════════════════════════════════════
 load();
 cleanSnapshots();
+cleanSpendingHistory();
 // 기존 세부 섹터 → 큰 분류로 마이그레이션
 (function migrateSectors(){
   const OLD_TO_NEW = {
