@@ -279,6 +279,14 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
     <div id="quote-status" class="hdr-status status-idle"><div class="sdot"></div><span>시세 미조회</span></div>
     <button class="btn btn-ghost" id="refresh-btn" onclick="fetchAllQuotes()">🔄 시세 업데이트</button>
     <button class="btn btn-primary" onclick="openModal()">✏️ 자산 수정</button>
+    <div style="position:relative;display:inline-block;">
+      <button class="btn btn-ghost" onclick="toggleBackupMenu()" id="backup-menu-btn">💾</button>
+      <div id="backup-menu" style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:6px;min-width:160px;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.4);">
+        <button onclick="exportBackup()" style="display:block;width:100%;text-align:left;padding:10px 14px;background:none;border:none;color:var(--t1);font-size:13px;font-family:var(--font);cursor:pointer;border-radius:7px;" onmouseover="this.style.background='var(--card3)'" onmouseout="this.style.background='none'">📤 백업 내보내기</button>
+        <button onclick="document.getElementById('restore-input').click()" style="display:block;width:100%;text-align:left;padding:10px 14px;background:none;border:none;color:var(--t1);font-size:13px;font-family:var(--font);cursor:pointer;border-radius:7px;" onmouseover="this.style.background='var(--card3)'" onmouseout="this.style.background='none'">📥 백업 복원하기</button>
+      </div>
+    </div>
+    <input type="file" id="restore-input" accept=".json" style="display:none;" onchange="importBackup(event)">
   </div>
 </header>
 
@@ -4244,6 +4252,84 @@ if(savedTab && document.getElementById('page-'+savedTab)){
   switchTab(savedTab, null);
 } else {
   renderAll();
+}
+
+// ═══════════════════════════════════════
+// BACKUP / RESTORE
+// ═══════════════════════════════════════
+function toggleBackupMenu(){
+  const m = document.getElementById('backup-menu');
+  m.style.display = m.style.display === 'none' ? 'block' : 'none';
+}
+document.addEventListener('click', e => {
+  const menu = document.getElementById('backup-menu');
+  const btn = document.getElementById('backup-menu-btn');
+  if(menu && !menu.contains(e.target) && !btn.contains(e.target)) menu.style.display='none';
+});
+
+function exportBackup(){
+  const data = {
+    _backup: true,
+    _version: 2,
+    _date: new Date().toISOString(),
+    dash_v2: JSON.parse(localStorage.getItem('dash_v2') || '{}'),
+    dash_action_done: JSON.parse(localStorage.getItem('dash_action_done') || '{}'),
+    dash_custom_actions: JSON.parse(localStorage.getItem('dash_custom_actions') || '[]')
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `finance-backup-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  document.getElementById('backup-menu').style.display='none';
+  showToast('백업 파일이 다운로드되었습니다');
+}
+
+function importBackup(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    try {
+      const data = JSON.parse(ev.target.result);
+      if(!data._backup){
+        showToast('유효한 백업 파일이 아닙니다', true);
+        return;
+      }
+      if(!confirm('현재 데이터를 백업 파일의 데이터로 교체합니다. 계속하시겠습니까?')) return;
+      if(data.dash_v2) localStorage.setItem('dash_v2', JSON.stringify(data.dash_v2));
+      if(data.dash_action_done) localStorage.setItem('dash_action_done', JSON.stringify(data.dash_action_done));
+      if(data.dash_custom_actions) localStorage.setItem('dash_custom_actions', JSON.stringify(data.dash_custom_actions));
+      load();
+      actionPlanDone = JSON.parse(localStorage.getItem('dash_action_done')||'{}');
+      customActions = JSON.parse(localStorage.getItem('dash_custom_actions')||'[]');
+      renderAll();
+      showToast('백업이 복원되었습니다!');
+    } catch(err){
+      showToast('파일을 읽을 수 없습니다', true);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+  document.getElementById('backup-menu').style.display='none';
+}
+
+function showToast(msg, isErr){
+  let t = document.getElementById('backup-toast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'backup-toast';
+    t.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:10px;font-size:13px;font-family:var(--font);z-index:9999;transition:opacity .3s;pointer-events:none;';
+    document.body.appendChild(t);
+  }
+  t.style.background = isErr ? 'rgba(248,113,113,.9)' : 'rgba(52,211,153,.9)';
+  t.style.color = '#fff';
+  t.textContent = msg;
+  t.style.opacity = '1';
+  setTimeout(()=>{ t.style.opacity='0'; }, 2500);
 }
 </script>
 </body>
