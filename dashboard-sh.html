@@ -4529,9 +4529,13 @@ function importBackup(e){
         return;
       }
       if(!confirm('현재 데이터를 백업 파일의 데이터로 교체합니다. 계속하시겠습니까?')) return;
-      if(data.dash_sh) localStorage.setItem('dash_sh', JSON.stringify(data.dash_sh));
-      if(data.dash_sh_action_done) localStorage.setItem('dash_sh_action_done', JSON.stringify(data.dash_sh_action_done));
-      if(data.dash_sh_custom_actions) localStorage.setItem('dash_sh_custom_actions', JSON.stringify(data.dash_sh_custom_actions));
+      // SH 백업 또는 기존(dash_v2) 백업 모두 지원
+      const mainData = data.dash_sh || data.dash_v2;
+      const actionData = data.dash_sh_action_done || data.dash_action_done;
+      const customData = data.dash_sh_custom_actions || data.dash_custom_actions;
+      if(mainData) localStorage.setItem('dash_sh', JSON.stringify(mainData));
+      if(actionData) localStorage.setItem('dash_sh_action_done', JSON.stringify(actionData));
+      if(customData) localStorage.setItem('dash_sh_custom_actions', JSON.stringify(customData));
       load();
       actionPlanDone = JSON.parse(localStorage.getItem('dash_sh_action_done')||'{}');
       customActions = JSON.parse(localStorage.getItem('dash_sh_custom_actions')||'[]');
