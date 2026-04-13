@@ -4536,11 +4536,8 @@ function importBackup(e){
       if(mainData) localStorage.setItem('dash_sh', JSON.stringify(mainData));
       if(actionData) localStorage.setItem('dash_sh_action_done', JSON.stringify(actionData));
       if(customData) localStorage.setItem('dash_sh_custom_actions', JSON.stringify(customData));
-      load();
-      actionPlanDone = JSON.parse(localStorage.getItem('dash_sh_action_done')||'{}');
-      customActions = JSON.parse(localStorage.getItem('dash_sh_custom_actions')||'[]');
-      renderAll();
-      showToast('백업이 복원되었습니다!');
+      alert('백업이 복원되었습니다! 페이지를 새로고침합니다.');
+      location.reload();
     } catch(err){
       showToast('파일을 읽을 수 없습니다', true);
     }
