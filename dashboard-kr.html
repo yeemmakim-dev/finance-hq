@@ -279,6 +279,14 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
     <div id="quote-status" class="hdr-status status-idle"><div class="sdot"></div><span>시세 미조회</span></div>
     <button class="btn btn-ghost" id="refresh-btn" onclick="fetchAllQuotes()">🔄 시세 업데이트</button>
     <button class="btn btn-primary" onclick="openModal()">✏️ 자산 수정</button>
+    <div style="position:relative;display:inline-block;">
+      <button class="btn btn-ghost" onclick="toggleBackupMenu()" id="backup-menu-btn">💾</button>
+      <div id="backup-menu" style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:6px;min-width:160px;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.4);">
+        <button onclick="exportBackup()" style="display:block;width:100%;text-align:left;padding:10px 14px;background:none;border:none;color:var(--t1);font-size:13px;font-family:var(--font);cursor:pointer;border-radius:7px;" onmouseover="this.style.background='var(--card3)'" onmouseout="this.style.background='none'">📤 백업 내보내기</button>
+        <button onclick="document.getElementById('restore-input').click()" style="display:block;width:100%;text-align:left;padding:10px 14px;background:none;border:none;color:var(--t1);font-size:13px;font-family:var(--font);cursor:pointer;border-radius:7px;" onmouseover="this.style.background='var(--card3)'" onmouseout="this.style.background='none'">📥 백업 복원하기</button>
+      </div>
+    </div>
+    <input type="file" id="restore-input" accept=".json" style="display:none;" onchange="importBackup(event)">
   </div>
 </header>
 
@@ -4112,6 +4120,56 @@ if(savedTab && document.getElementById('page-'+savedTab)){
   switchTab(savedTab, null);
 } else {
   renderAll();
+}
+
+// ── BACKUP / RESTORE ──
+function toggleBackupMenu(){
+  const m = document.getElementById('backup-menu');
+  m.style.display = m.style.display==='none' ? 'block' : 'none';
+}
+document.addEventListener('click', e => {
+  const menu = document.getElementById('backup-menu');
+  const btn = document.getElementById('backup-menu-btn');
+  if(menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) menu.style.display='none';
+});
+
+function exportBackup(){
+  const data = {
+    _backup: true, _version: 2, _date: new Date().toISOString(),
+    dash_kr_v2: JSON.parse(localStorage.getItem('dash_kr_v2') || '{}'),
+    dash_action_done: JSON.parse(localStorage.getItem('dash_action_done') || '{}'),
+    dash_custom_actions: JSON.parse(localStorage.getItem('dash_custom_actions') || '[]')
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `finance-kr-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  document.getElementById('backup-menu').style.display='none';
+}
+
+function importBackup(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    try {
+      const data = JSON.parse(ev.target.result);
+      if(!data._backup){ alert('유효한 백업 파일이 아닙니다'); return; }
+      if(!confirm('현재 데이터를 백업 파일의 데이터로 교체합니다. 계속하시겠습니까?')) return;
+      const mainData = data.dash_kr_v2 || data.dash_v2;
+      if(mainData) localStorage.setItem('dash_kr_v2', JSON.stringify(mainData));
+      if(data.dash_action_done) localStorage.setItem('dash_action_done', JSON.stringify(data.dash_action_done));
+      if(data.dash_custom_actions) localStorage.setItem('dash_custom_actions', JSON.stringify(data.dash_custom_actions));
+      alert('백업이 복원되었습니다! 페이지를 새로고침합니다.');
+      location.reload();
+    } catch(err){ alert('파일을 읽을 수 없습니다'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+  document.getElementById('backup-menu').style.display='none';
 }
 </script>
 </body>
