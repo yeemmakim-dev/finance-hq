@@ -4407,11 +4407,8 @@ function importBackup(e){
       if(data.dash_v2) localStorage.setItem('dash_v2', JSON.stringify(data.dash_v2));
       if(data.dash_action_done) localStorage.setItem('dash_action_done', JSON.stringify(data.dash_action_done));
       if(data.dash_custom_actions) localStorage.setItem('dash_custom_actions', JSON.stringify(data.dash_custom_actions));
-      load();
-      actionPlanDone = JSON.parse(localStorage.getItem('dash_action_done')||'{}');
-      customActions = JSON.parse(localStorage.getItem('dash_custom_actions')||'[]');
-      renderAll();
-      showToast('백업이 복원되었습니다!');
+      alert('백업이 복원되었습니다! 페이지를 새로고침합니다.');
+      location.reload();
     } catch(err){
       showToast('파일을 읽을 수 없습니다', true);
     }
