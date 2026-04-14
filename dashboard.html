@@ -357,6 +357,12 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
       <div id="debt-list"></div>
     </div>
 
+    <!-- LOANS -->
+    <div class="section" id="loan-section" style="display:none;">
+      <div class="section-hdr"><div class="section-title">🏦 대출 현황</div></div>
+      <div id="loan-list"></div>
+    </div>
+
     <!-- HISTORY -->
     <div class="section">
       <div class="section-hdr">
@@ -709,6 +715,12 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
     <div id="debt-fields"></div>
     <button class="add-row" onclick="addDebtField()">+ 부채 추가</button>
 
+    <div class="form-section">🏦 대출 관리</div>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:8px;">부동산 담보대출, 신용대출 등을 입력하세요. 연결 자산을 지정하면 해당 자산에서 대출을 차감한 순자산을 볼 수 있습니다.<br>금액 단위: 한국 부동산 → 만원, 미국 부동산/기타 → USD</div>
+    <div class="debt-hdr-grid" style="grid-template-columns:1.5fr 1fr 1fr .8fr 1fr 1fr 30px;"><span>대출명</span><span>총 대출금</span><span>잔액</span><span>금리(%)</span><span>월 상환액</span><span>연결자산</span><span></span></div>
+    <div id="loan-fields"></div>
+    <button class="add-row" onclick="addLoanField()">+ 대출 추가</button>
+
     <div class="form-section">⚙️ 환율</div>
     <div class="field"><label>USD/KRW 환율</label><input type="number" id="f-fx" min="1000" max="2000"/></div>
 
@@ -739,6 +751,9 @@ let stocks = [];
 let snapshots = [];
 // Debts: [{name, totalAmount, savedAmount, currency, targetYears, note}]
 let debts = [];
+// Loans: [{name, totalAmount, remaining, interestRate, monthlyPayment, currency, linkedAsset, note}]
+// linkedAsset: 'us-realty' | 'kr-realty' | 'other'
+let loans = [];
 
 // Budget state
 let budgetIncomeUSD = 0;
@@ -766,6 +781,18 @@ const PAY_ANCHOR = new Date('2026-03-20'); // first known payday (biweekly Frida
 // cash 합계 헬퍼
 function cashSum(arr){ return Array.isArray(arr) ? arr.reduce((s,a)=>s+(a.value||0),0) : (arr||0); }
 
+// 대출 잔액 합계 (만원 기준)
+function totalLoansMan(){
+  return loans.reduce((s,l)=>{
+    const rem = l.remaining||0;
+    if(l.linkedAsset==='kr-realty') return s + rem;
+    return s + rem*FX/10000;
+  },0);
+}
+function loansForAsset(asset){
+  return loans.filter(l=>l.linkedAsset===asset);
+}
+
 const CATS = ['국내주식','미국주식','ETF','채권','원자재','암호화폐','기타'];
 const ASSET_META = {
   cash:  { label:'현금/예금', labelKR:'현금/예적금', icon:'💵', color:'#5b9cff', bg:'rgba(91,156,255,.12)' },
@@ -779,7 +806,7 @@ const ASSET_META = {
 // PERSIST
 // ═══════════════════════════════════════
 function save(){
-  try{ localStorage.setItem('dash_v2', JSON.stringify({ usAssets, krAssets, stocks, FX, snapshots, budgetIncomeUSD, budgetIncomeKRW, budgetCats, debts, paychecks, spendingHistory, userCatMap, liveQuotes })); }catch(e){}
+  try{ localStorage.setItem('dash_v2', JSON.stringify({ usAssets, krAssets, stocks, FX, snapshots, budgetIncomeUSD, budgetIncomeKRW, budgetCats, debts, loans, paychecks, spendingHistory, userCatMap, liveQuotes })); }catch(e){}
 }
 function load(){
   try{
@@ -797,6 +824,7 @@ function load(){
       if(d.budgetIncomeKRW!=null) budgetIncomeKRW = d.budgetIncomeKRW;
       if(d.budgetCats) budgetCats = d.budgetCats;
       if(d.debts) debts = d.debts;
+      if(d.loans) loans = d.loans;
       if(d.paychecks) paychecks = d.paychecks;
       if(d.spendingHistory) spendingHistory = d.spendingHistory;
       if(d.userCatMap) userCatMap = d.userCatMap;
@@ -1228,8 +1256,15 @@ function renderAllTab(){
 
   const healthScore = calcHealthScore();
   const hColor = healthScore.score >= 80 ? 'var(--green)' : healthScore.score >= 60 ? 'var(--amber)' : 'var(--red)';
+  const loanMan = totalLoansMan();
+  const netMan = tot - loanMan;
+  const hasLoans = loans.length > 0;
   document.getElementById('all-strip').innerHTML = `
     <div class="stat"><div class="stat-label">💰 총 자산</div><div class="stat-val">${fmtMan(tot)}원</div><div class="stat-sub neu">${Math.round(tot).toLocaleString()}만원 · ≈ ${fmtUSD(tot*10000/FX)}</div></div>
+    ${hasLoans ? `
+    <div class="stat" style="border-color:rgba(248,113,113,.15);"><div class="stat-label">🏦 대출 잔액</div><div class="stat-val" style="color:var(--red);">-${fmtMan(loanMan)}원</div><div class="stat-sub neu">${loans.length}건</div></div>
+    <div class="stat" style="border-color:rgba(52,211,153,.15);"><div class="stat-label">📊 순자산</div><div class="stat-val" style="color:var(--green);">${fmtMan(netMan)}원</div><div class="stat-sub neu">≈ ${fmtUSD(netMan*10000/FX)}</div></div>
+    ` : ''}
     <div class="stat"><div class="stat-label">🇺🇸 미국</div><div class="stat-val">${fmtUSD(usUSD)}</div><div class="stat-sub neu">≈ ${fmtMan(usMan)}원 · ${tot?(usMan/tot*100).toFixed(0):0}%</div></div>
     <div class="stat"><div class="stat-label">🇰🇷 한국</div><div class="stat-val">${fmtMan(krMan)}원</div><div class="stat-sub neu">≈ ${fmtUSD(krMan*10000/FX)} · ${tot?(krMan/tot*100).toFixed(0):0}%</div></div>
     <div class="stat"><div class="stat-label">📈 주식/ETF</div><div class="stat-val">${fmtMan(stockTotalMan)}원</div><div class="stat-sub neu">${stocks.length}종목 · ${stockPctAll.toFixed(0)}%</div></div>
@@ -1264,6 +1299,7 @@ function renderAllTab(){
   renderAssetRows('all-asset-rows', categories, tot, null, true);
   renderDonut('all-donut', 'all-donut-total', 'all-donut-leg', categories, tot, fmtMan(tot)+'원');
   renderDebts();
+  renderLoans();
   renderHistory();
   renderRecs();
   try{ renderAIAssetAll(); }catch(e){ console.error('AI asset all error:',e); }
@@ -1273,12 +1309,15 @@ function renderAllTab(){
 function renderUSTab(){
   const usUSD = usTotalUSD();
   const usStk = usStockUSD();
+  const usLoans = loansForAsset('us-realty');
+  const usLoanRemaining = usLoans.reduce((s,l)=>s+(l.remaining||0),0);
 
   document.getElementById('us-strip').innerHTML = `
     <div class="stat"><div class="stat-label">🇺🇸 미국 총 자산</div><div class="stat-val">${fmtUSD(usUSD)}</div><div class="stat-sub neu">≈ ${fmtMan(usUSD*FX/10000)}원</div></div>
     <div class="stat"><div class="stat-label">📈 주식/ETF</div><div class="stat-val">${fmtUSD(usStk)}</div><div class="stat-sub neu">${stocks.filter(s=>s.currency==='USD').length}종목</div></div>
     <div class="stat"><div class="stat-label">💰 401k/IRA</div><div class="stat-val">${fmtUSD(usAssets.retire)}</div><div class="stat-sub neu">은퇴 계좌</div></div>
     <div class="stat"><div class="stat-label">💵 현금/예금</div><div class="stat-val">${fmtUSD(cashSum(usAssets.cash))}</div><div class="stat-sub neu">${usUSD?(cashSum(usAssets.cash)/usUSD*100).toFixed(0):0}%</div></div>
+    ${usLoans.length ? `<div class="stat" style="border-color:rgba(248,113,113,.15);"><div class="stat-label">🏦 부동산 대출</div><div class="stat-val" style="color:var(--red);">-${fmtUSD(usLoanRemaining)}</div><div class="stat-sub neu">순부동산 ${fmtUSD(usAssets.realty - usLoanRemaining)}</div></div>` : ''}
   `;
 
   const categories = [
@@ -1303,11 +1342,13 @@ function renderUSTab(){
 function renderKRTab(){
   const krMan = krTotalMan();
   const krStk = krStockMan();
+  const krLoans = loansForAsset('kr-realty');
+  const krLoanRemaining = krLoans.reduce((s,l)=>s+(l.remaining||0),0);
 
   document.getElementById('kr-strip').innerHTML = `
     <div class="stat"><div class="stat-label">🇰🇷 한국 총 자산</div><div class="stat-val">${fmtMan(krMan)}원</div><div class="stat-sub neu">≈ ${fmtUSD(krMan*10000/FX)}</div></div>
     <div class="stat"><div class="stat-label">📈 주식/ETF</div><div class="stat-val">${fmtMan(krStk)}원</div><div class="stat-sub neu">${stocks.filter(s=>s.currency==='KRW').length}종목</div></div>
-    <div class="stat"><div class="stat-label">🏠 부동산</div><div class="stat-val">${fmtMan(krAssets.realty)}원</div><div class="stat-sub neu">≈ ${fmtUSD(krAssets.realty*10000/FX)}</div></div>
+    <div class="stat"><div class="stat-label">🏠 부동산</div><div class="stat-val">${fmtMan(krAssets.realty)}원</div><div class="stat-sub neu">${krLoans.length ? '순자산 '+fmtMan(krAssets.realty - krLoanRemaining)+'원 (대출 -'+fmtMan(krLoanRemaining)+'원)' : '≈ '+fmtUSD(krAssets.realty*10000/FX)}</div></div>
     <div class="stat"><div class="stat-label">💵 현금/예적금</div><div class="stat-val">${fmtMan(cashSum(krAssets.cash))}원</div><div class="stat-sub neu">${krMan?(cashSum(krAssets.cash)/krMan*100).toFixed(0):0}%</div></div>
   `;
 
@@ -1608,6 +1649,53 @@ function renderDebts(){
         <div class="debt-stat"><div class="debt-stat-label">모은 금액</div><div class="debt-stat-val up">${fmtA(saved)}</div></div>
         <div class="debt-stat"><div class="debt-stat-label">남은 금액</div><div class="debt-stat-val ${remaining>0?'down':''}">${fmtA(remaining)}</div></div>
         <div class="debt-stat"><div class="debt-stat-label">월 필요액 (${d.targetYears||5}년)</div><div class="debt-stat-val">${fmtA(Math.round(monthlyNeeded))}/월</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderLoans(){
+  const section = document.getElementById('loan-section');
+  if(!loans.length){ section.style.display='none'; return; }
+  section.style.display='block';
+
+  const totalLoanMan = totalLoansMan();
+  const tot = grandTotalMan();
+  const netMan = tot - totalLoanMan;
+
+  document.getElementById('loan-list').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
+      <div class="stat"><div class="stat-label">💰 총 자산</div><div class="stat-val">${fmtMan(tot)}원</div></div>
+      <div class="stat" style="border-color:rgba(248,113,113,.2);"><div class="stat-label">🏦 총 대출 잔액</div><div class="stat-val" style="color:var(--red);">-${fmtMan(totalLoanMan)}원</div></div>
+      <div class="stat" style="border-color:rgba(52,211,153,.2);"><div class="stat-label">📊 순자산</div><div class="stat-val" style="color:var(--green);">${fmtMan(netMan)}원</div></div>
+    </div>
+  ` + loans.map((l,i) => {
+    const isKR = l.linkedAsset==='kr-realty';
+    const fmtL = v => isKR ? fmtMan(v)+'원' : '$'+Math.round(v).toLocaleString();
+    const total = l.totalAmount||0;
+    const rem = l.remaining||0;
+    const paid = total - rem;
+    const pct = total ? (paid/total*100) : 0;
+    const linkedLabel = l.linkedAsset==='kr-realty' ? '🇰🇷 한국 부동산' : l.linkedAsset==='us-realty' ? '🇺🇸 미국 부동산' : '기타';
+
+    return `<div class="debt-card">
+      <div class="debt-hdr">
+        <div class="debt-name">🏦 ${l.name}</div>
+        <div style="font-size:11px;color:var(--t3);background:var(--card3);padding:3px 8px;border-radius:4px;">${linkedLabel}</div>
+      </div>
+      <div class="debt-progress">
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;">
+          <span style="color:var(--t2)">상환 진행률</span>
+          <span style="font-weight:600;color:var(--amber)">${pct.toFixed(1)}%</span>
+        </div>
+        <div class="debt-bar-bg"><div class="debt-bar-fill" style="width:${Math.min(pct,100)}%;background:var(--blue);"></div></div>
+      </div>
+      <div class="debt-stats">
+        <div class="debt-stat"><div class="debt-stat-label">총 대출금</div><div class="debt-stat-val">${fmtL(total)}</div></div>
+        <div class="debt-stat"><div class="debt-stat-label">상환 완료</div><div class="debt-stat-val up">${fmtL(paid)}</div></div>
+        <div class="debt-stat"><div class="debt-stat-label">대출 잔액</div><div class="debt-stat-val down">${fmtL(rem)}</div></div>
+        <div class="debt-stat"><div class="debt-stat-label">금리</div><div class="debt-stat-val">${l.interestRate||0}%</div></div>
+        ${l.monthlyPayment ? `<div class="debt-stat"><div class="debt-stat-label">월 상환액</div><div class="debt-stat-val">${fmtL(l.monthlyPayment)}/월</div></div>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -2487,6 +2575,11 @@ function openModal(){
   dc.innerHTML='';
   debts.forEach(d=>addDebtField(d));
 
+  // Loan fields
+  const lc = document.getElementById('loan-fields');
+  lc.innerHTML='';
+  loans.forEach(l=>addLoanField(l));
+
   document.getElementById('modal-overlay').classList.add('open');
 }
 function closeModal(){ document.getElementById('modal-overlay').classList.remove('open'); }
@@ -2697,6 +2790,26 @@ function addDebtField(data){
   c.appendChild(d);
 }
 
+function addLoanField(data){
+  const c = document.getElementById('loan-fields');
+  const d = document.createElement('div');
+  d.className='loan-entry';
+  d.style.cssText='display:grid;grid-template-columns:1.5fr 1fr 1fr .8fr 1fr 1fr 30px;gap:6px;align-items:end;margin-bottom:6px;';
+  d.innerHTML=`
+    <div class="field"><label>대출명</label><input placeholder="예: 아파트 담보대출" value="${data?.name||''}"/></div>
+    <div class="field"><label>총 대출금</label><input type="number" placeholder="30000" value="${data?.totalAmount||''}"/></div>
+    <div class="field"><label>잔액</label><input type="number" placeholder="25000" value="${data?.remaining||''}"/></div>
+    <div class="field"><label>금리(%)</label><input type="number" step="0.01" placeholder="3.5" value="${data?.interestRate||''}"/></div>
+    <div class="field"><label>월 상환액</label><input type="number" placeholder="150" value="${data?.monthlyPayment||''}"/></div>
+    <div class="field"><label>연결자산</label><select>
+      <option value="kr-realty" ${data?.linkedAsset==='kr-realty'?'selected':''}>🇰🇷 한국 부동산</option>
+      <option value="us-realty" ${data?.linkedAsset==='us-realty'?'selected':''}>🇺🇸 미국 부동산</option>
+      <option value="other" ${data?.linkedAsset==='other'?'selected':''}>기타</option>
+    </select></div>
+    <button class="del-btn" onclick="this.parentElement.remove()">✕</button>`;
+  c.appendChild(d);
+}
+
 function saveModal(){
   // Parse cash bank entries
   usAssets.cash = [];
@@ -2731,6 +2844,14 @@ function saveModal(){
     const inp=row.querySelectorAll('input'), sel=row.querySelectorAll('select');
     const name=inp[0].value.trim(), totalAmount=+inp[1].value||0, savedAmount=+inp[2].value||0, targetYears=+inp[3].value||5;
     if(name&&totalAmount) debts.push({name,totalAmount,savedAmount,currency:sel[0].value,targetYears});
+  });
+  loans=[];
+  document.querySelectorAll('.loan-entry').forEach(row=>{
+    const inp=row.querySelectorAll('input'), sel=row.querySelectorAll('select');
+    const name=inp[0].value.trim(), totalAmount=+inp[1].value||0, remaining=+inp[2].value||0;
+    const interestRate=+inp[3].value||0, monthlyPayment=+inp[4].value||0;
+    const linkedAsset=sel[0].value;
+    if(name&&totalAmount) loans.push({name,totalAmount,remaining,interestRate,monthlyPayment,linkedAsset});
   });
   save(); closeModal(); renderAll();
   if(stocks.length) fetchAllQuotes();
