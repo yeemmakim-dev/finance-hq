@@ -672,6 +672,7 @@ let FX_HKD = 0.128; // HKD → USD (1 HKD ≈ 0.128 USD)
 function getToday(){ return new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Seoul'}); }
 function getNowLA(){ return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'})); }
 let liveQuotes = {};
+let liveQuoteTime = 0; // 시세 캐시 타임스탬프 (ms)
 let currentTab = 'all';
 
 let usAssets = { cash:[], realty:0, crypto:0, retire:0 }; // USD, cash = [{name,value}]
@@ -736,7 +737,12 @@ const ASSET_META = {
 // PERSIST
 // ═══════════════════════════════════════
 function save(){
-  try{ localStorage.setItem('dash_kr_v2', JSON.stringify({ usAssets, krAssets, stocks, FX, snapshots, budgetIncomeUSD, budgetIncomeKRW, budgetCats, debts, loans, paychecks, spendingHistory, userCatMap, liveQuotes })); }catch(e){}
+  // 메인 데이터 (시세 제외) — 용량 클 수 있음
+  try{ localStorage.setItem('dash_kr_v2', JSON.stringify({ usAssets, krAssets, stocks, FX, snapshots, budgetIncomeUSD, budgetIncomeKRW, budgetCats, debts, loans, paychecks, spendingHistory, userCatMap })); }
+  catch(e){ console.error('메인 저장 실패:', e); }
+  // 시세 캐시는 별도 키로 저장
+  try{ localStorage.setItem('dash_kr_v2_quotes', JSON.stringify({ liveQuotes, liveQuoteTime })); }
+  catch(e){ console.error('시세 캐시 저장 실패:', e); }
 }
 function load(){
   try{
@@ -758,9 +764,18 @@ function load(){
       if(d.paychecks) paychecks = d.paychecks;
       if(d.spendingHistory) spendingHistory = d.spendingHistory;
       if(d.userCatMap) userCatMap = d.userCatMap;
-      if(d.liveQuotes) liveQuotes = d.liveQuotes;
+      // 구버전 호환
+      if(d.liveQuotes && Object.keys(d.liveQuotes).length) liveQuotes = d.liveQuotes;
     }
-  }catch(e){}
+  }catch(e){ console.error('메인 로드 실패:', e); }
+  // 별도 시세 캐시 로드
+  try{
+    const q = JSON.parse(localStorage.getItem('dash_kr_v2_quotes'));
+    if(q){
+      if(q.liveQuotes && Object.keys(q.liveQuotes).length) liveQuotes = q.liveQuotes;
+      if(q.liveQuoteTime) liveQuoteTime = q.liveQuoteTime;
+    }
+  }catch(e){ console.error('시세 캐시 로드 실패:', e); }
 }
 
 // ═══════════════════════════════════════
@@ -1046,6 +1061,7 @@ async function fetchAllQuotes(){
 
     if(successCount === 0) throw new Error('시세 조회 실패 - 잠시 후 다시 시도하세요');
 
+    liveQuoteTime = Date.now();
     setStatus('live');
     save();
     renderAll();
@@ -1103,12 +1119,23 @@ async function fetchAllQuotes(){
     btn.disabled = false; btn.textContent = '🔄 시세 업데이트';
   }
 }
+function fmtCacheAge(ts){
+  if(!ts) return '';
+  const diff = Date.now() - ts;
+  const min = Math.floor(diff/60000);
+  if(min < 1) return '방금';
+  if(min < 60) return min+'분 전';
+  const hr = Math.floor(min/60);
+  if(hr < 24) return hr+'시간 전';
+  const day = Math.floor(hr/24);
+  return day+'일 전';
+}
 function setStatus(s){
   const el = document.getElementById('quote-status');
   if(s==='loading') el.innerHTML='<div class="sdot"></div><span>조회 중...</span>';
   else if(s==='live'){ el.className='hdr-status status-live'; el.innerHTML='<div class="sdot"></div><span>실시간 · '+getNowLA().toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'})+'</span>'; }
   else if(s==='error'){ el.className='hdr-status status-err'; el.innerHTML='<div class="sdot"></div><span>오류</span>'; }
-  else if(s==='cached'){ el.className='hdr-status status-idle'; el.innerHTML='<div class="sdot"></div><span>캐시된 시세</span>'; }
+  else if(s==='cached'){ el.className='hdr-status status-idle'; el.innerHTML='<div class="sdot"></div><span>캐시 · '+fmtCacheAge(liveQuoteTime)+'</span>'; }
   else{ el.className='hdr-status status-idle'; el.innerHTML='<div class="sdot"></div><span>시세 미조회</span>'; }
 }
 
