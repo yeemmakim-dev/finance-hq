@@ -711,7 +711,8 @@ body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:14px
     <button class="add-row" onclick="addStockField('KRW')">+ 한국 종목 추가</button>
 
     <div class="form-section">📋 부채 / 상환 계획</div>
-    <div class="debt-hdr-grid"><span>대상/설명</span><span>총 금액</span><span>모은 금액</span><span>통화</span><span>목표(년)</span><span></span></div>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:8px;">"현재 통장"은 아직 송금하지 않고 모으는 중인 금액이에요. 송금 내역은 부채 카드에서 따로 추가/관리할 수 있어요.</div>
+    <div class="debt-hdr-grid"><span>대상/설명</span><span>총 금액</span><span>현재 통장</span><span>통화</span><span>목표(년)</span><span></span></div>
     <div id="debt-fields"></div>
     <button class="add-row" onclick="addDebtField()">+ 부채 추가</button>
 
@@ -1236,7 +1237,7 @@ function krStockCount(){ return stocks.filter(s=>s.currency==='KRW').length; }
 
 // Debt totals (만원 기준)
 function totalDebtMan(){ return debts.reduce((s,d)=>{ const amt=d.totalAmount||0; return s+(d.currency==='USD'?amt*FX/10000:amt/10000); },0); }
-function totalDebtSavedMan(){ return debts.reduce((s,d)=>{ const amt=d.savedAmount||0; return s+(d.currency==='USD'?amt*FX/10000:amt/10000); },0); }
+function totalDebtSavedMan(){ return debts.reduce((s,d)=>{ const amt=debtSavedTotal(d); return s+(d.currency==='USD'?amt*FX/10000:amt/10000); },0); }
 function totalDebtRemainingMan(){ return totalDebtMan()-totalDebtSavedMan(); }
 // Net worth = total assets - total debt remaining
 function netWorthMan(){ return grandTotalMan() - totalDebtRemainingMan(); }
@@ -1640,6 +1641,47 @@ function cleanSpendingHistory(){
 // ═══════════════════════════════════════
 // DEBT RENDERING
 // ═══════════════════════════════════════
+function debtSavedTotal(d){
+  // 구버전 호환: payments가 없으면 savedAmount를 currentSaved로 간주
+  if(!d.payments && d.savedAmount!=null) return d.savedAmount;
+  const sent = (d.payments||[]).reduce((s,p)=>s+(+p.amount||0),0);
+  const current = +d.currentSaved||0;
+  return sent + current;
+}
+function debtSentTotal(d){ return (d.payments||[]).reduce((s,p)=>s+(+p.amount||0),0); }
+
+function addDebtPayment(idx){
+  const d = debts[idx]; if(!d) return;
+  const sym = d.currency==='USD'?'$':'₩';
+  const date = prompt('송금 날짜 (YYYY-MM-DD)', getToday());
+  if(!date) return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){ alert('날짜 형식이 잘못됐어요 (YYYY-MM-DD)'); return; }
+  const amtStr = prompt('송금 금액 ('+sym+')', '10000');
+  if(!amtStr) return;
+  const amount = +amtStr;
+  if(!amount || amount<=0){ alert('금액을 확인해주세요'); return; }
+  const note = prompt('메모 (선택, 예: 3차 송금)', '') || '';
+  if(!d.payments) d.payments = [];
+  d.payments.push({date, amount, note});
+  d.payments.sort((a,b)=>b.date.localeCompare(a.date)); // 최신순
+  save(); renderDebts();
+}
+
+function deleteDebtPayment(di, pi){
+  const d = debts[di]; if(!d || !d.payments) return;
+  if(!confirm('이 송금 기록을 삭제할까요?')) return;
+  d.payments.splice(pi, 1);
+  save(); renderDebts();
+}
+
+function updateDebtCurrent(idx, val){
+  const d = debts[idx]; if(!d) return;
+  d.currentSaved = +val||0;
+  // 구버전 savedAmount 필드 제거 (payments/currentSaved 체계로 전환)
+  if(d.savedAmount!=null && (d.payments||d.currentSaved!=null)) delete d.savedAmount;
+  save(); renderDebts();
+}
+
 function renderDebts(){
   const section = document.getElementById('debt-section');
   if(!debts.length){ section.style.display='none'; return; }
@@ -1648,7 +1690,9 @@ function renderDebts(){
   document.getElementById('debt-list').innerHTML = debts.map((d,i) => {
     const sym = d.currency==='USD'?'$':'₩';
     const total = d.totalAmount||0;
-    const saved = d.savedAmount||0;
+    const sent = debtSentTotal(d);
+    const current = +d.currentSaved||0;
+    const saved = debtSavedTotal(d);
     const remaining = total - saved;
     const pct = total ? (saved/total*100) : 0;
     const complete = pct >= 100;
@@ -1658,6 +1702,9 @@ function renderDebts(){
     const monthlyNeeded = remaining > 0 ? remaining / monthsLeft : 0;
 
     const fmtA = v => d.currency==='USD' ? '$'+Math.round(v).toLocaleString() : '₩'+Math.round(v).toLocaleString();
+
+    const payments = d.payments || [];
+    const hasPayments = payments.length > 0;
 
     return `<div class="debt-card">
       <div class="debt-hdr">
@@ -1675,9 +1722,30 @@ function renderDebts(){
       </div>
       <div class="debt-stats">
         <div class="debt-stat"><div class="debt-stat-label">총 금액</div><div class="debt-stat-val">${fmtA(total)}</div></div>
-        <div class="debt-stat"><div class="debt-stat-label">모은 금액</div><div class="debt-stat-val up">${fmtA(saved)}</div></div>
+        <div class="debt-stat"><div class="debt-stat-label">보낸 금액 ${hasPayments?'('+payments.length+'회)':''}</div><div class="debt-stat-val up">${fmtA(sent)}</div></div>
+        <div class="debt-stat">
+          <div class="debt-stat-label">현재 통장 모인 금액</div>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <span style="font-size:13px;color:var(--t2);">${sym}</span>
+            <input type="number" value="${current}" onchange="updateDebtCurrent(${i}, this.value)" style="font-size:14px;font-weight:600;background:transparent;border:1px solid var(--border);border-radius:4px;padding:2px 6px;color:var(--t1);width:100%;max-width:120px;" />
+          </div>
+        </div>
+        <div class="debt-stat"><div class="debt-stat-label">모은 금액 합계</div><div class="debt-stat-val up" style="color:var(--green);">${fmtA(saved)}</div></div>
         <div class="debt-stat"><div class="debt-stat-label">남은 금액</div><div class="debt-stat-val ${remaining>0?'down':''}">${fmtA(remaining)}</div></div>
         <div class="debt-stat"><div class="debt-stat-label">월 필요액 (${d.targetYears||5}년)</div><div class="debt-stat-val">${fmtA(Math.round(monthlyNeeded))}/월</div></div>
+      </div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-size:12px;color:var(--t2);font-weight:600;">📬 송금 내역</div>
+          <button onclick="addDebtPayment(${i})" style="font-size:11px;padding:4px 10px;border-radius:6px;border:none;background:var(--blue);color:#fff;cursor:pointer;">+ 송금 기록 추가</button>
+        </div>
+        ${hasPayments ? `<div style="display:flex;flex-direction:column;gap:4px;">${payments.map((p,pi)=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--card2);border-radius:6px;font-size:12px;">
+            <span style="color:var(--t3);font-family:'SF Mono',monospace;">${p.date}</span>
+            <span style="font-weight:600;color:var(--green);">${fmtA(+p.amount||0)}</span>
+            ${p.note?`<span style="color:var(--t2);">${p.note}</span>`:''}
+            <button onclick="deleteDebtPayment(${i},${pi})" style="margin-left:auto;background:none;border:none;color:var(--t3);cursor:pointer;font-size:13px;padding:0 4px;" title="삭제">✕</button>
+          </div>`).join('')}</div>` : `<div style="font-size:11px;color:var(--t3);text-align:center;padding:8px;">아직 송금 기록이 없어요. "+ 송금 기록 추가" 버튼으로 추가하세요.</div>`}
       </div>
     </div>`;
   }).join('');
@@ -2263,7 +2331,7 @@ function renderAIAssetAll(){
   // 부채
   if(typeof debts!=='undefined' && debts.length > 0){
     debts.forEach(d=>{
-      const saved = d.savedAmount||0, total = d.totalAmount||0;
+      const saved = debtSavedTotal(d), total = d.totalAmount||0;
       const pct = total?(saved/total*100):0;
       const remaining = total-saved;
       const monthly = remaining > 0 ? remaining / ((d.targetYears||5)*12) : 0;
@@ -2813,10 +2881,14 @@ function addDebtField(data){
   const c = document.getElementById('debt-fields');
   const d = document.createElement('div');
   d.className='debt-entry';
+  // payments/currentSaved 보존을 위해 dataset에 JSON 저장
+  d.dataset.payments = JSON.stringify(data?.payments || []);
+  // 구버전 호환: payments 없고 savedAmount만 있으면 그걸 현재 통장 값으로
+  const initCurrent = data?.currentSaved!=null ? data.currentSaved : (data?.payments ? 0 : (data?.savedAmount||0));
   d.innerHTML=`
     <div class="field"><label>대상</label><input placeholder="예: 엄마 빌린돈" value="${data?.name||''}"/></div>
     <div class="field"><label>총 금액</label><input type="number" placeholder="100000" value="${data?.totalAmount||''}"/></div>
-    <div class="field"><label>모은 금액</label><input type="number" placeholder="20000" value="${data?.savedAmount||''}"/></div>
+    <div class="field"><label>현재 통장</label><input type="number" placeholder="5000" value="${initCurrent||''}"/></div>
     <div class="field"><label>통화</label><select><option ${data?.currency==='USD'?'selected':''}>USD</option><option ${data?.currency==='KRW'?'selected':''}>KRW</option></select></div>
     <div class="field"><label>목표(년)</label><input type="number" placeholder="5" value="${data?.targetYears||''}"/></div>
     <button class="del-btn" onclick="this.parentElement.remove()">✕</button>`;
@@ -2875,8 +2947,10 @@ function saveModal(){
   debts=[];
   document.querySelectorAll('.debt-entry').forEach(row=>{
     const inp=row.querySelectorAll('input'), sel=row.querySelectorAll('select');
-    const name=inp[0].value.trim(), totalAmount=+inp[1].value||0, savedAmount=+inp[2].value||0, targetYears=+inp[3].value||5;
-    if(name&&totalAmount) debts.push({name,totalAmount,savedAmount,currency:sel[0].value,targetYears});
+    const name=inp[0].value.trim(), totalAmount=+inp[1].value||0, currentSaved=+inp[2].value||0, targetYears=+inp[3].value||5;
+    let payments = [];
+    try{ payments = JSON.parse(row.dataset.payments||'[]'); }catch(e){}
+    if(name&&totalAmount) debts.push({name,totalAmount,currentSaved,payments,currency:sel[0].value,targetYears});
   });
   loans=[];
   document.querySelectorAll('.loan-entry').forEach(row=>{
