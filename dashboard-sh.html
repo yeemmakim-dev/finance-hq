@@ -1682,23 +1682,41 @@ function updateDebtCurrent(idx, val){
   save(); renderDebts();
 }
 
-// "현재 통장" 인풋 명시적 저장 + 시각 피드백
-function saveDebtCurrent(idx){
+// "현재 통장" 인풋 — 수정/저장 토글 (잘못 수정 방지)
+function toggleDebtCurrent(idx){
   const inp = document.getElementById('debt-current-'+idx);
+  const btn = document.getElementById('debt-current-btn-'+idx);
   const status = document.getElementById('debt-current-status-'+idx);
-  if(!inp) return;
-  const val = +inp.value||0;
-  const d = debts[idx]; if(!d) return;
-  d.currentSaved = val;
-  if(d.savedAmount!=null && (d.payments||d.currentSaved!=null)) delete d.savedAmount;
-  save();
-  if(status){
-    status.textContent = '✓ 저장됨';
-    status.style.color = 'var(--green)';
-    clearTimeout(status._t);
-    status._t = setTimeout(()=>{ status.textContent=''; renderDebts(); }, 1500);
+  if(!inp || !btn) return;
+
+  if(inp.readOnly){
+    inp.readOnly = false;
+    inp.style.borderColor = 'var(--blue)';
+    inp.style.background = 'var(--card2)';
+    inp.focus();
+    inp.select();
+    btn.textContent = '저장';
+    btn.style.background = 'var(--green)';
+    if(status) status.textContent = '';
   } else {
-    renderDebts();
+    const val = +inp.value||0;
+    const d = debts[idx]; if(!d) return;
+    d.currentSaved = val;
+    if(d.savedAmount!=null && (d.payments||d.currentSaved!=null)) delete d.savedAmount;
+    save();
+    inp.readOnly = true;
+    inp.style.borderColor = '';
+    inp.style.background = 'transparent';
+    btn.textContent = '수정';
+    btn.style.background = 'var(--blue)';
+    if(status){
+      status.textContent = '✓ 저장됨';
+      status.style.color = 'var(--green)';
+      clearTimeout(status._t);
+      status._t = setTimeout(()=>{ status.textContent=''; renderDebts(); }, 1500);
+    } else {
+      renderDebts();
+    }
   }
 }
 
@@ -1747,8 +1765,8 @@ function renderDebts(){
           <div class="debt-stat-label">현재 통장 모인 금액 <span id="debt-current-status-${i}" style="font-size:10px;margin-left:4px;"></span></div>
           <div style="display:flex;align-items:center;gap:4px;">
             <span style="font-size:13px;color:var(--t2);">${sym}</span>
-            <input id="debt-current-${i}" type="number" value="${current}" onkeydown="if(event.key==='Enter'){event.preventDefault();saveDebtCurrent(${i});}" style="font-size:14px;font-weight:600;background:transparent;border:1px solid var(--border);border-radius:4px;padding:2px 6px;color:var(--t1);width:100%;max-width:100px;" />
-            <button onclick="saveDebtCurrent(${i})" style="font-size:11px;padding:3px 8px;border-radius:4px;border:none;background:var(--blue);color:#fff;cursor:pointer;flex-shrink:0;">저장</button>
+            <input id="debt-current-${i}" type="number" value="${current}" readonly onkeydown="if(event.key==='Enter'){event.preventDefault();toggleDebtCurrent(${i});}" style="font-size:14px;font-weight:600;background:transparent;border:1px solid var(--border);border-radius:4px;padding:2px 6px;color:var(--t1);width:100%;max-width:100px;" />
+            <button id="debt-current-btn-${i}" onclick="toggleDebtCurrent(${i})" style="font-size:11px;padding:3px 8px;border-radius:4px;border:none;background:var(--blue);color:#fff;cursor:pointer;flex-shrink:0;">수정</button>
           </div>
         </div>
         <div class="debt-stat"><div class="debt-stat-label">모은 금액 합계</div><div class="debt-stat-val up" style="color:var(--green);">${fmtA(saved)}</div></div>
