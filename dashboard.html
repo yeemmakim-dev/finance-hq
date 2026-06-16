@@ -2415,69 +2415,79 @@ const BIWEEKLY_BUY_USD = 500;
 
 // 종목별 상세 분석 DB (위험도/전망/주요변수)
 // risk: 1(매우낮음)~6(매우높음), outlook: '안정'|'성장'|'고변동'|'금리민감'|'경기민감'|'배당/현금흐름'
+// ETF별 상세 분석: pros(강점), cons(리스크), drivers(주요 변수)
 const ETF_OUTLOOK = {
-  // 코어 인덱스
-  VOO:{risk:3, outlook:'장기 안정', note:'S&P 500 대표 인덱스. 미국 대형주 분산. 장기 우상향 기대.'},
-  VTI:{risk:3, outlook:'장기 안정', note:'미국 전체시장. 소형주까지 포함. 가장 분산된 코어.'},
-  SPY:{risk:3, outlook:'장기 안정', note:'S&P 500. VOO와 유사하나 운용보수 약간 높음.'},
-  IVV:{risk:3, outlook:'장기 안정', note:'iShares S&P 500. 운용보수 0.03%.'},
-  VFIAX:{risk:3, outlook:'장기 안정', note:'Vanguard S&P 500 Index Fund. VOO와 사실상 동일.'},
-  VTSAX:{risk:3, outlook:'장기 안정', note:'Vanguard 전체시장 인덱스. VTI 뮤추얼펀드 버전.'},
-  // 기술 성장
-  QQQ:{risk:4, outlook:'성장/금리민감', note:'나스닥100 (대형 기술주 집중). 금리 인하 시 유리. 변동성 큼.'},
-  QQQM:{risk:4, outlook:'성장/금리민감', note:'QQQ 저비용 버전 (0.15%). 장기 보유에 유리.'},
-  VUG:{risk:4, outlook:'성장', note:'대형 성장주. 기술주 비중 높음. 시장 약세 시 부진.'},
-  SMH:{risk:5, outlook:'고변동/AI수혜', note:'반도체 ETF. 사이클 변동성 매우 큼. AI 수혜.'},
-  SOXX:{risk:5, outlook:'고변동/AI수혜', note:'iShares 반도체. SMH와 유사. 변동성 ↑.'},
-  // 소형주
-  VB:{risk:4, outlook:'경기민감', note:'미국 소형주. 경기 회복 시 강세. 변동성 큼.'},
-  IJR:{risk:4, outlook:'경기민감', note:'iShares 소형주. 금리 영향 큼.'},
-  // 채권
-  BND:{risk:2, outlook:'안정/방어', note:'미국 종합채권. 변동성 낮음. 주식과 음의 상관.'},
-  AGG:{risk:2, outlook:'안정/방어', note:'iShares 종합채권. BND와 유사.'},
-  VGLT:{risk:3, outlook:'금리민감/방어', note:'장기국채. 금리 인하 시 가격 상승. 디플레/경기침체 헤지.'},
-  VGIT:{risk:2, outlook:'중기/안정', note:'중기 국채. 금리 변동 영향 중간.'},
-  VGSH:{risk:1, outlook:'단기/현금성', note:'단기 국채. 변동성 거의 없음. MMF 대체.'},
-  TLT:{risk:4, outlook:'금리민감/고변동', note:'20년+ 장기국채. 금리에 매우 민감. 변동성 크다.'},
-  IEF:{risk:2, outlook:'중기/안정', note:'7-10년 국채. 금리 인하기 좋음.'},
-  IEI:{risk:2, outlook:'중기/안정', note:'3-7년 국채. 듀레이션 짧음.'},
-  SHY:{risk:1, outlook:'단기/현금성', note:'1-3년 국채. 거의 현금성.'},
-  GOVT:{risk:2, outlook:'안정', note:'미국 국채 전구간. 분산된 듀레이션.'},
-  LQD:{risk:3, outlook:'회사채/스프레드', note:'투자등급 회사채. 신용 스프레드 영향. 금리 + 신용 리스크.'},
-  HYG:{risk:4, outlook:'하이일드/경기민감', note:'하이일드 회사채. 경기 둔화 시 약세. 고배당.'},
-  JNK:{risk:4, outlook:'하이일드/경기민감', note:'정크본드 ETF. HYG와 유사. 신용 위험.'},
-  TIP:{risk:2, outlook:'인플레이션 헤지', note:'물가연동채. 인플레이션 상승 시 유리.'},
-  MUB:{risk:2, outlook:'안정/세제혜택', note:'지방채. 연방세 면제 (미국 거주자).'},
-  SGOV:{risk:1, outlook:'단기/현금성', note:'0-3개월 국채. 4%+ 수익. 비상금 운용.'},
-  // 배당
-  SCHD:{risk:3, outlook:'배당성장/안정', note:'배당성장 ETF. 약 3.5% 배당. 가치주 성격. 장기 우상향.'},
-  VYM:{risk:3, outlook:'고배당', note:'Vanguard 고배당. 약 3% 배당. 보수적 가치주.'},
-  HDV:{risk:3, outlook:'고배당/방어', note:'iShares 핵심 고배당. 방어 섹터 중심.'},
-  DGRO:{risk:3, outlook:'배당성장', note:'배당성장 ETF. SCHD와 유사한 전략.'},
-  JEPI:{risk:3, outlook:'월배당/현금흐름', note:'커버드콜 ETF. 7-8% 월배당. 상승장 수익 제한.'},
-  JEPQ:{risk:3, outlook:'월배당/현금흐름', note:'나스닥 커버드콜. JEPI 나스닥 버전.'},
-  VHYAX:{risk:3, outlook:'고배당', note:'Vanguard 고배당 뮤추얼펀드.'},
-  VDIGX:{risk:3, outlook:'배당성장', note:'Vanguard 배당성장.'},
-  // 국제
-  VXUS:{risk:3, outlook:'국제분산', note:'미국 제외 전체시장. 환율 노출. 달러 약세 시 유리.'},
-  VEA:{risk:3, outlook:'선진국', note:'미국 제외 선진국 (유럽/일본). 보수적 분산.'},
-  VWO:{risk:4, outlook:'신흥국/고변동', note:'신흥국 (중국/인도/대만 등). 고성장/고변동.'},
-  EFA:{risk:3, outlook:'선진국', note:'iShares 선진국. VEA와 유사.'},
-  IXUS:{risk:3, outlook:'국제분산', note:'iShares 미국 외 전체. VXUS와 유사.'},
-  // 방어
-  XLV:{risk:3, outlook:'헬스케어/방어', note:'헬스케어 섹터. 경기 영향 적음. 인구 고령화 수혜.'},
-  XLP:{risk:2, outlook:'필수소비재/방어', note:'필수소비재. 침체기에도 견고. 배당 안정.'},
-  XLU:{risk:2, outlook:'유틸리티/방어', note:'유틸리티 섹터. 채권과 유사. 금리 민감.'},
-  // 리츠
-  VNQ:{risk:3, outlook:'리츠/금리민감', note:'미국 리츠. 금리 인하 시 유리. 배당 4%+.'},
-  SCHH:{risk:3, outlook:'리츠/금리민감', note:'Schwab 리츠. VNQ와 유사.'},
-  // 원자재/금
-  GLD:{risk:3, outlook:'안전자산/달러반대', note:'금 ETF. 달러 약세/지정학 리스크 시 강세. 인플레 헤지.'},
-  IAU:{risk:3, outlook:'안전자산/달러반대', note:'iShares 금. GLD와 유사. 운용보수 낮음.'},
-  // 암호화폐
-  IBIT:{risk:6, outlook:'고변동/투기', note:'비트코인 현물 ETF. 변동성 50%+. 소액 비중 권장 (5% 이하).'},
-  BITO:{risk:6, outlook:'고변동/투기', note:'비트코인 선물 ETF. 롤오버 비용 있음. IBIT보다 비효율적.'},
-  FBTC:{risk:6, outlook:'고변동/투기', note:'Fidelity 비트코인 현물. IBIT와 유사.'},
+  // ── 코어 인덱스 ──
+  VOO:{risk:3, outlook:'장기 안정', pros:'미국 대형주 500개 분산, 운용보수 0.03%로 최저, 역사적 연 10% 수익', cons:'기술주 비중 약 30%로 일부 편중, 미국 경기 전적 의존', drivers:'미국 GDP, 기업 실적, 연준 정책'},
+  VTI:{risk:3, outlook:'장기 안정', pros:'미국 전체시장 (대중소형 4000+종목), VOO보다 분산도 ↑', cons:'VOO와 상관성 매우 높음 (소형주 영향 미미)', drivers:'미국 시장 전반'},
+  SPY:{risk:3, outlook:'장기 안정', pros:'세계 최대 ETF, 유동성 최고', cons:'운용보수 0.09% (VOO/IVV 대비 높음)', drivers:'S&P 500 지수'},
+  IVV:{risk:3, outlook:'장기 안정', pros:'iShares S&P 500, 운용보수 0.03%', cons:'VOO와 사실상 동일 (선택 무의미)', drivers:'S&P 500 지수'},
+  VFIAX:{risk:3, outlook:'장기 안정', pros:'Vanguard S&P 500 뮤추얼펀드', cons:'ETF 대비 거래 유연성 ↓', drivers:'S&P 500 지수'},
+  VTSAX:{risk:3, outlook:'장기 안정', pros:'전체시장 뮤추얼펀드', cons:'ETF 대비 거래 유연성 ↓', drivers:'미국 시장 전반'},
+
+  // ── 기술/성장 ──
+  QQQ:{risk:4, outlook:'성장/금리민감', pros:'나스닥100 (테크 거인 집중), 장기 수익률 우수, 혁신 노출', cons:'상위 10종목이 50%+ 비중 → 집중도 ↑, 금리 인상 시 큰 폭 하락', drivers:'연준 금리, 빅테크 실적, AI 사이클'},
+  QQQM:{risk:4, outlook:'성장/금리민감', pros:'QQQ 저비용 버전 (0.15%), 동일 지수', cons:'유동성 QQQ보다 낮음', drivers:'QQQ와 동일'},
+  VUG:{risk:4, outlook:'성장', pros:'대형 성장주, 분산은 QQQ보다 ↑', cons:'기술주 의존, 시장 약세 시 부진', drivers:'성장주 사이클, 금리'},
+  SMH:{risk:5, outlook:'반도체/고변동', pros:'AI 핵심 수혜, NVDA/TSM 등 톱티어 포함', cons:'반도체 사이클 격렬 (50%+ 변동 흔함), 종목 25개로 분산도 낮음', drivers:'AI 수요, 반도체 사이클, 대만 지정학'},
+  SOXX:{risk:5, outlook:'반도체/고변동', pros:'반도체 30종, AI 수혜', cons:'SMH보다 분산 ↑이나 여전히 변동성 큼', drivers:'AI 수요, 반도체 사이클'},
+
+  // ── 소형주 ──
+  VB:{risk:4, outlook:'경기민감/소형', pros:'미국 소형주 1300+, 경기 회복기 강세, 가치주 노출', cons:'경기 침체 시 대형주보다 큰 폭 하락, 변동성 ↑', drivers:'미국 GDP, 금리, 소비'},
+  IJR:{risk:4, outlook:'경기민감/소형', pros:'iShares 소형주, VB와 유사', cons:'금리 인상에 취약', drivers:'경기 사이클'},
+
+  // ── 채권 (듀레이션별 위험도 차등) ──
+  SGOV:{risk:1, outlook:'단기/현금성', pros:'0-3개월 국채, 사실상 무변동, 4%+ 수익', cons:'금리 인하 시 수익률 하락', drivers:'연준 기준금리'},
+  SHY:{risk:1, outlook:'단기/현금성', pros:'1-3년 국채, 변동성 거의 없음', cons:'장기 수익률 제한', drivers:'단기 금리'},
+  VGSH:{risk:1, outlook:'단기/현금성', pros:'Vanguard 단기국채, MMF 대체 가능', cons:'장기 수익률 제한', drivers:'단기 금리'},
+  VGIT:{risk:2, outlook:'중기/안정', pros:'중기 국채 (듀레이션 ~5년), 금리 인하기 ETF', cons:'1% 금리 인상 시 약 5% 손실', drivers:'중기 금리'},
+  IEI:{risk:2, outlook:'중기/안정', pros:'3-7년 국채, 듀레이션 짧음', cons:'금리 인상에 약간 노출', drivers:'중기 금리'},
+  IEF:{risk:3, outlook:'중기/금리민감', pros:'7-10년 국채 (듀레이션 ~7년), 금리 인하기 강세', cons:'1% 금리 인상 시 약 7% 손실', drivers:'중기 금리, 인플레이션'},
+  BND:{risk:2, outlook:'종합채권/안정', pros:'미국 종합채권 (듀레이션 ~6년), 주식과 음의 상관, 분산도 ↑', cons:'장기보다 듀레이션 짧아 금리 인하기 상승폭 제한', drivers:'금리, 인플레이션'},
+  AGG:{risk:2, outlook:'종합채권/안정', pros:'iShares 종합채권, BND와 유사', cons:'BND와 차이 거의 없음', drivers:'금리, 인플레이션'},
+  GOVT:{risk:2, outlook:'국채 전구간', pros:'미국 국채 전구간 분산 (듀레이션 ~6년)', cons:'BND와 유사', drivers:'금리'},
+  VGLT:{risk:4, outlook:'장기국채/고변동', pros:'장기국채 (듀레이션 ~17년), 디플레/경기침체 헤지, 주식과 강한 음의 상관', cons:'⚠️ 채권이지만 변동성 큼: 1% 금리 인상 시 약 17% 손실, 인플레 재발 시 약세', drivers:'연준 장기금리, 인플레이션 기대'},
+  TLT:{risk:5, outlook:'초장기국채/고변동', pros:'20년+ 국채, 금리 인하 시 큰 폭 상승', cons:'⚠️ 듀레이션 ~17년으로 채권 중 가장 변동성 큼, 사실상 주식급 변동성', drivers:'장기금리, 인플레 기대'},
+  LQD:{risk:3, outlook:'회사채/신용+금리', pros:'투자등급 회사채 (듀레이션 ~8년), 국채보다 수익률 ↑', cons:'금리 리스크 + 신용 스프레드 확대 시 손실 (이중 리스크)', drivers:'금리, 회사 신용도, 경기'},
+  HYG:{risk:4, outlook:'하이일드/신용리스크', pros:'7%+ 고배당, 인컴 추구', cons:'⚠️ 정크본드 (BB 이하) — 경기 둔화/침체 시 부도율 ↑, 주식과 함께 하락', drivers:'경기, 신용 스프레드, 디폴트율'},
+  JNK:{risk:4, outlook:'하이일드/신용리스크', pros:'HYG와 유사', cons:'⚠️ 신용 리스크 큼, 위기 시 주식과 동반 하락', drivers:'경기, 신용 스프레드'},
+  TIP:{risk:2, outlook:'물가연동/인플레헤지', pros:'인플레이션 상승 시 원금 자동 조정, 실질 수익 보장', cons:'디플레이션 시 약세, 명목 채권 대비 수익률 낮음', drivers:'CPI, 인플레 기대'},
+  MUB:{risk:2, outlook:'지방채/세제혜택', pros:'연방세 면제 (미국 거주자), 안정적', cons:'지자체 재정 리스크, 한국 거주자에겐 무의미', drivers:'지방재정, 금리'},
+
+  // ── 배당/인컴 ──
+  SCHD:{risk:3, outlook:'배당성장/가치', pros:'10년+ 배당 성장 종목 선별, 약 3.5% 배당, 운용보수 0.06%', cons:'기술주 비중 낮아 강세장 부진, 가치주 함정 리스크', drivers:'가치주 사이클, 배당 안정성'},
+  VYM:{risk:3, outlook:'고배당/보수', pros:'Vanguard 고배당 (약 3%), 분산도 ↑', cons:'성장률 낮음', drivers:'배당주 사이클'},
+  HDV:{risk:3, outlook:'고배당/방어', pros:'방어 섹터 중심 (헬스/필수소비)', cons:'분산도 낮음 (75종)', drivers:'방어 섹터 흐름'},
+  DGRO:{risk:3, outlook:'배당성장', pros:'배당 5년+ 성장 종목, SCHD 대비 분산도 ↑', cons:'배당률은 SCHD보다 낮음 (~2.3%)', drivers:'배당 안정성'},
+  JEPI:{risk:3, outlook:'커버드콜/월배당', pros:'월배당 7-8%, 변동성 ↓, 약세장 방어', cons:'⚠️ 강세장 수익 제한 (상방 잘림), 옵션 프리미엄에 의존', drivers:'시장 변동성, 옵션 프리미엄'},
+  JEPQ:{risk:3, outlook:'나스닥 커버드콜', pros:'JEPI 나스닥 버전, 월배당 ~10%', cons:'JEPI와 동일한 상방 제한', drivers:'나스닥 변동성'},
+  VHYAX:{risk:3, outlook:'고배당', pros:'Vanguard 고배당 뮤추얼펀드', cons:'ETF 대비 거래 유연성 ↓', drivers:'배당주 사이클'},
+  VDIGX:{risk:3, outlook:'배당성장', pros:'Vanguard 배당성장 뮤추얼펀드', cons:'ETF 대비 거래 유연성 ↓', drivers:'배당 안정성'},
+
+  // ── 국제 ──
+  VXUS:{risk:3, outlook:'국제분산/환율노출', pros:'미국 제외 전체시장 분산 (선진국+신흥국 8000+종목), 달러 약세 시 강세', cons:'미국 대비 장기 수익률 부진, 환율 리스크', drivers:'달러지수, 글로벌 경기'},
+  VEA:{risk:3, outlook:'선진국/보수', pros:'유럽/일본 등 선진국 분산', cons:'장기 수익률 미국 대비 약함', drivers:'선진국 경기, 환율'},
+  VWO:{risk:4, outlook:'신흥국/고변동', pros:'고성장 기대 (중국/인도/대만 등)', cons:'⚠️ 환율 + 정치 리스크 ↑, 변동성 ↑, 중국 비중 큼', drivers:'달러, 중국 정책, 신흥국 통화'},
+  EFA:{risk:3, outlook:'선진국', pros:'iShares 선진국, VEA와 유사', cons:'VEA와 차이 거의 없음', drivers:'선진국 경기'},
+  IXUS:{risk:3, outlook:'국제분산', pros:'iShares 미국 외 전체, VXUS와 유사', cons:'VXUS와 차이 거의 없음', drivers:'글로벌 경기'},
+
+  // ── 방어 섹터 ──
+  XLV:{risk:3, outlook:'헬스케어/방어', pros:'경기 영향 적음, 인구 고령화 수혜', cons:'규제/약가 정책 리스크, 분산도 낮음', drivers:'의료 정책, 신약 승인'},
+  XLP:{risk:2, outlook:'필수소비재/방어', pros:'침체기에도 견고, 배당 안정', cons:'성장률 낮음, 인플레 시 마진 압박', drivers:'소비, 인플레이션'},
+  XLU:{risk:2, outlook:'유틸리티/금리민감', pros:'배당 안정, 침체기 방어', cons:'⚠️ 채권처럼 금리에 민감, 금리 인상 시 약세', drivers:'장기금리, 전력 수요'},
+
+  // ── 리츠 ──
+  VNQ:{risk:3, outlook:'리츠/금리민감', pros:'4%+ 배당, 부동산 노출, 금리 인하 시 강세', cons:'⚠️ 금리 인상기 큰 폭 하락 (2022년 -25%), 상업용 부동산 리스크', drivers:'금리, 부동산 경기'},
+  SCHH:{risk:3, outlook:'리츠/금리민감', pros:'Schwab 리츠, VNQ와 유사', cons:'VNQ와 차이 거의 없음', drivers:'금리, 부동산'},
+
+  // ── 원자재/금 ──
+  GLD:{risk:3, outlook:'금/안전자산', pros:'달러 약세/지정학 리스크 시 강세, 인플레 헤지', cons:'배당 없음, 장기 실질 수익률은 주식보다 낮음', drivers:'달러지수, 실질금리, 지정학'},
+  IAU:{risk:3, outlook:'금/안전자산', pros:'iShares 금, 운용보수 낮음 (0.25%)', cons:'GLD와 차이 거의 없음', drivers:'달러, 지정학'},
+
+  // ── 암호화폐 ETF ──
+  IBIT:{risk:6, outlook:'비트코인/극변동', pros:'비트코인 현물 노출, 변동성 매우 큼 = 잠재 수익 큼', cons:'⚠️ 변동성 50%+ 흔함, 30-70% 드로다운 가능, 펀더멘탈 없음, 포트의 5% 이하 권장', drivers:'BTC 가격, 거시 유동성, 규제'},
+  BITO:{risk:6, outlook:'비트코인선물/극변동', pros:'비트코인 선물 노출', cons:'⚠️ 롤오버 비용으로 IBIT보다 비효율, 콘탱고 시 손실', drivers:'BTC 선물 곡선'},
+  FBTC:{risk:6, outlook:'비트코인/극변동', pros:'Fidelity 비트코인 현물', cons:'IBIT와 유사한 리스크', drivers:'BTC 가격'},
 };
 
 const STOCK_OUTLOOK = {
@@ -2521,19 +2531,23 @@ function getStockOutlook(ticker, info){
   const t = ticker.toUpperCase();
   if(ETF_OUTLOOK[t]) return ETF_OUTLOOK[t];
   if(STOCK_OUTLOOK[t]) return STOCK_OUTLOOK[t];
-  // 섹터 기반 기본값
+  // 섹터 기반 기본값 (DB 미등록 ETF용)
   const s = info?.style || '';
   if(info?.type === 'ETF'){
-    if(/채권|국채/.test(s)) return {risk:2, outlook:'안정/방어', note:'채권 ETF. 변동성 낮음. 금리 영향.'};
-    if(/배당/.test(s)) return {risk:3, outlook:'배당/현금흐름', note:'배당 ETF. 안정적 현금흐름. 가치주 성격.'};
-    if(/대형|S&P|인덱스/.test(s)) return {risk:3, outlook:'장기 안정', note:'대형주 인덱스. 시장 추종.'};
-    if(/기술|나스닥|반도체/.test(s)) return {risk:4, outlook:'성장/금리민감', note:'기술 ETF. 금리 인하 시 유리. 변동성 큼.'};
-    if(/국제|선진국|신흥국|글로벌/.test(s)) return {risk:3, outlook:'국제분산', note:'국제 ETF. 환율 노출. 달러 약세 시 유리.'};
-    if(/암호|코인/.test(s)) return {risk:6, outlook:'고변동/투기', note:'암호화폐 ETF. 매우 높은 변동성.'};
-    if(/리츠|부동산/.test(s)) return {risk:3, outlook:'리츠/금리민감', note:'리츠 ETF. 금리 인하 시 유리.'};
-    return {risk:3, outlook:'중립', note:'ETF — 추가 분석 필요.'};
+    if(/장기국채|장기/.test(s)) return {risk:4, outlook:'장기국채/고변동', pros:'금리 인하 시 강세, 디플레/침체 헤지', cons:'⚠️ 듀레이션 길어 금리 인상 시 큰 폭 손실', drivers:'장기금리, 인플레'};
+    if(/단기국채|단기/.test(s)) return {risk:1, outlook:'단기/현금성', pros:'변동성 거의 없음', cons:'금리 인하 시 수익률 ↓', drivers:'기준금리'};
+    if(/채권|국채/.test(s)) return {risk:2, outlook:'채권/안정', pros:'주식과 음의 상관, 분산 효과', cons:'금리 인상 시 손실, 듀레이션 확인 필요', drivers:'금리, 인플레'};
+    if(/배당/.test(s)) return {risk:3, outlook:'배당/현금흐름', pros:'안정적 배당, 가치주 성격', cons:'성장률 낮음', drivers:'배당 안정성'};
+    if(/대형|S&P|인덱스|전체/.test(s)) return {risk:3, outlook:'장기 안정', pros:'분산 효과, 시장 추종', cons:'미국 경기 의존', drivers:'미국 시장'};
+    if(/기술|나스닥|반도체|성장/.test(s)) return {risk:4, outlook:'성장/금리민감', pros:'장기 성장 잠재력', cons:'⚠️ 금리 인상 시 큰 폭 하락, 집중도 ↑', drivers:'금리, 빅테크 실적'};
+    if(/국제|선진국|신흥국|글로벌/.test(s)) return {risk:3, outlook:'국제분산/환율', pros:'지역 분산, 달러 약세 헤지', cons:'환율 리스크', drivers:'달러, 글로벌 경기'};
+    if(/암호|코인/.test(s)) return {risk:6, outlook:'고변동/투기', pros:'잠재 수익 큼', cons:'⚠️ 변동성 매우 높음, 펀더멘탈 없음', drivers:'시장 유동성, 규제'};
+    if(/리츠|부동산/.test(s)) return {risk:3, outlook:'리츠/금리민감', pros:'고배당, 부동산 노출', cons:'⚠️ 금리 인상 시 큰 폭 하락', drivers:'금리, 부동산'};
+    if(/금|원자재/.test(s)) return {risk:3, outlook:'안전자산/달러반대', pros:'지정학/인플레 헤지', cons:'배당 없음', drivers:'달러, 실질금리'};
+    if(/헬스|필수소비|유틸리티|방어/.test(s)) return {risk:2, outlook:'방어섹터', pros:'경기 영향 적음, 배당 안정', cons:'성장률 낮음', drivers:'섹터 흐름'};
+    return {risk:3, outlook:'중립', pros:'ETF (DB 미등록)', cons:'추가 분석 필요', drivers:'-'};
   }
-  // 개별주 기본
+  // 개별주 기본 (간단)
   if(/기술|반도체|AI/.test(s)) return {risk:4, outlook:'성장/고변동', note:'기술 개별주. 변동성 큼.'};
   if(/헬스|제약/.test(s)) return {risk:3, outlook:'방어/규제민감', note:'헬스케어. 경기 영향 적음.'};
   if(/금융|은행/.test(s)) return {risk:3, outlook:'금리민감', note:'금융주. 금리/경기 사이클.'};
@@ -2652,53 +2666,68 @@ function renderAIAssetUS(){
       }
     }
 
-    // ── 종목별 상세 전망 & 위험도 ──
-    if(stot > 0){
-      const riskScore = portfolioRiskScore(analyzed);
+    // ── ETF별 상세 전망 & 위험도 (개별주 제외) ──
+    const etfsForAnalysis = analyzed.filter(s => s.info.type === 'ETF');
+    const etfTot = etfsForAnalysis.reduce((s,e)=>s+e.val,0);
+    if(etfsForAnalysis.length > 0 && etfTot > 0){
+      const riskScore = portfolioRiskScore(etfsForAnalysis);
       const riskLabel = riskScore < 2.3 ? '보수적' : riskScore < 3.3 ? '균형' : riskScore < 4.3 ? '적극적' : '공격적';
       const riskColor = riskScore < 2.3 ? 'var(--green)' : riskScore < 3.3 ? 'var(--blue)' : riskScore < 4.3 ? 'var(--amber)' : 'var(--red)';
 
-      // 보유 비중 큰 순으로 정렬
-      const sortedByVal = [...analyzed].sort((a,b)=>b.val-a.val);
+      const sortedByVal = [...etfsForAnalysis].sort((a,b)=>b.val-a.val);
       const detailHtml = sortedByVal.map(s=>{
         const o = getStockOutlook(s.ticker, s.info);
         const b = riskBadge(o.risk);
-        const pct = (s.val/stot*100);
+        const pct = (s.val/etfTot*100);
         const plBadge = s.plPct!==null ?
           `<span style="font-size:10px;color:${s.plPct>=0?'var(--green)':'var(--red)'};margin-left:4px;">${s.plPct>=0?'+':''}${s.plPct.toFixed(1)}%</span>` : '';
-        return `<div style="padding:10px;background:var(--card2);border-radius:8px;margin-bottom:6px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+
+        // pros/cons/drivers 또는 fallback note
+        let detailBlock = '';
+        if(o.pros || o.cons || o.drivers){
+          if(o.pros) detailBlock += `<div style="display:flex;gap:6px;margin-top:6px;font-size:11px;line-height:1.4;"><span style="color:var(--green);flex-shrink:0;">✅</span><span style="color:var(--t2);">${o.pros}</span></div>`;
+          if(o.cons) detailBlock += `<div style="display:flex;gap:6px;margin-top:4px;font-size:11px;line-height:1.4;"><span style="color:var(--red);flex-shrink:0;">⚠️</span><span style="color:var(--t2);">${o.cons}</span></div>`;
+          if(o.drivers) detailBlock += `<div style="display:flex;gap:6px;margin-top:4px;font-size:10px;line-height:1.4;"><span style="color:var(--t3);flex-shrink:0;">📊</span><span style="color:var(--t3);">핵심 변수: ${o.drivers}</span></div>`;
+        } else if(o.note){
+          detailBlock = `<div style="font-size:11px;color:var(--t2);line-height:1.4;margin-top:6px;">${o.note}</div>`;
+        }
+
+        return `<div style="padding:12px;background:var(--card2);border-radius:8px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
             <div>
               <span style="font-size:13px;font-weight:600;">${s.ticker}</span>
-              <span style="font-size:10px;color:var(--t3);margin-left:6px;">${s.info.type==='ETF'?'ETF':'개별주'} · ${s.info.style}</span>
+              <span style="font-size:10px;color:var(--t3);margin-left:6px;">${s.info.style}</span>
               ${plBadge}
             </div>
-            <div style="font-size:11px;color:var(--t2);">${pct.toFixed(1)}%</div>
+            <div style="font-size:11px;color:var(--t2);font-weight:600;">${pct.toFixed(1)}%</div>
           </div>
-          <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;flex-wrap:wrap;">
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
             <span style="font-size:10px;background:${b.color}22;color:${b.color};padding:2px 8px;border-radius:10px;font-weight:600;">위험 ${b.label}</span>
             <span style="font-size:10px;background:var(--card3);color:var(--t2);padding:2px 8px;border-radius:10px;">${o.outlook}</span>
           </div>
-          <div style="font-size:11px;color:var(--t2);line-height:1.4;">${o.note}</div>
+          ${detailBlock}
         </div>`;
       }).join('');
 
-      // 위험도 분포 요약
+      // 위험도 분포 요약 (ETF 기준)
       const buckets = {low:0, mid:0, high:0};
-      analyzed.forEach(s=>{
+      etfsForAnalysis.forEach(s=>{
         const o = getStockOutlook(s.ticker, s.info);
         if(o.risk <= 2) buckets.low += s.val;
         else if(o.risk <= 4) buckets.mid += s.val;
         else buckets.high += s.val;
       });
-      const lowPct = (buckets.low/stot*100).toFixed(0);
-      const midPct = (buckets.mid/stot*100).toFixed(0);
-      const highPct = (buckets.high/stot*100).toFixed(0);
+      const lowPct = (buckets.low/etfTot*100).toFixed(0);
+      const midPct = (buckets.mid/etfTot*100).toFixed(0);
+      const highPct = (buckets.high/etfTot*100).toFixed(0);
 
-      items.push({icon:'📋',type:'info',title:`보유 종목별 전망 & 위험도 (${analyzed.length}종목)`,
-        desc:`<div style="background:linear-gradient(90deg,${riskColor}22,transparent);padding:10px;border-radius:8px;border-left:3px solid ${riskColor};margin-bottom:10px;">
+      const indivCount = analyzed.length - etfsForAnalysis.length;
+      const indivNote = indivCount > 0 ? `<div style="font-size:10px;color:var(--t3);margin-top:8px;text-align:right;">개별주 ${indivCount}종목은 분석에서 제외 (ETF 위주 분석)</div>` : '';
+
+      items.push({icon:'📋',type:'info',title:`보유 ETF별 전망 & 위험도 (${etfsForAnalysis.length}종목)`,
+        desc:`<div style="background:linear-gradient(90deg,${riskColor}22,transparent);padding:12px;border-radius:8px;border-left:3px solid ${riskColor};margin-bottom:12px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <span style="font-size:12px;font-weight:600;">포트폴리오 종합 위험도</span>
+            <span style="font-size:12px;font-weight:600;">ETF 포트폴리오 종합 위험도</span>
             <span style="font-size:14px;font-weight:700;color:${riskColor};">${riskLabel} (${riskScore.toFixed(1)}/6)</span>
           </div>
           <div style="font-size:11px;color:var(--t2);display:flex;gap:10px;">
@@ -2707,7 +2736,7 @@ function renderAIAssetUS(){
             <span>🔴 고위험 ${highPct}%</span>
           </div>
         </div>
-        ${detailHtml}`});
+        ${detailHtml}${indivNote}`});
     }
 
     if(stot > 0){
