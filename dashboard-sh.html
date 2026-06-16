@@ -2397,6 +2397,66 @@ function renderAIAssetAll(){
   renderActionPlanList(actions);
 }
 
+// ETF 스타일 → 큰 카테고리 매핑
+const ETF_BIG_GROUP = {
+  '대형전체':'코어인덱스','대형성장':'코어인덱스','대형가치':'코어인덱스','중형주':'코어인덱스','미국소형':'코어인덱스',
+  '채권':'채권','미국채권':'채권','장기국채':'채권','단기국채':'채권','물가연동채':'채권','회사채':'채권',
+  '국제주식':'국제분산','선진국':'국제분산','신흥국':'국제분산','글로벌ETF':'국제분산','한국주식':'국제분산',
+  '배당':'배당','배당성장':'배당','고배당':'배당','월배당(커버드콜)':'배당',
+  '기술':'기술/성장','기술성장(나스닥)':'기술/성장','반도체':'기술/성장','AI':'기술/성장',
+  '헬스케어':'방어섹터','필수소비재':'방어섹터','유틸리티':'방어섹터',
+  '리츠':'리츠','원자재':'원자재','금':'원자재','암호화폐ETF':'기타',
+};
+const TARGET_BIG_PCT = {
+  '코어인덱스':50, '채권':15, '국제분산':15, '배당':10, '기술/성장':5, '방어섹터':5,
+};
+const BIWEEKLY_BUY_USD = 500;
+
+function recommendBiweeklyBuy(usEtfsAnalyzed){
+  if(!usEtfsAnalyzed.length) return null;
+  const etfTotal = usEtfsAnalyzed.reduce((s,e)=>s+e.val,0);
+  if(etfTotal === 0) return null;
+  const byGroup = {};
+  usEtfsAnalyzed.forEach(e=>{
+    const g = ETF_BIG_GROUP[e.info.style] || '기타';
+    if(!byGroup[g]) byGroup[g] = {value:0, etfs:[]};
+    byGroup[g].value += e.val;
+    byGroup[g].etfs.push(e);
+  });
+  const groupAnalysis = Object.keys(TARGET_BIG_PCT).map(g=>{
+    const have = byGroup[g] || {value:0, etfs:[]};
+    const currentPct = have.value/etfTotal*100;
+    const targetPct = TARGET_BIG_PCT[g];
+    const gap = Math.max(0, targetPct - currentPct);
+    return {group:g, currentPct, targetPct, gap, etfs:have.etfs};
+  });
+  const eligible = groupAnalysis.filter(g=>g.etfs.length>0 && g.gap>0);
+  const missing = groupAnalysis.filter(g=>g.etfs.length===0 && g.targetPct>=10);
+
+  let recs = [];
+  if(eligible.length > 0){
+    const totalGap = eligible.reduce((s,g)=>s+g.gap,0);
+    let allocated = 0;
+    eligible.sort((a,b)=>b.gap-a.gap).forEach((g, idx)=>{
+      let amt = Math.round(BIWEEKLY_BUY_USD * g.gap / totalGap / 50) * 50;
+      if(idx === eligible.length-1) amt = BIWEEKLY_BUY_USD - allocated;
+      else allocated += amt;
+      if(amt <= 0) return;
+      const topEtf = [...g.etfs].sort((a,b)=>b.val-a.val)[0];
+      recs.push({ticker:topEtf.ticker, name:topEtf.name, group:g.group, amt, currentPct:g.currentPct, targetPct:g.targetPct});
+    });
+  } else {
+    const coreEtfs = (byGroup['코어인덱스']?.etfs || []).sort((a,b)=>b.val-a.val);
+    if(coreEtfs.length){
+      recs.push({ticker:coreEtfs[0].ticker, name:coreEtfs[0].name, group:'코어인덱스', amt:BIWEEKLY_BUY_USD, currentPct:byGroup['코어인덱스'].value/etfTotal*100, targetPct:TARGET_BIG_PCT['코어인덱스'], note:'균형 좋음 — 핵심 인덱스 보강'});
+    } else {
+      const top = [...usEtfsAnalyzed].sort((a,b)=>b.val-a.val)[0];
+      recs.push({ticker:top.ticker, name:top.name, group:'기존 보유', amt:BIWEEKLY_BUY_USD, currentPct:top.val/etfTotal*100, targetPct:null});
+    }
+  }
+  return {recs, missing, etfTotal};
+}
+
 function renderAIAssetUS(){
   const el = document.getElementById('ai-asset-us');
   const usUSD = usTotalUSD();
@@ -2419,6 +2479,28 @@ function renderAIAssetUS(){
       return {name:s.name, ticker:s.ticker, val, info, plPct, avgCost:s.avgCost, qty:s.qty, prc:curPrice(s)};
     });
     const stot = analyzed.reduce((a,s)=>a+s.val,0);
+
+    // ── 격주 $500 다음 매수 추천 (보유 ETF만) ──
+    const etfsOnly = analyzed.filter(s=>s.info.type==='ETF');
+    if(etfsOnly.length > 0){
+      const rec = recommendBiweeklyBuy(etfsOnly);
+      if(rec && rec.recs.length){
+        const recHtml = rec.recs.map(r=>{
+          const reasonText = r.note ? r.note : `${r.group} 보강 — 현재 ${r.currentPct.toFixed(0)}% / 목표 ${r.targetPct}%`;
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--card2);border-radius:6px;margin-bottom:4px;">
+            <div>
+              <div style="font-size:13px;font-weight:600;">${r.ticker} <span style="font-size:11px;color:var(--t3);font-weight:400;">· ${r.name}</span></div>
+              <div style="font-size:10px;color:var(--t2);margin-top:2px;">${reasonText}</div>
+            </div>
+            <div style="font-size:14px;font-weight:700;color:var(--green);">$${r.amt}</div>
+          </div>`;
+        }).join('');
+        const missingNote = rec.missing.length ?
+          `<div style="margin-top:8px;font-size:11px;color:var(--t2);">⚠️ 미보유 카테고리: ${rec.missing.map(m=>m.group).join(', ')} — 장기적으로 추가 검토 권장</div>` : '';
+        items.push({icon:'💰',type:'good',title:`다음 매수 추천 ($${BIWEEKLY_BUY_USD} 격주)`,
+          desc:`<div style="font-size:11px;color:var(--t2);margin-bottom:8px;">보유 ETF 중 목표 비중 대비 부족한 영역에 분배</div>${recHtml}${missingNote}`});
+      }
+    }
 
     if(stot > 0){
       // 섹터 분포
