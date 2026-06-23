@@ -3191,6 +3191,21 @@ function parseCSV(text){
   console.log('[CSV Debug] Headers:', headers);
   console.log('[CSV Debug] Columns → date:', dateCol, 'desc:', descCol, 'amount:', amtCol, 'debit:', debitCol, 'credit:', creditCol, 'type:', typeCol);
 
+  // 부호 컨벤션 자동 감지 (Chase: 음수=지출, Amex: 양수=지출)
+  let positiveIsSpending = false;
+  if(amtCol>=0){
+    let posCount = 0, negCount = 0;
+    for(let i=1; i<lines.length; i++){
+      const cols = parseLine(lines[i], delim);
+      if(cols.length<3) continue;
+      const v = parseAmount(cols[amtCol]||'0');
+      if(v > 0) posCount++;
+      else if(v < 0) negCount++;
+    }
+    if(posCount > negCount * 1.5) positiveIsSpending = true;
+    console.log('[CSV Debug] Sign distribution: pos=', posCount, 'neg=', negCount, '→ positiveIsSpending=', positiveIsSpending);
+  }
+
   const txns = [];
   for(let i=1; i<lines.length; i++){
     const cols = parseLine(lines[i], delim);
@@ -3203,6 +3218,8 @@ function parseCSV(text){
     let amt = 0;
     if(amtCol>=0){
       amt = parseAmount(cols[amtCol]||'0');
+      // Amex 스타일이면 부호 뒤집어서 음수=지출로 정규화
+      if(positiveIsSpending) amt = -amt;
     } else if(debitCol>=0){
       amt = parseAmount(cols[debitCol]||'0');
       if(creditCol>=0 && !amt) amt = -parseAmount(cols[creditCol]||'0');
