@@ -2035,7 +2035,7 @@ const SECTOR_DB = {
 // ETF → 자산 클래스 매핑
 const ETF_STYLE = {
   // 대형전체 (S&P500, 전체시장, 대형가치)
-  VOO:'대형전체',VTI:'대형전체',SPY:'대형전체',IVV:'대형전체',
+  VOO:'대형전체',VTI:'대형전체',SPY:'대형전체',IVV:'대형전체',VV:'대형전체',
   VFIAX:'대형전체',VTSAX:'대형전체',FXAIX:'대형전체',SWPPX:'대형전체',
   VINIX:'대형전체',VIIIX:'대형전체',VFINX:'대형전체',
   VTV:'대형전체',SCHV:'대형전체',IWD:'대형전체',VVIAX:'대형전체',
@@ -2421,6 +2421,7 @@ const ETF_OUTLOOK = {
   VTI:{risk:3, outlook:'장기 안정', pros:'미국 전체시장 (대중소형 4000+종목), VOO보다 분산도 ↑', cons:'VOO와 상관성 매우 높음 (소형주 영향 미미)', drivers:'미국 시장 전반'},
   SPY:{risk:3, outlook:'장기 안정', pros:'세계 최대 ETF, 유동성 최고', cons:'운용보수 0.09% (VOO/IVV 대비 높음)', drivers:'S&P 500 지수'},
   IVV:{risk:3, outlook:'장기 안정', pros:'iShares S&P 500, 운용보수 0.03%', cons:'VOO와 사실상 동일 (선택 무의미)', drivers:'S&P 500 지수'},
+  VV:{risk:3, outlook:'장기 안정', pros:'Vanguard 대형주 ETF (CRSP US Large Cap Index, 약 550종), 운용보수 0.04%, VOO보다 살짝 광범위', cons:'VOO와 성과 거의 동일, S&P 500 대비 약간 다른 종목 편입', drivers:'미국 대형주, 연준 정책'},
   VFIAX:{risk:3, outlook:'장기 안정', pros:'Vanguard S&P 500 뮤추얼펀드', cons:'ETF 대비 거래 유연성 ↓', drivers:'S&P 500 지수'},
   VTSAX:{risk:3, outlook:'장기 안정', pros:'전체시장 뮤추얼펀드', cons:'ETF 대비 거래 유연성 ↓', drivers:'미국 시장 전반'},
 
