@@ -1061,14 +1061,18 @@ function profileToSector(profile, ticker){
 }
 
 async function fetchSingleQuote(ticker){
+  const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=2d&interval=1d`;
   const urls = [
-    `https://corsproxy.io/?${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=2d&interval=1d`)}`,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=2d&interval=1d`)}`,
-    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=2d&interval=1d`)}`,
+    `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(yahooUrl)}`,
+    `https://cors.eu.org/${yahooUrl}`,
+    `https://proxy.cors.sh/${yahooUrl}`,
+    `https://api.cors.lol/?url=${encodeURIComponent(yahooUrl)}`,
   ];
   for(const url of urls){
     try{
-      const res = await fetch(url);
+      const res = await fetch(url, {signal: AbortSignal.timeout(8000)});
       if(!res.ok) continue;
       const data = await res.json();
       const result = data?.chart?.result?.[0];
@@ -1130,7 +1134,15 @@ async function fetchAllQuotes(){
       }
     });
 
-    if(successCount === 0) throw new Error('시세 조회 실패 - 잠시 후 다시 시도하세요');
+    if(successCount === 0){
+      // 전체 실패 → 기존 캐시가 있으면 유지, 없으면 오류
+      if(Object.keys(liveQuotes).length){
+        setStatus('cached');
+        alert('시세 조회 실패 (CORS 프록시 문제일 수 있음). 이전 캐시를 계속 사용합니다.');
+        return;
+      }
+      throw new Error('시세 조회 실패 - Yahoo Finance 접근 불가 (잠시 후 다시 시도)');
+    }
 
     liveQuoteTime = Date.now();
     setStatus('live');
@@ -1201,11 +1213,11 @@ function fmtCacheAge(ts){
   const day = Math.floor(hr/24);
   return day+'일 전';
 }
-function setStatus(s){
+function setStatus(s, msg){
   const el = document.getElementById('quote-status');
   if(s==='loading') el.innerHTML='<div class="sdot"></div><span>조회 중...</span>';
   else if(s==='live'){ el.className='hdr-status status-live'; el.innerHTML='<div class="sdot"></div><span>실시간 · '+getNowLA().toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'})+'</span>'; }
-  else if(s==='error'){ el.className='hdr-status status-err'; el.innerHTML='<div class="sdot"></div><span>오류</span>'; }
+  else if(s==='error'){ el.className='hdr-status status-err'; el.innerHTML='<div class="sdot"></div><span title="'+(msg||'').replace(/"/g,'&quot;')+'">오류</span>'; }
   else if(s==='cached'){ el.className='hdr-status status-idle'; el.innerHTML='<div class="sdot"></div><span>캐시 · '+fmtCacheAge(liveQuoteTime)+'</span>'; }
   else{ el.className='hdr-status status-idle'; el.innerHTML='<div class="sdot"></div><span>시세 미조회</span>'; }
 }

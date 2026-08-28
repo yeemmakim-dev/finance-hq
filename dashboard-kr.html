@@ -991,14 +991,18 @@ function profileToSector(profile, ticker){
 }
 
 async function fetchSingleQuote(ticker){
+  const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=2d&interval=1d`;
   const urls = [
-    `https://corsproxy.io/?${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=2d&interval=1d`)}`,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=2d&interval=1d`)}`,
-    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=2d&interval=1d`)}`,
+    `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(yahooUrl)}`,
+    `https://cors.eu.org/${yahooUrl}`,
+    `https://proxy.cors.sh/${yahooUrl}`,
+    `https://api.cors.lol/?url=${encodeURIComponent(yahooUrl)}`,
   ];
   for(const url of urls){
     try{
-      const res = await fetch(url);
+      const res = await fetch(url, {signal: AbortSignal.timeout(8000)});
       if(!res.ok) continue;
       const data = await res.json();
       const result = data?.chart?.result?.[0];
@@ -1060,7 +1064,14 @@ async function fetchAllQuotes(){
       }
     });
 
-    if(successCount === 0) throw new Error('시세 조회 실패 - 잠시 후 다시 시도하세요');
+    if(successCount === 0){
+      if(Object.keys(liveQuotes).length){
+        setStatus('cached');
+        alert('시세 조회 실패 (CORS 프록시 문제일 수 있음). 이전 캐시를 계속 사용합니다.');
+        return;
+      }
+      throw new Error('시세 조회 실패 - Yahoo Finance 접근 불가 (잠시 후 다시 시도)');
+    }
 
     liveQuoteTime = Date.now();
     setStatus('live');
