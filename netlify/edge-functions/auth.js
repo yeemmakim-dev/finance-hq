@@ -28,4 +28,6 @@ export default async function auth(req) {
 
 export const config = {
   path: "/*", // 모든 경로에 적용
+  // 시세 프록시는 GitHub Pages/로컬 파일에서도 불러야 하므로 제외 (함수 자체에서 출처·호스트 제한)
+  excludedPath: ["/api/proxy", "/.netlify/functions/proxy"],
 };

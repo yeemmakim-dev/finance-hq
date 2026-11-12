@@ -970,11 +970,20 @@ const NAVER_INDUSTRY = {
 };
 
 // 네이버 주식 API로 한국 종목 섹터 조회
+// 내 Netlify 시세 프록시 (netlify/functions/proxy.js). 비어 있으면 공용 프록시만 사용
+// Netlify에서 열면 같은 사이트의 /api/proxy, GitHub Pages·로컬 파일에서 열면 NETLIFY_SITE 사용
+const NETLIFY_SITE = ''; // 예: 'https://내사이트.netlify.app'
+const QUOTE_PROXY = (/^https?:$/.test(location.protocol) && !location.hostname.endsWith('github.io'))
+  ? '/api/proxy'
+  : (NETLIFY_SITE ? NETLIFY_SITE+'/api/proxy' : '');
+function ownProxy(u){ return QUOTE_PROXY ? [QUOTE_PROXY+'?url='+encodeURIComponent(u)] : []; }
+
 async function fetchNaverSector(ticker){
   const code = ticker.replace(/\.(KS|KQ)$/i,'');
   if(!/^\d{6}$/.test(code)) return null;
   const naverUrl = `https://m.stock.naver.com/api/stock/${code}/integration`;
   const urls = [
+    ...ownProxy(naverUrl),
     `https://corsproxy.io/?${encodeURIComponent(naverUrl)}`,
     `https://api.allorigins.win/raw?url=${encodeURIComponent(naverUrl)}`,
   ];
@@ -995,6 +1004,7 @@ async function fetchNaverSector(ticker){
 async function fetchStockProfile(ticker){
   const profileUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${ticker}?modules=assetProfile,quoteType`;
   const urls = [
+    ...ownProxy(profileUrl),
     `https://corsproxy.io/?${encodeURIComponent(profileUrl)}`,
     `https://api.allorigins.win/raw?url=${encodeURIComponent(profileUrl)}`,
   ];
@@ -1064,6 +1074,7 @@ function profileToSector(profile, ticker){
 async function fetchSingleQuote(ticker){
   const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=2d&interval=1d`;
   const urls = [
+    ...ownProxy(yahooUrl),
     `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`,
     `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`,
     `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(yahooUrl)}`,
@@ -3183,7 +3194,7 @@ function searchTicker(input, currency){
     });
 
     var yahooUrl = 'https://query2.finance.yahoo.com/v1/finance/search?q='+encodeURIComponent(query)+'&quotesCount=6&newsCount=0&enableFuzzyQuery=true';
-    var url = 'https://api.allorigins.win/raw?url='+encodeURIComponent(yahooUrl);
+    var url = QUOTE_PROXY ? QUOTE_PROXY+'?url='+encodeURIComponent(yahooUrl) : 'https://api.allorigins.win/raw?url='+encodeURIComponent(yahooUrl);
 
     fetch(url).then(function(res){
       if(!res.ok) throw new Error('HTTP '+res.status);
