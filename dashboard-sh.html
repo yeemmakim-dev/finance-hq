@@ -969,29 +969,58 @@ const NAVER_INDUSTRY = {
   '339':'서비스',
 };
 
-// 네이버 주식 API로 한국 종목 섹터 조회
-// 내 Netlify 시세 프록시 (netlify/functions/proxy.js). 비어 있으면 공용 프록시만 사용
-// Netlify에서 열면 같은 사이트의 /api/proxy, GitHub Pages·로컬 파일에서 열면 NETLIFY_SITE 사용
-const NETLIFY_SITE = ''; // 예: 'https://내사이트.netlify.app'
-const QUOTE_PROXY = (/^https?:$/.test(location.protocol) && !location.hostname.endsWith('github.io'))
-  ? '/api/proxy'
-  : (NETLIFY_SITE ? NETLIFY_SITE+'/api/proxy' : '');
-function ownProxy(u){ return QUOTE_PROXY ? [QUOTE_PROXY+'?url='+encodeURIComponent(u)] : []; }
+// 공용 프록시: r.jina.ai (CORS 허용, 키 없이 분당 약 20회) → 응답 앞에 'Title/URL Source' 텍스트가 붙음
+function jinaUrl(u){ return 'https://r.jina.ai/'+u; }
+// 일반 JSON 응답과 jina 텍스트 응답 모두 처리
+async function readJson(res){
+  const t = await res.text();
+  const i = t.search(/[\{\[]/);
+  return JSON.parse(i > 0 ? t.slice(i) : t);
+}
+// 여러 종목을 요청 1번으로 조회 (Yahoo spark, 20개씩) → { 티커: quote }
+async function fetchBatchQuotes(tickers){
+  const out = {};
+  for(let i=0; i<tickers.length; i+=20){
+    const chunk = tickers.slice(i, i+20);
+    const sparkUrl = `https://query1.finance.yahoo.com/v7/finance/spark?symbols=${chunk.map(encodeURIComponent).join(',')}&range=1d&interval=1d`;
+    try{
+      const res = await fetch(jinaUrl(sparkUrl), {signal: AbortSignal.timeout(15000)});
+      if(!res.ok) continue;
+      const data = await readJson(res);
+      (data?.spark?.result||[]).forEach(r=>{
+        const meta = r?.response?.[0]?.meta;
+        if(!meta || meta.regularMarketPrice==null) return;
+        const want = chunk.find(t=>t.toUpperCase()===String(r.symbol).toUpperCase()) || r.symbol;
+        const price = meta.regularMarketPrice;
+        const prevClose = meta.chartPreviousClose || meta.previousClose;
+        const change = prevClose ? price - prevClose : 0;
+        out[want] = {
+          symbol: want, price, change,
+          changePercent: prevClose ? (change/prevClose*100) : 0,
+          currency: meta.currency || 'USD',
+          shortName: meta.shortName || want,
+        };
+      });
+    }catch(e){ console.warn('일괄 시세 조회 실패:', e); }
+  }
+  return out;
+}
 
+// 네이버 주식 API로 한국 종목 섹터 조회
 async function fetchNaverSector(ticker){
   const code = ticker.replace(/\.(KS|KQ)$/i,'');
   if(!/^\d{6}$/.test(code)) return null;
   const naverUrl = `https://m.stock.naver.com/api/stock/${code}/integration`;
   const urls = [
-    ...ownProxy(naverUrl),
+    jinaUrl(naverUrl),
     `https://corsproxy.io/?${encodeURIComponent(naverUrl)}`,
     `https://api.allorigins.win/raw?url=${encodeURIComponent(naverUrl)}`,
   ];
   for(const url of urls){
     try{
-      const res = await fetch(url, {signal: AbortSignal.timeout(5000)});
+      const res = await fetch(url, {signal: AbortSignal.timeout(12000)});
       if(!res.ok) continue;
-      const data = await res.json();
+      const data = await readJson(res);
       const indCode = String(data?.industryCode||'');
       if(indCode && NAVER_INDUSTRY[indCode]) return NAVER_INDUSTRY[indCode];
       if(indCode) return indCode; // 코드라도 반환
@@ -1004,7 +1033,7 @@ async function fetchNaverSector(ticker){
 async function fetchStockProfile(ticker){
   const profileUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${ticker}?modules=assetProfile,quoteType`;
   const urls = [
-    ...ownProxy(profileUrl),
+    jinaUrl(profileUrl),
     `https://corsproxy.io/?${encodeURIComponent(profileUrl)}`,
     `https://api.allorigins.win/raw?url=${encodeURIComponent(profileUrl)}`,
   ];
@@ -1012,7 +1041,7 @@ async function fetchStockProfile(ticker){
     try{
       const res = await fetch(url);
       if(!res.ok) continue;
-      const data = await res.json();
+      const data = await readJson(res);
       const profile = data?.quoteSummary?.result?.[0]?.assetProfile;
       const quoteType = data?.quoteSummary?.result?.[0]?.quoteType;
       const qType = quoteType?.quoteType||''; // EQUITY, ETF, MUTUALFUND
@@ -1074,7 +1103,7 @@ function profileToSector(profile, ticker){
 async function fetchSingleQuote(ticker){
   const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=2d&interval=1d`;
   const urls = [
-    ...ownProxy(yahooUrl),
+    jinaUrl(yahooUrl),
     `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`,
     `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`,
     `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(yahooUrl)}`,
@@ -1084,9 +1113,9 @@ async function fetchSingleQuote(ticker){
   ];
   for(const url of urls){
     try{
-      const res = await fetch(url, {signal: AbortSignal.timeout(8000)});
+      const res = await fetch(url, {signal: AbortSignal.timeout(12000)});
       if(!res.ok) continue;
-      const data = await res.json();
+      const data = await readJson(res);
       const result = data?.chart?.result?.[0];
       if(!result) continue;
       const meta = result.meta;
@@ -1122,7 +1151,9 @@ async function fetchAllQuotes(){
     if(!allTickers.includes('HKDUSD=X')) allTickers.push('HKDUSD=X');
 
     // 개별 종목을 병렬로 조회 (v8 chart API 사용)
-    const results = await Promise.allSettled(allTickers.map(t => fetchSingleQuote(t)));
+    // 1) 일괄 조회(요청 1~2번) → 2) 빠진 종목만 개별 조회
+    const batch = await fetchBatchQuotes(allTickers);
+    const results = await Promise.allSettled(allTickers.map(t => batch[t] ? Promise.resolve(batch[t]) : fetchSingleQuote(t)));
 
     let successCount = 0;
     results.forEach((r, i) => {
@@ -1149,7 +1180,7 @@ async function fetchAllQuotes(){
     if(successCount === 0){
       if(Object.keys(liveQuotes).length){
         setStatus('cached');
-        alert('시세 조회 실패 (CORS 프록시 문제일 수 있음). 이전 캐시를 계속 사용합니다.');
+        alert('시세 조회 실패 (공용 프록시 요청 한도 초과일 수 있음 · 1분 뒤 다시 시도). 이전 캐시를 계속 사용합니다.');
         return;
       }
       throw new Error('시세 조회 실패 - Yahoo Finance 접근 불가 (잠시 후 다시 시도)');
@@ -3194,11 +3225,11 @@ function searchTicker(input, currency){
     });
 
     var yahooUrl = 'https://query2.finance.yahoo.com/v1/finance/search?q='+encodeURIComponent(query)+'&quotesCount=6&newsCount=0&enableFuzzyQuery=true';
-    var url = QUOTE_PROXY ? QUOTE_PROXY+'?url='+encodeURIComponent(yahooUrl) : 'https://api.allorigins.win/raw?url='+encodeURIComponent(yahooUrl);
+    var url = jinaUrl(yahooUrl);
 
     fetch(url).then(function(res){
       if(!res.ok) throw new Error('HTTP '+res.status);
-      return res.json();
+      return readJson(res);
     }).then(function(json){
       var yahooResults = (json.quotes||[]).filter(function(q){ return q.symbol; }).map(function(q){
         return {symbol:q.symbol, name:q.shortname||q.longname||q.symbol, exch:q.exchDisp||q.exchange||''};
